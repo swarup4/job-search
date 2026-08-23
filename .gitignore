@@ -1,0 +1,30 @@
+# Claude Code — dev tooling, not application code. Not pushed.
+.claude/
+CLAUDE.md
+
+# Secrets — one .env per service, none committed
+.env
+.env.*
+!.env.example
+server/.env
+ai/.env
+app/web/.env.local
+credentials/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Node
+node_modules/
+.next/
+app/extension/dist/
+
+# Generated resumes
+*.aux
+*.log
+*.out
