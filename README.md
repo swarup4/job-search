@@ -1,6 +1,6 @@
 # JobPilot
 
-**A personal, agentic AI job-search co-pilot — fully local, single-user, no cloud LLM dependency.**
+**A personal, agentic AI job-search co-pilot — local-first, single-user, all generation on your own hardware.**
 
 JobPilot discovers relevant job openings, analyzes how well they match your resume, tailors your resume per job description, and helps you fill out applications — all through a set of coordinated AI agents running entirely on your own machine.
 
@@ -33,12 +33,13 @@ Manually job hunting at scale is repetitive: searching multiple sources daily, r
 
 - 🔍 **Automated job discovery** — pulls fresh listings daily from Google/SerpAPI, Indeed (via MCP), LinkedIn, and Naukri
 - 🎯 **JD keyword matching & gap analysis** — extracts technical keywords from a JD, diffs them against your resume, and shows you exactly what's present vs. missing
-- 🧠 **RAG-backed retrieval** — your resume is chunked and embedded into a vector store, so tailoring and scoring work against what your resume actually says rather than a keyword list
+- 🧠 **RAG-backed retrieval with reranking** — your resume is chunked and embedded, retrieved by vector search, then reranked so tailoring and scoring work against what your resume actually says
+- 📐 **Measured, not assumed** — a [Ragas](https://docs.ragas.io/) suite scores retrieval quality and, critically, **faithfulness**: the automated check that nothing was fabricated
 - ✅ **Interactive keyword selection** — you choose which missing keywords to incorporate; nothing gets added to your resume without explicit approval
 - 📄 **Resume tailoring** — generates a tailored `.tex` (LaTeX) resume per job, built on your own template
 - 🧩 **Chrome extension autofill** — fills application forms inside your real, already-logged-in browser session; you always review and submit manually
 - 📊 **Pipeline tracking** — status board (Applied → Viewed → Interview → Offer/Rejected) with follow-up reminders, synced to Google Sheets
-- 🤖 **Fully local LLM inference** — runs on Ollama/vLLM; no resume or JD data is ever sent to a third-party hosted AI API
+- 🤖 **All generation runs locally** — every LLM call that writes, decides, or scores runs on Ollama/vLLM. Embedding and reranking use Voyage's hosted API; see [what leaves your machine](#what-leaves-your-machine)
 
 ## Architecture
 
@@ -92,9 +93,25 @@ The five agents run as LangGraph nodes inside the `ai` worker, under a superviso
 
 `server/.env` holds the local URI and no Atlas URI; `ai/.env` holds the Atlas URI and no local URI. Neither service can reach the other's store, even by mistake.
 
-**Atlas never receives resume or JD prose.** Vector search returns `chunk_id`s, and the text is fetched from `server` on a second local hop. That costs one HTTP call per retrieval and keeps the privacy guarantee real rather than aspirational.
+**Atlas never receives resume or JD prose.** Vector search returns `chunk_id`s, and the text is fetched from `server` on a second local hop.
 
-> **Note on the design docs.** Two decisions here supersede the planning documents: the dashboard is Next.js rather than Streamlit/Gradio, and agents reach structural data through `server`'s REST API rather than the MongoDB MCP Server (SRS FR-8.1). Both are deliberate — the API route gives one validation boundary and keeps DB credentials out of the agent process. Docs 02 and 03 still describe the earlier shape.
+### What leaves your machine
+
+Being precise about this matters more than a reassuring one-liner:
+
+| | Stays local | Goes to Voyage |
+|---|---|---|
+| Every LLM call that writes, decides, extracts, or scores | ✅ | |
+| Prompts, tailored resumes, cover letters, keyword decisions | ✅ | |
+| Chunk text and JD text, when embedded | | ⚠️ |
+| Query + candidate chunks, when reranked | | ⚠️ |
+| Ragas judging (contexts + generated output) | ✅ local judge | |
+
+So resume and JD prose **does** reach Voyage's API in flight. What never leaves is generation: no prompt and no generated content touches a hosted provider, and no other cloud AI service is used at all.
+
+Two-stage retrieval: Voyage embed → `$vectorSearch` (top ~50) → fetch text from `server` → Voyage rerank → top ~5.
+
+> **Notes on the design docs.** Three decisions supersede the planning documents. (1) The dashboard is Next.js, not Streamlit/Gradio. (2) Agents reach structural data through `server`'s REST API rather than the MongoDB MCP Server (SRS FR-8.1) — one validation boundary, and no DB credentials in the agent process. (3) **SRS NFR-3 forbids sending any data to third-party inference APIs; using Voyage narrows that to "all generation is local."** If the original absolute guarantee matters more than retrieval quality, swap `ai/rag/embeddings.py` and `reranking.py` for a local embedding model — the rest of the pipeline is unchanged. Docs 02 and 03 still describe the earlier shape.
 
 ## Tech Stack
 
@@ -103,7 +120,8 @@ The five agents run as LangGraph nodes inside the `ai` worker, under a superviso
 | Agent orchestration | [LangGraph](https://github.com/langchain-ai/langgraph) |
 | Tool protocol | [MCP](https://modelcontextprotocol.io/) (self-hosted servers) |
 | LLM serving | [Ollama](https://ollama.com/) (dev) / [vLLM](https://github.com/vllm-project/vllm) (production-like) |
-| Models | Qwen2.5-32B+/Llama 3.3-70B (orchestration, tailoring) · Qwen2.5-7B/14B (discovery, scoring) · BGE-M3/nomic-embed-text (embeddings) |
+| Generation models | Qwen2.5-32B+/Llama 3.3-70B (orchestration, tailoring) · Qwen2.5-7B/14B (discovery, scoring) — all local |
+| Embeddings + reranking | [Voyage AI](https://www.voyageai.com/) (hosted; MongoDB-owned, pairs natively with Atlas) |
 | Database — structural | Local MongoDB (native install) |
 | Database — vector / RAG | [MongoDB Atlas](https://www.mongodb.com/atlas) (free M0 tier, `$vectorSearch`) |
 | Backend | [FastAPI](https://fastapi.tiangolo.com/) (Python, `uv`) |
@@ -112,7 +130,8 @@ The five agents run as LangGraph nodes inside the `ai` worker, under a superviso
 | Application autofill | Custom Chrome Extension (Manifest V3, TypeScript) |
 | Resume templating | [Jinja2](https://jinja.palletsprojects.com/) over a LaTeX template |
 | Queue / scheduling | Redis + Celery |
-| Eval/observability | [Langfuse](https://langfuse.com/) or [Phoenix](https://phoenix.arize.com/) (self-hosted) |
+| RAG evaluation | [Ragas](https://docs.ragas.io/) — faithfulness, context precision/recall, with a **local** judge |
+| Observability | [Langfuse](https://langfuse.com/) or [Phoenix](https://phoenix.arize.com/) (self-hosted) |
 
 ## Getting Started
 
@@ -120,13 +139,14 @@ The five agents run as LangGraph nodes inside the `ai` worker, under a superviso
 
 - Python 3.11+ and [uv](https://docs.astral.sh/uv/)
 - Node.js 18+ and npm
-- [Ollama](https://ollama.com/download) installed locally, with a chat model and an embedding model pulled:
+- [Ollama](https://ollama.com/download) installed locally, with a chat model pulled:
   ```bash
   ollama pull qwen2.5:32b
-  ollama pull nomic-embed-text
   ```
+  No local embedding model is needed — embeddings come from Voyage.
+- A [Voyage AI](https://www.voyageai.com/) API key, for embeddings and reranking (paid per token)
 - MongoDB installed locally ([macOS via Homebrew](https://www.mongodb.com/docs/manual/tutorial/install-mongodb-on-os-x/))
-- A free [MongoDB Atlas](https://www.mongodb.com/cloud/atlas/register) account (M0 tier) with a `$vectorSearch` index on the vector collections
+- A free [MongoDB Atlas](https://www.mongodb.com/cloud/atlas/register) account (M0 tier) with a `$vectorSearch` index whose **dimension matches your chosen Voyage embedding model**
 - Redis (`brew install redis` on macOS)
 - Google Chrome, for loading the extension in developer mode
 
@@ -197,9 +217,15 @@ GOOGLE_SHEET_ID=<your-sheet-id>
 MONGODB_ATLAS_URI=<your-atlas-connection-string>
 REDIS_URL=redis://localhost:6379
 
+# Generation — always local
 OLLAMA_BASE_URL=http://localhost:11434
 LLM_MODEL=qwen2.5:32b
-EMBEDDING_MODEL=nomic-embed-text
+
+# Embeddings + reranking — Voyage (hosted). Verify model names against Voyage's docs.
+VOYAGE_API_KEY=<your-key>
+VOYAGE_EMBED_MODEL=<embedding-model>
+VOYAGE_EMBED_DIM=<must match the Atlas $vectorSearch index>
+VOYAGE_RERANK_MODEL=<rerank-model>
 
 JOBPILOT_API_BASE_URL=http://localhost:8000
 SERPAPI_KEY=<your-key>
@@ -212,7 +238,9 @@ INDEED_MCP_URL=<your-indeed-mcp-endpoint>
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 ```
 
-> Changing `EMBEDDING_MODEL` invalidates every stored vector. Treat it as a migration and re-index, not a config tweak.
+> The Voyage key belongs to `ai/.env` alone — never `server/.env`, and never anything `NEXT_PUBLIC_` prefixed, which would ship it to every browser.
+>
+> Changing `VOYAGE_EMBED_MODEL` or `VOYAGE_EMBED_DIM` invalidates every stored vector and requires re-creating the Atlas index. Treat it as a migration and re-index, not a config tweak.
 
 ## Usage
 
@@ -256,17 +284,19 @@ jobpilot/
 │   │   └── <name>/
 │   │       ├── __init__.py         #     public interface
 │   │       ├── router.py
-│   │       ├── service.py
-│   │       ├── repository.py       #     the only place this module's collections are touched
+│   │       ├── service.py          #     domain logic and this module's queries
 │   │       ├── models.py
 │   │       └── tests/
 │   └── config/                     #   settings.py · database.py · deps.py
 │
 ├── ai/                             # agents, RAG, orchestration, MCP
 │   ├── agents/                     #   discovery · matching · tailoring · application · tracking
-│   ├── rag/                        #   embeddings · chunking · indexing · retrieval
+│   ├── rag/                        #   chunking · indexing · two-stage retrieval
+│   │   ├── embeddings.py           #     Voyage embeddings — one of two files that may call Voyage
+│   │   ├── reranking.py            #     Voyage reranker — the other
 │   │   ├── atlas.py                #     the Atlas client
 │   │   └── repository.py           #     the only place Atlas collections are touched
+│   ├── eval/                       #   Ragas: datasets · metrics · judge (local) · run
 │   ├── orchestration/              #   graph.py · state.py · interrupts.py
 │   ├── mcp_servers/                #   jobpilot_api · job_search · indeed · linkedin · latex · browser
 │   └── config/                     #   settings.py · llm.py · mcp.py
@@ -306,7 +336,8 @@ Full detail in [`05-Roadmap-Backlog.md`](05-Roadmap-Backlog.md).
 
 - **Human approval at every consequential step.** Resume content and application submission both require explicit user action — nothing is fabricated or auto-submitted. The orchestrator pauses at two interrupts and cannot be configured past them.
 - **No fabrication.** Only keywords you explicitly check reach the tailored resume. Retrieval finds content you already have; it is never permission to claim something new.
-- **Local-first.** LLM inference and all raw text stay on your machine. Only embeddings and identifiers live in Atlas.
+- **Local-first, stated precisely.** All generation runs on your hardware. Embedding and reranking use Voyage; nothing else leaves. See [What leaves your machine](#what-leaves-your-machine) rather than trusting a slogan.
+- **Measured, not assumed.** Ragas faithfulness is the automated proof that the no-fabrication rule holds. A guardrail without a test is a hope.
 - **One tier, one database.** `server` owns the structural store, `ai` owns the vector store, and neither holds the other's connection string. The boundary is enforced by configuration, not by discipline.
 - **Real browser session for applying.** The Chrome extension fills forms inside your actual logged-in session rather than a separate automated browser — more reliable, and it avoids anti-bot detection.
 - **Single-user by design.** No auth, no multi-tenancy — kept intentionally simple for personal use.
