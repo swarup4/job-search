@@ -1,0 +1,40 @@
+{
+  "pending": { "keywordSelections": 3, "applicationsToSubmit": 1 },
+  "columns": [
+    {
+      "key": "new", "label": "New", "count": 12, "more": 9,
+      "cards": [
+        { "id": "acme", "company": "Acme Corp", "role": "Senior GenAI Engineer", "match": 91, "meta": "Bengaluru · 2h · LinkedIn" },
+        { "id": "betasoft", "company": "BetaSoft", "role": "Technical Lead — Full Stack", "match": 84, "meta": "Remote (India) · 5h · Indeed" },
+        { "id": "nimbus", "company": "Nimbus Labs", "role": "Staff Engineer, Platform", "match": 78, "meta": "Pune · 6h · Naukri" }
+      ]
+    },
+    {
+      "key": "reviewed", "label": "Reviewed", "count": 5, "more": 3,
+      "cards": [
+        { "id": "corvus", "company": "Corvus Health", "role": "Senior Backend Engineer", "match": 88, "flag": { "kind": "attention", "text": "Keywords await you" } },
+        { "id": "trellis", "company": "Trellis AI", "role": "LLM Applications Engineer", "match": 73, "flag": { "kind": "risk", "text": "Seniority mismatch" } }
+      ]
+    },
+    {
+      "key": "tailored", "label": "Tailored", "count": 3, "more": 2,
+      "cards": [
+        { "id": "northwind", "company": "Northwind Data", "role": "Principal Engineer", "match": 82, "file": "northwind-v2.tex" }
+      ]
+    },
+    {
+      "key": "applied", "label": "Applied", "count": 8, "more": 6,
+      "cards": [
+        { "id": "vantage", "company": "Vantage Systems", "role": "Engineering Manager", "meta": "Applied 3d ago · follow up Fri" },
+        { "id": "helix", "company": "Helix Digital", "role": "Senior Full-Stack Engineer", "meta": "Viewed 6d ago" }
+      ]
+    },
+    {
+      "key": "interview", "label": "Interview", "count": 2,
+      "cards": [
+        { "id": "orbital", "company": "Orbital Retail", "role": "Technical Lead", "meta": "Round 2 · Thu 14:00", "strong": true },
+        { "id": "kestrel", "company": "Kestrel Fintech", "role": "Lead Backend Engineer", "meta": "Awaiting schedule" }
+      ]
+    }
+  ]
+}

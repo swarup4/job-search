@@ -1,0 +1,354 @@
+@use "sass:list";
+@use "sass:map";
+
+// =============================================================================
+// JobPilot — the single stylesheet. All SCSS.
+//
+// Design system — Zobstar idiom, teal & white. Values lifted from the reference
+// template's own stylesheet, not eyeballed:
+//   font       Noto Sans JP, 15px base
+//   radius     4px everywhere · 30px pills for buttons · 50% avatars
+//   elevation  0 0 40px rgba(82,85,90,.1) — a soft AMBIENT shadow, no offset.
+//              White cards floating on a tinted page, separated by air.
+//
+// Brand is teal. Teal marks what you already have, and drives primary action.
+// Three signals beyond it: amber = act · red = risk · green = added line.
+// Nothing else is coloured.
+//
+// Order below: Tailwind entry · tokens · base styles · @theme · @utility ·
+// component classes in @layer components.
+// =============================================================================
+
+// Plain @import works: sass-loader puts node_modules on the Sass load path, so
+// Sass resolves the package and PostCSS + Tailwind expand the result.
+//
+// Do NOT add tw-animate-css. Its @utility blocks use Tailwind's --value()
+// syntax, which Sass cannot parse — `next build` dies with "Expected
+// expression" at tw-animate.css 1:5801. `next dev` hides the problem.
+@import "tailwindcss";
+
+// No @custom-variant here: the app uses zero `dark:` utilities, so it was
+// generating nothing. The .dark block below is a plain class selector and works
+// without it. If you ever write `dark:` utilities, add
+//   @custom-variant dark (&:is(.dark *));
+// back — otherwise Tailwind keys them to prefers-color-scheme, not the .dark class.
+
+// ---- compile-time constants -------------------------------------------------
+$radius: 4px;
+$radius-pill: 30px;
+$font-size-base: 15px;
+$line-height-base: 1.6;
+
+$elevation: (
+  card:  (0 0 40px rgba(82, 85, 90, 0.1),  0 0 40px rgba(0, 0, 0, 0.32)),
+  raise: (0 10px 40px rgba(82, 85, 90, 0.14), 0 10px 40px rgba(0, 0, 0, 0.4)),
+  soft:  (0 0 18px 0 rgba(44, 44, 81, 0.08), 0 0 18px 0 rgba(0, 0, 0, 0.28)),
+);
+
+/// Emit the three elevation variables for a theme.
+/// $i: 1 = light, 2 = dark — so the two themes can never define different sets.
+@mixin elevation($i) {
+  @each $name, $pair in $elevation {
+    --elev-#{$name}: #{list.nth($pair, $i)};
+  }
+}
+
+// ---- light ------------------------------------------------------------------
+:root {
+  --radius: #{$radius};
+  --radius-pill: #{$radius-pill};
+
+  // page is faintly tinted so white cards read as raised
+  --background: oklch(0.9825 0.0035 250);
+  --foreground: oklch(0.3126 0.0654 281.9);
+  --card: oklch(1 0 0);
+  --card-foreground: var(--foreground);
+  --popover: oklch(1 0 0);
+  --popover-foreground: var(--foreground);
+
+  // TEAL — L=0.535 so white-on-teal clears WCAG AA (4.94:1)
+  --primary: oklch(0.535 0.088 185.5);
+  --primary-foreground: oklch(1 0 0);
+  --primary-hover: oklch(0.465 0.079 186.5);
+  --primary-tint: oklch(0.9527 0.0498 180.8);
+  --primary-wash: oklch(0.9836 0.0142 180.7);
+
+  --secondary: oklch(0.968 0.0055 250);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.968 0.0055 250);
+  --muted-foreground: oklch(0.555 0.014 255.5);
+  --accent: oklch(0.9527 0.0498 180.8);
+  --accent-foreground: oklch(0.42 0.075 186);
+  --border: oklch(0.921 0.004 250);
+  --input: oklch(0.921 0.004 250);
+  --ring: var(--primary);
+  --well: oklch(0.976 0.005 250);
+
+  @include elevation(1);
+
+  // SIGNAL — amber: you must act
+  --attention: oklch(0.968 0.037 88);
+  --attention-rule: oklch(0.885 0.088 84);
+  --attention-ink: oklch(0.46 0.105 68);
+  --attention-muted: oklch(0.565 0.115 72);
+  --attention-solid: oklch(0.7 0.145 76);
+
+  // SIGNAL — red: a risk was surfaced
+  --risk: oklch(0.966 0.017 20);
+  --risk-rule: oklch(0.875 0.06 22);
+  --risk-ink: oklch(0.435 0.16 25);
+  --risk-muted: oklch(0.545 0.17 25);
+  --risk-solid: oklch(0.585 0.215 25);
+  --destructive: var(--risk-solid);
+  --destructive-foreground: oklch(1 0 0);
+
+  // SIGNAL — green: a line was added
+  --added: oklch(0.963 0.035 142);
+  --added-ink: oklch(0.42 0.105 145);
+  --added-gutter: oklch(0.53 0.135 145);
+
+  --font-sans: "Noto Sans JP", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+// ---- dark -------------------------------------------------------------------
+.dark {
+  --background: oklch(0.185 0.018 258);
+  --foreground: oklch(0.955 0.005 250);
+  --card: oklch(0.235 0.02 258);
+  --card-foreground: var(--foreground);
+  --popover: oklch(0.235 0.02 258);
+  --popover-foreground: var(--foreground);
+
+  --primary: oklch(0.7038 0.123 182.5);
+  --primary-foreground: oklch(0.19 0.02 258);
+  --primary-hover: oklch(0.775 0.13 181);
+  --primary-tint: oklch(0.3 0.045 186);
+  --primary-wash: oklch(0.245 0.028 190);
+
+  --secondary: oklch(0.29 0.02 258);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.29 0.02 258);
+  --muted-foreground: oklch(0.72 0.014 253);
+  --accent: oklch(0.3 0.045 186);
+  --accent-foreground: oklch(0.93 0.05 182);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: var(--primary);
+  --well: oklch(0.215 0.018 258);
+
+  @include elevation(2);
+
+  --attention: oklch(0.315 0.05 72);
+  --attention-rule: oklch(0.44 0.075 72);
+  --attention-ink: oklch(0.925 0.06 86);
+  --attention-muted: oklch(0.825 0.09 80);
+  --attention-solid: oklch(0.705 0.135 76);
+
+  --risk: oklch(0.29 0.055 24);
+  --risk-rule: oklch(0.425 0.09 24);
+  --risk-ink: oklch(0.92 0.045 20);
+  --risk-muted: oklch(0.81 0.09 22);
+  --risk-solid: oklch(0.655 0.19 25);
+
+  --added: oklch(0.27 0.05 145);
+  --added-ink: oklch(0.895 0.055 145);
+  --added-gutter: oklch(0.715 0.12 145);
+}
+
+// ---- base element styles ----------------------------------------------------
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: $font-size-base;
+  line-height: $line-height-base;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5 {
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--foreground);
+}
+
+* {
+  font-variant-numeric: tabular-nums;
+}
+
+@theme inline {
+  --radius-sm: 3px;
+  --radius-md: var(--radius);
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-pill: var(--radius-pill);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  --shadow-card: var(--elev-card);
+  --shadow-raise: var(--elev-raise);
+  --shadow-soft: var(--elev-soft);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-tint: var(--primary-tint);
+  --color-primary-wash: var(--primary-wash);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-well: var(--well);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-attention: var(--attention);
+  --color-attention-rule: var(--attention-rule);
+  --color-attention-ink: var(--attention-ink);
+  --color-attention-muted: var(--attention-muted);
+  --color-attention-solid: var(--attention-solid);
+
+  --color-risk: var(--risk);
+  --color-risk-rule: var(--risk-rule);
+  --color-risk-ink: var(--risk-ink);
+  --color-risk-muted: var(--risk-muted);
+  --color-risk-solid: var(--risk-solid);
+
+  --color-added: var(--added);
+  --color-added-ink: var(--added-ink);
+  --color-added-gutter: var(--added-gutter);
+}
+
+// =============================================================================
+// Component styles
+//
+// These were CSS Modules; they are global classes now. Two consequences the
+// module hashing used to handle for us:
+//
+//   1. Class names must be NAMESPACED. `.label` / `.value` / `.sm` were safe
+//      when hashed; as globals they would collide with anything. Hence BEM.
+//   2. They sit in `@layer components`, which Tailwind declares BEFORE
+//      `utilities` — so a Tailwind class on the element still wins. Unlayered
+//      CSS would have beaten the utilities, which is the wrong default.
+// =============================================================================
+
+// pipeline status → its tinted surface
+$statuses: (
+  "applied":   (bg: var(--secondary),    fg: var(--muted-foreground)),
+  "viewed":    (bg: var(--primary-tint), fg: var(--accent-foreground)),
+  "interview": (bg: var(--attention),    fg: var(--attention-ink)),
+  "offer":     (bg: var(--primary),      fg: var(--primary-foreground)),
+  "rejected":  (bg: var(--risk),         fg: var(--risk-ink)),
+);
+
+// match ring: one source for box / stroke / label per size, so they cannot drift
+$ring-sizes: (
+  "sm": (box: 38px, label: 11px),
+  "md": (box: 48px, label: 13px),
+  "lg": (box: 62px, label: 16px),
+);
+
+@layer components {
+  // ---- the template's card: white, 4px, ambient shadow, no border -----------
+  .panel {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--elev-card);
+  }
+
+  // section heading inside a panel — "widget-title" in the reference
+  .widget-title {
+    font-size: 17px;
+    font-weight: 500;
+    line-height: 1.3;
+    color: var(--foreground);
+  }
+
+  // ---- StatusChip -----------------------------------------------------------
+  .status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: $radius;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.35;
+    white-space: nowrap;
+    background: var(--secondary);
+    color: var(--muted-foreground);
+
+    @each $name, $tone in $statuses {
+      &--#{$name} {
+        background: map.get($tone, bg);
+        color: map.get($tone, fg);
+      }
+    }
+  }
+
+  // ---- MatchScore -----------------------------------------------------------
+  .match-score {
+    position: relative;
+    flex-shrink: 0;
+
+    svg {
+      display: block;
+      transform: rotate(-90deg);
+    }
+
+    &__track {
+      fill: none;
+      stroke: var(--border);
+    }
+
+    &__value {
+      fill: none;
+      stroke: var(--muted-foreground);
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.4s ease;
+    }
+
+    &__label {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      font-weight: 600;
+      line-height: 1;
+      color: var(--muted-foreground);
+    }
+
+    &__pct {
+      font-weight: 500;
+    }
+
+    // a strong match reads as an affirmation, so it takes the brand hue
+    &--strong {
+      .match-score__value { stroke: var(--primary); }
+      .match-score__label { color: var(--primary); }
+    }
+
+    @each $name, $cfg in $ring-sizes {
+      &--#{$name} {
+        width: map.get($cfg, box);
+        height: map.get($cfg, box);
+
+        .match-score__label { font-size: map.get($cfg, label); }
+        .match-score__pct { font-size: map.get($cfg, label) * 0.62; }
+      }
+    }
+  }
+}
