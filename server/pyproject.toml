@@ -1,0 +1,30 @@
+[project]
+name = "jobpilot-server"
+version = "0.1.0"
+description = "JobPilot REST API — owns the local MongoDB structural store"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "beanie>=2.2.0",
+    "pymongo>=4.15.0",
+    "pydantic[email]>=2.9.0",
+    "pydantic-settings>=2.6.0",
+    "python-dotenv>=1.0.1",
+]
+
+[dependency-groups]
+dev = ["ruff>=0.7.0"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# B008 is FastAPI's Query/Path idiom; RUF012 is Beanie's inner Settings class.
+# Both are how the frameworks are meant to be written.
+ignore = ["B008", "RUF012"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["config*", "modules*"]
