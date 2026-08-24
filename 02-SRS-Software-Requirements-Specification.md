@@ -96,6 +96,13 @@ Single technical user (software engineer) — no requirement for simplified/non-
 - **FR-7.4** The system shall retry failed agent steps with bounded backoff before surfacing an error to the user.
 
 ### FR-8 — Data Access
+> **Implementation deviation, recorded 2026-08-24.** FR-8.1 below routes all agent data access
+> through the MongoDB MCP Server. As built, structural data goes through `server`'s REST API (wrapped
+> as the `jobpilot_api` MCP server) and `ai` owns the Atlas vector store directly, because that is
+> where embeddings and retrieval live. Neither tier holds the other's connection string, which makes
+> the split a config-level guarantee rather than a convention. See
+> [doc 06](docs/06-Data-Model-ER.md).
+
 - **FR-8.1** Agents shall access MongoDB (local and Atlas) exclusively through the MongoDB MCP Server, not direct hand-rolled clients per agent.
 - **FR-8.2** Vector-search queries shall be routed to the Atlas-hosted collections; structural CRUD shall be routed to the local instance.
 
