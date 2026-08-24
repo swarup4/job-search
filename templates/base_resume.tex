@@ -1,0 +1,101 @@
+% base_resume.tex — the one resume template.
+%
+% Jinja2 renders this with custom delimiters so Jinja never competes with LaTeX
+% braces. The exact delimiter strings are set in the renderer, not here: do NOT
+% write them literally in a comment. Jinja scans the whole file and has no idea
+% that a percent sign starts a LaTeX comment, so a delimiter mentioned in prose
+% is parsed as real syntax and the template fails to compile.
+%
+% Expressions and statements both close on the FIRST closing brace, so an
+% expression must contain no braces of its own.
+%
+% The `tex` filter escapes LaTeX specials and is mandatory on every value coming
+% from profile data — see .claude/rules/resume-templating.md.
+%
+% Note the subscript on group['items']: dotted access would resolve to Python's
+% dict.items method rather than the profile key of that name.
+%
+% The body may only use the custom commands defined below. Nothing here ever
+% receives LLM-written prose.
+
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[margin=0.7in]{geometry}
+\usepackage[hidelinks]{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{tabularx}
+\usepackage{xcolor}
+
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\definecolor{accent}{HTML}{2F6F6A}
+
+\titleformat{\section}{\large\bfseries\color{accent}}{}{0pt}{}[\vspace{-0.55em}\rule{\linewidth}{0.4pt}]
+\titlespacing{\section}{0pt}{1.1em}{0.55em}
+
+% --- the only commands the body uses ----------------------------------------
+\newcommand{\jobtitle}[3]{%
+  \textbf{#1}\hfill\textit{#3}\par
+  \textsc{#2}\par\vspace{0.15em}}
+
+\newcommand{\skillrow}[2]{\textbf{#1} & #2 \\}
+
+\newcommand{\certrow}[3]{\textbf{#1}\hfill#3\par\textit{#2}\par\vspace{0.25em}}
+
+\newcommand{\degreerow}[4]{%
+  \textbf{#1}\hfill\textit{#4}\par
+  \textsc{#2} \textemdash{} #3\par\vspace{0.25em}}
+
+\newenvironment{bullets}
+  {\begin{itemize}[leftmargin=1.15em,itemsep=0.12em,topsep=0.15em,parsep=0pt]}
+  {\end{itemize}}
+
+\newenvironment{skillsblock}
+  {\begin{tabularx}{\linewidth}{@{}l>{\raggedright\arraybackslash}X@{}}}
+  {\end{tabularx}}
+
+\begin{document}
+
+\begin{center}
+  {\LARGE\bfseries \VAR{ personal.name | tex }}\par\vspace{0.3em}
+  \VAR{ personal.headline | tex }\par\vspace{0.25em}
+  \VAR{ personal.location | tex } \textbullet{} \VAR{ personal.email | tex } \textbullet{} \VAR{ personal.phone | tex }\par\vspace{0.15em}
+  \BLOCK{ for link in personal.links }\VAR{ link.value | tex }\BLOCK{ if not loop.last } \textbullet{} \BLOCK{ endif }\BLOCK{ endfor }
+
+\end{center}
+
+\section{Summary}
+\VAR{ summary | tex }
+
+\section{Technical Skills}
+\begin{skillsblock}
+\BLOCK{ for group in skillGroups }
+  \skillrow{\VAR{ group.name | tex }}{\VAR{ group['items'] | join(', ') | tex }}
+\BLOCK{ endfor }
+\end{skillsblock}
+
+\section{Experience}
+\BLOCK{ for job in experience }
+\jobtitle{\VAR{ job.title | tex }}{\VAR{ job.company | tex }}{\VAR{ job.start | tex }--\VAR{ job.end | tex }}
+\begin{bullets}
+\BLOCK{ for bullet in job.bullets }
+  \item \VAR{ bullet | tex }
+\BLOCK{ endfor }
+\end{bullets}
+\BLOCK{ endfor }
+
+\section{Education}
+\BLOCK{ for school in education }
+\degreerow{\VAR{ school.degree | tex }}{\VAR{ school.institution | tex }}{\VAR{ school.location | tex }}{\VAR{ school.start | tex }--\VAR{ school.end | tex }}
+\BLOCK{ endfor }
+
+\section{Certifications}
+\BLOCK{ for cert in certifications }
+\certrow{\VAR{ cert.name | tex }}{\VAR{ cert.issuer | tex }}{\VAR{ cert.year | tex }}
+\BLOCK{ endfor }
+
+\end{document}

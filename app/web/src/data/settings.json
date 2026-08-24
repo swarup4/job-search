@@ -1,0 +1,48 @@
+{
+  "targets": {
+    "roles": ["Technical Lead", "Senior Full-Stack Engineer", "GenAI Engineer", "Staff Engineer"],
+    "locations": ["Bengaluru", "Remote (India)", "Pune", "Hyderabad"],
+    "workMode": "Hybrid preferred",
+    "minExperience": 6,
+    "maxExperience": 12,
+    "minSalary": "40 LPA"
+  },
+  "companyPreference": {
+    "preferred": ["Acme Corp", "Northwind Data", "Trellis AI", "Nimbus Labs"],
+    "excluded": ["Ashwood Consulting", "Ridgeline Media"],
+    "sizes": [
+      { "label": "1–50", "on": false },
+      { "label": "51–200", "on": true },
+      { "label": "201–1000", "on": true },
+      { "label": "1000+", "on": false }
+    ],
+    "industries": ["AI / ML", "Developer tools", "Fintech", "Healthcare"],
+    "avoidStaffing": true
+  },
+  "discovery": {
+    "schedule": "Daily at 06:00",
+    "minMatch": 70,
+    "dedupe": true,
+    "respectRobots": true,
+    "sources": [
+      { "name": "LinkedIn", "on": true, "found": 34 },
+      { "name": "Indeed", "on": true, "found": 21 },
+      { "name": "Naukri", "on": true, "found": 18 },
+      { "name": "SerpAPI / Google", "on": true, "found": 12 },
+      { "name": "Company career pages", "on": false, "found": 0 }
+    ]
+  },
+  "applications": {
+    "followUpDays": 5,
+    "sheetSync": true,
+    "sheetName": "Job Search 2026",
+    "autoSubmit": false
+  },
+  "ai": {
+    "llm": "qwen2.5:32b",
+    "llmHost": "http://localhost:11434",
+    "embedModel": "voyage embedding model",
+    "rerank": true,
+    "judge": "local (Ollama)"
+  }
+}
