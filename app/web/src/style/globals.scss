@@ -4,12 +4,6 @@
 // =============================================================================
 // JobPilot — the single stylesheet. All SCSS.
 //
-// Tailwind's `@import "tailwindcss"` cannot be written plainly here: Sass would
-// try to resolve it as a Sass partial and fail with "Can't find stylesheet to
-// import". Interpolating the at-rule NAME makes Sass emit the rule verbatim
-// instead of interpreting it, so PostCSS + Tailwind receive exactly
-// `@import "tailwindcss";` and expand it normally.
-//
 // Design system — Zobstar idiom, teal & white. Values lifted from the reference
 // template's own stylesheet, not eyeballed:
 //   font       Noto Sans JP, 15px base
@@ -20,17 +14,24 @@
 // Brand is teal. Teal marks what you already have, and drives primary action.
 // Three signals beyond it: amber = act · red = risk · green = added line.
 // Nothing else is coloured.
+//
+// Order below: Tailwind entry · tokens · base styles · @theme · @utility ·
+// component classes in @layer components.
 // =============================================================================
 
-// Plain @import works here: sass-loader resolves node_modules, so Sass finds
-// tailwindcss and inlines it, and PostCSS + Tailwind then expand the result.
+// Plain @import works: sass-loader puts node_modules on the Sass load path, so
+// Sass resolves the package and PostCSS + Tailwind expand the result.
 //
-// tw-animate-css must NOT be imported. Its @utility blocks use Tailwind's
-// --value() syntax, which Sass cannot parse — `next build` dies with
-// "Expected expression" at tw-animate.css 1:5801. It was also unused.
+// Do NOT add tw-animate-css. Its @utility blocks use Tailwind's --value()
+// syntax, which Sass cannot parse — `next build` dies with "Expected
+// expression" at tw-animate.css 1:5801. `next dev` hides the problem.
 @import "tailwindcss";
 
-@custom-variant dark (&:is(.dark *));
+// No @custom-variant here: the app uses zero `dark:` utilities, so it was
+// generating nothing. The .dark block below is a plain class selector and works
+// without it. If you ever write `dark:` utilities, add
+//   @custom-variant dark (&:is(.dark *));
+// back — otherwise Tailwind keys them to prefers-color-scheme, not the .dark class.
 
 // ---- compile-time constants -------------------------------------------------
 $radius: 4px;
@@ -156,12 +157,14 @@ $elevation: (
 }
 
 // ---- base element styles ----------------------------------------------------
-// @apply works in this file: Sass runs first, then Tailwind's PostCSS plugin
-// sees the emitted CSS. It would NOT work in a .scss that Tailwind never touches.
 body {
-  @apply bg-background text-foreground font-sans antialiased;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
   font-size: $font-size-base;
   line-height: $line-height-base;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 h1, h2, h3, h4, h5 {
@@ -229,21 +232,6 @@ h1, h2, h3, h4, h5 {
   --color-added-gutter: var(--added-gutter);
 }
 
-/* the template's card: white, 4px, ambient shadow, no border */
-@utility panel {
-  background: var(--card);
-  border-radius: var(--radius);
-  box-shadow: var(--elev-card);
-}
-
-/* section heading inside a panel — "widget-title" in the reference */
-@utility widget-title {
-  font-size: 17px;
-  font-weight: 500;
-  line-height: 1.3;
-  color: var(--foreground);
-}
-
 // =============================================================================
 // Component styles
 //
@@ -274,6 +262,21 @@ $ring-sizes: (
 );
 
 @layer components {
+  // ---- the template's card: white, 4px, ambient shadow, no border -----------
+  .panel {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--elev-card);
+  }
+
+  // section heading inside a panel — "widget-title" in the reference
+  .widget-title {
+    font-size: 17px;
+    font-weight: 500;
+    line-height: 1.3;
+    color: var(--foreground);
+  }
+
   // ---- StatusChip -----------------------------------------------------------
   .status-chip {
     display: inline-flex;

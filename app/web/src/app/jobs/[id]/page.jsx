@@ -1,6 +1,6 @@
 import Link from "next/link";
 import {
-    ArrowRight, Bookmark, Briefcase, Building2, CalendarClock, Clock, ExternalLink,
+    ArrowRight, Briefcase, Building2, CalendarClock, Clock, ExternalLink,
     Globe, MapPin, Users, Wallet,
 } from "lucide-react";
 import { AppShell } from "@/layout/AppShell";
@@ -9,20 +9,26 @@ import { Signal } from "@/component/Signal";
 import { Badge } from "@/component/ui/badge";
 import { Panel, PanelBody, PanelHeader, PanelTitle } from "@/component/ui/panel";
 import { Button, buttonVariants } from "@/component/ui/button";
-import { ROUTES } from "@/routes";
+import { ShortlistButton } from "@/component/ShortlistButton";
+import { ROUTES, sectionFor } from "@/routes";
 import matches from "@/data/matches.json";
 import board from "@/data/board.json";
+import search from "@/data/search.json";
 import { cn } from "@/util/cn";
 
-export default async function Page({ params }) {
+export default async function Page({ params, searchParams }) {
   const { id: jobId } = await params;
+  const { from } = await searchParams;
 
     const job = matches[jobId] ?? matches.acme;
 
     return (
         <AppShell
-            active={ROUTES.shortlist}
-            counts={{ pending: board.pending.keywordSelections + board.pending.applicationsToSubmit }}
+            active={sectionFor(from)}
+            counts={{
+        pending: board.pending.keywordSelections + board.pending.applicationsToSubmit,
+        shortlisted: search.shortlistedCount,
+      }}
         >
             {/* header panel */}
             <Panel className="p-6">
@@ -55,7 +61,7 @@ export default async function Page({ params }) {
                 </div>
 
                 <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-border pt-5">
-                    <Link href={ROUTES.keywords(jobId)} className={buttonVariants()}>
+                    <Link href={ROUTES.keywords(jobId, from)} className={buttonVariants()}>
                         Review keywords
                         <ArrowRight />
                     </Link>
@@ -63,9 +69,7 @@ export default async function Page({ params }) {
                         <ExternalLink />
                         Open original posting
                     </Button>
-                    <Button variant="ghost" size="icon">
-                        <Bookmark className="size-[17px]" />
-                    </Button>
+                    <ShortlistButton shortlisted={job.shortlisted} />
                     <span className="grow" />
                     <span className="inline-flex items-center gap-1.5 text-[13px] text-muted-foreground">
                         <CalendarClock className="size-[14px]" />
@@ -120,7 +124,7 @@ export default async function Page({ params }) {
                             <PanelTitle>What the match agent found</PanelTitle>
                             <span className="grow" />
                             <Link
-                                href={ROUTES.keywords(jobId)}
+                                href={ROUTES.keywords(jobId, from)}
                                 className="text-[13px] font-medium text-primary hover:underline"
                             >
                                 Review &amp; select
@@ -203,7 +207,7 @@ export default async function Page({ params }) {
                                 is written without your explicit choice.
                             </p>
                             <Link
-                                href={ROUTES.keywords(jobId)}
+                                href={ROUTES.keywords(jobId, from)}
                                 className={cn(buttonVariants(), "w-full")}
                             >
                                 Review {job.missing.length} missing keywords

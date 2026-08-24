@@ -8,6 +8,7 @@ import { Panel } from "@/component/ui/panel";
 import { buttonVariants } from "@/component/ui/button";
 import { ROUTES } from "@/routes";
 import board from "@/data/board.json";
+import search from "@/data/search.json";
 import { cn } from "@/util/cn";
 
 export default function Page() {
@@ -18,7 +19,7 @@ export default function Page() {
     return (
         <AppShell
             active={ROUTES.board}
-            counts={{ pending: total, newJobs: byKey.new }}
+            counts={{ pending: total, shortlisted: search.shortlistedCount }}
         >
             <PageHeader
                 title="Pipeline"

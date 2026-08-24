@@ -1,131 +1,100 @@
+"use client";
+
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import {
-    Building2, ChevronDown, Clock, LayoutGrid, List, MapPin, SlidersHorizontal,
-} from "lucide-react";
+import { Bookmark, Search } from "lucide-react";
 import { AppShell } from "@/layout/AppShell";
 import { PageHeader } from "@/layout/PageHeader";
-import { MatchScore } from "@/component/MatchScore";
-import { Signal } from "@/component/Signal";
-import { Badge } from "@/component/ui/badge";
-import { Panel } from "@/component/ui/panel";
-import { Button, buttonVariants } from "@/component/ui/button";
+import { JobList } from "@/component/JobList";
+import { ViewToggle } from "@/component/ViewToggle";
+import { Panel, PanelBody } from "@/component/ui/panel";
+import { buttonVariants } from "@/component/ui/button";
+import { Field, Input } from "@/component/ui/field";
 import { ROUTES } from "@/routes";
-import shortlist from "@/data/shortlist.json";
+import search from "@/data/search.json";
 import board from "@/data/board.json";
-import { cn } from "@/util/cn";
 
+/**
+ * The jobs you saved — the same list shape as Search, filtered to `shortlisted`.
+ * Both pages render JobList, so a row looks identical wherever you meet it.
+ */
 export default function Page() {
-    return (
-        <AppShell
-            active={ROUTES.shortlist}
-            counts={{
-                pending: board.pending.keywordSelections + board.pending.applicationsToSubmit,
-                newJobs: shortlist.discovered,
-            }}
-        >
-            <PageHeader
-                title="Today's shortlist"
-                subtitle={`${shortlist.discovered} new jobs discovered since ${shortlist.since}, scored against your resume.`}
-            >
-                <div className="flex items-center gap-2.5">
-                    <Button variant="outline" size="sm">
-                        <SlidersHorizontal />
-                        All sources
-                    </Button>
-                    <Button variant="outline" size="sm">
-                        Match
-                        <ChevronDown />
-                    </Button>
-                    <div className="flex items-center gap-1 rounded-pill bg-secondary p-1">
-                        <span className="grid size-8 place-items-center rounded-pill bg-card text-primary shadow-soft">
-                            <List className="size-[15px]" />
-                        </span>
-                        <span className="grid size-8 place-items-center rounded-pill text-muted-foreground">
-                            <LayoutGrid className="size-[15px]" />
-                        </span>
-                    </div>
-                </div>
-            </PageHeader>
+  const [view, setView] = useState("list");
+  const [filter, setFilter] = useState("");
 
-            <div className="flex flex-col gap-4">
-                {shortlist.jobs.map((job) => (
-                    <Panel key={job.id} hover className="p-5">
-                        <div className="flex flex-wrap items-center gap-x-5 gap-y-4">
-                            <span className="grid size-14 shrink-0 place-items-center rounded-md bg-secondary text-muted-foreground">
-                                <Building2 className="size-6" />
-                            </span>
-
-                            <div className="min-w-[240px] grow">
-                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                                    <h3 className="text-[17px] font-medium leading-tight">{job.role}</h3>
-                                    <Badge variant="source">{job.source}</Badge>
-                                </div>
-                                <p className="mt-1.5 text-[13.5px] text-muted-foreground">{job.company}</p>
-                                <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px] text-muted-foreground">
-                                    <span className="inline-flex items-center gap-1.5">
-                                        <MapPin className="size-[13px]" />
-                                        {job.location}
-                                    </span>
-                                    <span className="inline-flex items-center gap-1.5">
-                                        <Clock className="size-[13px]" />
-                                        {job.posted}
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div className="flex shrink-0 items-center gap-6">
-                                <Tally n={job.present} label="present" />
-                                <Tally n={job.missing} label="missing" />
-                                <MatchScore value={job.match} size="lg" />
-                            </div>
-
-                            <div className="flex shrink-0 flex-col items-end gap-2.5">
-                                {job.risks > 0 ? (
-                                    <Signal kind="risk">
-                                        {job.risks} risk {job.risks === 1 ? "flag" : "flags"}
-                                    </Signal>
-                                ) : (
-                                    <span className="text-[12px] text-muted-foreground">no risk flags</span>
-                                )}
-                                <div className="flex items-center gap-2">
-                                    <Link
-                                        href={ROUTES.job(job.id)}
-                                        className={buttonVariants({ variant: "outline", size: "sm" })}
-                                    >
-                                        View JD
-                                    </Link>
-                                    <Link
-                                        href={ROUTES.keywords(job.id)}
-                                        className={cn(
-                                            buttonVariants({
-                                                variant: job.match >= 80 ? "default" : "soft",
-                                                size: "sm",
-                                            })
-                                        )}
-                                    >
-                                        Review
-                                    </Link>
-                                </div>
-                            </div>
-                        </div>
-                    </Panel>
-                ))}
-            </div>
-
-            <div className="mt-6 text-center">
-                <Button variant="outline">
-                    Show {shortlist.hidden} lower-scoring matches
-                </Button>
-            </div>
-        </AppShell>
+  const saved = useMemo(() => search.results.filter((j) => j.shortlisted), []);
+  const jobs = useMemo(() => {
+    const t = filter.toLowerCase().trim();
+    if (!t) return saved;
+    return saved.filter((j) =>
+      [j.role, j.company, j.location].some((f) => f.toLowerCase().includes(t))
     );
-}
+  }, [saved, filter]);
 
-function Tally({ n, label }) {
-    return (
-        <div className="text-center">
-            <div className="text-[19px] font-semibold leading-none">{n}</div>
-            <div className="mt-1 text-[12px] text-muted-foreground">{label}</div>
+  return (
+    <AppShell
+      active={ROUTES.shortlist}
+      counts={{
+        pending: board.pending.keywordSelections + board.pending.applicationsToSubmit,
+        shortlisted: saved.length,
+      }}
+    >
+      <PageHeader
+        title="Shortlist"
+        subtitle="Jobs you saved from Search or from a job page. Nothing lands here automatically."
+      >
+        <div className="flex items-center gap-2.5">
+          <div className="w-[240px]">
+            <Input
+              placeholder="Filter your shortlist"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+            />
+          </div>
+          <ViewToggle view={view} onChange={setView} />
         </div>
-    );
+      </PageHeader>
+
+      {saved.length === 0 ? (
+        <Panel>
+          <PanelBody className="py-16 text-center">
+            <span className="mx-auto grid size-12 place-items-center rounded-full bg-secondary text-muted-foreground">
+              <Bookmark className="size-5" />
+            </span>
+            <p className="mt-4 text-[15px] font-medium">Your shortlist is empty</p>
+            <p className="mx-auto mt-2 max-w-[46ch] text-[13.5px] text-muted-foreground">
+              Save a job with the bookmark button on Search or on a job page, and it shows up here.
+            </p>
+            <Link href={ROUTES.search} className={buttonVariants({ className: "mt-5" })}>
+              <Search />
+              Search jobs
+            </Link>
+          </PanelBody>
+        </Panel>
+      ) : (
+        <>
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            <p className="text-[14px]">
+              <span className="font-semibold">{jobs.length}</span>
+              <span className="text-muted-foreground">
+                {jobs.length === saved.length ? " saved" : ` of ${saved.length} saved`} job
+                {jobs.length === 1 ? "" : "s"}
+              </span>
+            </p>
+          </div>
+          {jobs.length === 0 ? (
+            <Panel>
+              <PanelBody className="py-12 text-center">
+                <p className="text-[14px] text-muted-foreground">
+                  Nothing in your shortlist matches “{filter}”.
+                </p>
+              </PanelBody>
+            </Panel>
+          ) : (
+            <JobList jobs={jobs} view={view} from="shortlist" />
+          )}
+        </>
+      )}
+    </AppShell>
+  );
 }

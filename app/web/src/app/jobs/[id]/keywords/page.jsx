@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { AlertTriangle, ArrowRight, Check, ChevronLeft, Quote } from "lucide-react";
 import { Badge } from "@/component/ui/badge";
@@ -10,13 +10,15 @@ import { Checkbox } from "@/component/ui/checkbox";
 import { Panel, PanelBody, PanelHeader, PanelTitle } from "@/component/ui/panel";
 import { AppShell } from "@/layout/AppShell";
 import { MatchScore } from "@/component/MatchScore";
-import { ROUTES } from "@/routes";
+import { ROUTES, sectionFor } from "@/routes";
 import matches from "@/data/matches.json";
 import board from "@/data/board.json";
+import search from "@/data/search.json";
 import { cn } from "@/util/cn";
 
 export default function Page() {
   const { id: jobId } = useParams();
+  const from = useSearchParams().get("from") ?? undefined;
 
     const detail = matches[jobId] ?? matches.acme;
 
@@ -34,12 +36,15 @@ export default function Page() {
 
     return (
         <AppShell
-            active={ROUTES.shortlist}
-            counts={{ pending: board.pending.keywordSelections + board.pending.applicationsToSubmit }}
+            active={sectionFor(from)}
+            counts={{
+        pending: board.pending.keywordSelections + board.pending.applicationsToSubmit,
+        shortlisted: search.shortlistedCount,
+      }}
         >
             <div className="mb-5 flex flex-wrap items-center gap-4">
                 <Link
-                    href={ROUTES.job(jobId)}
+                    href={ROUTES.job(jobId, from)}
                     className="inline-flex items-center gap-1.5 text-[13.5px] text-muted-foreground hover:text-primary"
                 >
                     <ChevronLeft className="size-4" />
@@ -195,7 +200,7 @@ export default function Page() {
                     </div>
                     <span className="grow" />
                     <Link
-                        href={ROUTES.shortlist}
+                        href={from === "shortlist" ? ROUTES.shortlist : ROUTES.search}
                         className={buttonVariants({ variant: "outline", size: "sm" })}
                     >
                         Skip this job
@@ -206,7 +211,7 @@ export default function Page() {
                             <ArrowRight />
                         </Button>
                     ) : (
-                        <Link href={ROUTES.preview(jobId)} className={buttonVariants({ size: "sm" })}>
+                        <Link href={ROUTES.preview(jobId, from)} className={buttonVariants({ size: "sm" })}>
                             Tailor with {count} selected
                             <ArrowRight />
                         </Link>

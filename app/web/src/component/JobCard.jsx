@@ -4,9 +4,9 @@ import { MatchScore } from "@/component/MatchScore";
 import { Signal } from "@/component/Signal";
 import { ROUTES } from "@/routes";
 
-export function JobCard({ card }) {
+export function JobCard({ card, from = "board" }) {
     return (
-        <Link href={ROUTES.job(card.id)} className="panel block p-4 transition-shadow hover:shadow-raise">
+        <Link href={ROUTES.job(card.id, from)} className="panel block p-4 transition-shadow hover:shadow-raise">
             <div className="flex items-start gap-3">
                 <span className="grid size-10 shrink-0 place-items-center rounded-md bg-secondary text-muted-foreground">
                     <Building2 className="size-[17px]" />

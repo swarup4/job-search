@@ -1,25 +1,45 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, ChevronLeft, FileText } from "lucide-react";
 import { AppShell } from "@/layout/AppShell";
 import { Badge } from "@/component/ui/badge";
-import { Panel, PanelHeader, PanelTitle } from "@/component/ui/panel";
+import { Panel } from "@/component/ui/panel";
 import { buttonVariants } from "@/component/ui/button";
-import { ROUTES } from "@/routes";
-import diff from "@/data/diff.json";
+import { SuggestionPanel } from "@/component/SuggestionPanel";
+import { ResumePreview } from "@/component/ResumePreview";
+import { ROUTES, sectionFor } from "@/routes";
+import { buildDocument } from "@/util/resumeDoc";
+import resume from "@/data/resume.json";
 import board from "@/data/board.json";
-import { cn } from "@/util/cn";
+import search from "@/data/search.json";
 
-export default async function Page({ params }) {
-  const { id: jobId } = await params;
+export default function Page() {
+    const { id: jobId } = useParams();
+    const from = useSearchParams().get("from") ?? undefined;
+
+    const doc = useMemo(() => buildDocument(resume, jobId), [jobId]);
+
+    const [activeLine, setActiveLine] = useState(null);
+
+    const active = useMemo(
+        () => doc.lines.find((line) => line.n === activeLine) ?? null,
+        [activeLine, doc]
+    );
 
     return (
         <AppShell
-            active={ROUTES.shortlist}
-            counts={{ pending: board.pending.keywordSelections + board.pending.applicationsToSubmit }}
+            active={sectionFor(from)}
+            counts={{
+                pending: board.pending.keywordSelections + board.pending.applicationsToSubmit,
+                shortlisted: search.shortlistedCount,
+            }}
         >
             <div className="mb-5 flex flex-wrap items-center gap-4">
                 <Link
-                    href={ROUTES.keywords(jobId)}
+                    href={ROUTES.keywords(jobId, from)}
                     className="inline-flex items-center gap-1.5 text-[13.5px] text-muted-foreground hover:text-primary"
                 >
                     <ChevronLeft className="size-4" />
@@ -28,7 +48,7 @@ export default async function Page({ params }) {
                 <span className="grow" />
                 <span className="inline-flex items-center gap-2 rounded-sm bg-secondary px-2.5 py-1.5 font-mono text-[12px] text-muted-foreground">
                     <FileText className="size-[12px]" />
-                    {diff.file}
+                    {doc.file}
                 </span>
             </div>
 
@@ -39,92 +59,51 @@ export default async function Page({ params }) {
                             Review the tailored resume
                         </h1>
                         <p className="mt-2 text-[14px] text-muted-foreground">
-                            {diff.added} additions across two sections. Nothing else changed.
+                            {doc.added} line{doc.added === 1 ? "" : "s"} changed from your
+                            selections. Nothing else changed.
                         </p>
                     </div>
                     <span className="grow" />
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                         <span className="text-[13px] text-muted-foreground">incorporated</span>
-                        {diff.incorporated.map((kw) => (
+                        {doc.incorporated.map((kw) => (
                             <Badge key={kw} variant="soft">{kw}</Badge>
                         ))}
                         <span className="text-[13px] text-muted-foreground">declined</span>
-                        <Badge variant="muted" className="line-through">{diff.declined}</Badge>
+                        {doc.declined.map((kw) => (
+                            <Badge key={kw} variant="muted" className="line-through">{kw}</Badge>
+                        ))}
                     </div>
                 </div>
             </Panel>
 
-            <Panel className="mt-5 overflow-hidden">
-                <PanelHeader>
-                    <PanelTitle>Diff</PanelTitle>
-                    <span className="ml-1 font-mono text-[12px] text-muted-foreground">
-                        {diff.from} → {diff.file}
-                    </span>
-                    <span className="grow" />
-                    <Badge variant="muted" className="text-added-gutter">+{diff.added}</Badge>
-                    <Badge variant="muted">−{diff.removed}</Badge>
-                </PanelHeader>
+            <div className="mt-5 grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(340px,400px)]">
+                <ResumePreview
+                    doc={doc}
+                    activeLine={activeLine}
+                    onSelect={(n) => setActiveLine((prev) => (prev === n ? null : n))}
+                />
 
-                <div className="overflow-x-auto py-3">
-                    {diff.hunks.map((line, i) =>
-                        line.gap ? (
-                            <div key={`gap-${i}`} className="my-2 ml-12 h-px bg-border" />
-                        ) : (
-                            <div
-                                key={line.n}
-                                className={cn(
-                                    "flex font-mono text-[12.5px] leading-[24px]",
-                                    line.add && "bg-added"
-                                )}
-                            >
-                                <span
-                                    className={cn(
-                                        "w-12 shrink-0 select-none pr-3 text-right text-[11px]",
-                                        line.add ? "text-added-gutter" : "text-muted-foreground/55"
-                                    )}
-                                >
-                                    {line.n}
-                                </span>
-                                <span
-                                    className={cn(
-                                        "w-4 shrink-0 select-none text-center",
-                                        line.add && "font-semibold text-added-gutter"
-                                    )}
-                                >
-                                    {line.add ? "+" : ""}
-                                </span>
-                                <span
-                                    className={cn(
-                                        "whitespace-pre pr-5",
-                                        line.add ? "text-added-ink" : "text-muted-foreground"
-                                    )}
-                                >
-                                    {line.text}
-                                </span>
-                            </div>
-                        )
-                    )}
+                <div className="xl:sticky xl:top-6">
+                    <SuggestionPanel
+                        keywords={doc.incorporated}
+                        activeLine={active}
+                        onDismiss={() => setActiveLine(null)}
+                    />
                 </div>
-
-                <div className="border-t border-border bg-well px-5 py-3">
-                    <p className="text-[12.5px] text-muted-foreground">
-                        <span className="font-mono">{diff.declined}</span> was offered but you left it
-                        unchecked, so it does not appear.
-                    </p>
-                </div>
-            </Panel>
+            </div>
 
             <Panel className="mt-5 p-4">
                 <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
                     <div>
-                        <p className="text-[14px] font-medium">.tex source only — no PDF is compiled</p>
+                        <p className="text-[14px] font-medium">Tailored source file</p>
                         <p className="mt-0.5 font-mono text-[12px] text-muted-foreground">
-                            ~/jobpilot/resumes/{diff.file}
+                            ~/jobpilot/resumes/{doc.file}
                         </p>
                     </div>
                     <span className="grow" />
                     <Link
-                        href={ROUTES.keywords(jobId)}
+                        href={ROUTES.keywords(jobId, from)}
                         className={buttonVariants({ variant: "outline", size: "sm" })}
                     >
                         Back to keywords

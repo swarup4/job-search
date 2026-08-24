@@ -11,6 +11,7 @@ import { Badge } from "@/component/ui/badge";
 import { ROUTES } from "@/routes";
 import profile from "@/data/profile.json";
 import board from "@/data/board.json";
+import search from "@/data/search.json";
 import { cn } from "@/util/cn";
 
 export default function Page() {
@@ -20,7 +21,10 @@ export default function Page() {
     return (
         <AppShell
             active={ROUTES.profile}
-            counts={{ pending: board.pending.keywordSelections + board.pending.applicationsToSubmit }}
+            counts={{
+        pending: board.pending.keywordSelections + board.pending.applicationsToSubmit,
+        shortlisted: search.shortlistedCount,
+      }}
         >
             <PageHeader
                 title="My details"

@@ -12,6 +12,7 @@ import { Button } from "@/component/ui/button";
 import { ROUTES } from "@/routes";
 import settings from "@/data/settings.json";
 import board from "@/data/board.json";
+import search from "@/data/search.json";
 import { cn } from "@/util/cn";
 
 export default function Page() {
@@ -20,7 +21,10 @@ export default function Page() {
     return (
         <AppShell
             active={ROUTES.settings}
-            counts={{ pending: board.pending.keywordSelections + board.pending.applicationsToSubmit }}
+            counts={{
+        pending: board.pending.keywordSelections + board.pending.applicationsToSubmit,
+        shortlisted: search.shortlistedCount,
+      }}
         >
             <PageHeader
                 title="Settings"
