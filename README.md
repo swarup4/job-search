@@ -39,19 +39,25 @@ JobPilot discovers relevant job openings, analyzes how well they match your resu
 |---|---|
 | Dashboard UI — 11 screens | **built**, rendering against JSON fixtures in `app/web/src/data/` |
 | `templates/base_resume.tex` | **written**; Jinja2 render verified — but never compiled by a TeX engine, so its LaTeX validity is unconfirmed |
-| `server/` — REST API, local MongoDB | not started (empty directory) |
+| `server/` — REST API, local MongoDB | **built** — six modules, eight collections, 28 endpoints over 20 paths, Beanie over local MongoDB. **No tests** (removed on request), so guardrail stories are not Done per Roadmap §4 |
 | `ai/` — agents, RAG, MCP, eval | not started (empty directory) |
 | `app/extension/` — Chrome MV3 | not started |
 
 ### What you can run today
 
 ```bash
+# dashboard — fixtures, nothing persisted
 cd app/web && npm install && npm run dev
+
+# REST API — needs a local mongod running
+cd server && uv venv && uv pip install -e . && .venv/bin/python main.py
 ```
 
-Open http://localhost:3000. Every screen navigates and the Resume Preview renders a real tailored
-`.tex` — but the data is fixtures, and nothing is persisted. The
-[Getting Started](#getting-started) commands below target the full system and **will fail today**.
+Open http://localhost:3000 for the dashboard, http://localhost:8000/docs for the API. Every screen
+navigates and the Resume Preview renders a real tailored `.tex` — but **the web app still reads JSON
+fixtures, not the API**; the two are not wired together yet. The
+[Getting Started](#getting-started) commands below target the full system and will still fail on the
+`ai/` and extension steps.
 
 Screens that exist: pipeline board, job search, shortlist, job details, keyword selection, resume
 preview, staged applications, my details, settings, login, signup.
@@ -303,8 +309,8 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 
 Organized by **capability**, not by technical layer. Each module is a vertical slice.
 
-**This is the target layout.** Today only `app/web/` and `templates/` exist; `server/`, `ai/`
-and `app/extension/` are empty or absent. See [Current state](#current-state).
+**This is the target layout.** Today `app/web/`, `server/` and `templates/` exist; `ai/` and
+`app/extension/` are empty or absent. See [Current state](#current-state).
 
 ```
 jobpilot/
@@ -335,8 +341,7 @@ jobpilot/
 │   │       ├── __init__.py         #     public interface
 │   │       ├── router.py
 │   │       ├── service.py          #     domain logic and this module's queries
-│   │       ├── models.py
-│   │       └── tests/
+│   │       └── models.py
 │   └── config/                     #   settings.py · database.py · deps.py
 │
 ├── ai/                             # agents, RAG, orchestration, MCP
@@ -367,12 +372,13 @@ Server modules are named after the **resource** they expose; agents after the **
 | [03 — Architecture & System Design](03-Architecture-System-Design.md) | Component design, data architecture, deployment |
 | [04 — UI/UX Wireframes & User Flows](04-UIUX-Wireframes-User-Flows.md) | Screens and end-to-end flows |
 | [05 — Roadmap & Backlog](05-Roadmap-Backlog.md) | Phased roadmap, epics, sprint breakdown — carries a per-story status column |
+| [06 — Data Model / ER](docs/06-Data-Model-ER.md) | ER diagram, every collection's fields and indexes, and where each guardrail is enforced in the schema |
 
 ## Roadmap
 
 - [x] **Phase 0 — Architecture & Planning** (docs 01–05)
 - [x] **Phase 1 — Dashboard UI** — all screens, on JSON fixtures
-- [ ] Phase 2 — Foundation (DB setup, LLM validation, `$vectorSearch` index)
+- [~] **Phase 2 — Foundation** — REST API and local data layer built; Atlas, Redis/Celery and LLM validation still open
 - [ ] Phase 3 — Job Discovery Agent
 - [ ] Phase 4 — JD Match & Resume Tailor Agents *(the two screens exist; the agents behind them do not)*
 - [ ] Phase 5 — Application Agent (Chrome extension)
@@ -388,7 +394,7 @@ Full detail in [`05-Roadmap-Backlog.md`](05-Roadmap-Backlog.md).
 - **Human approval at every consequential step.** Resume content and application submission both require explicit user action — nothing is fabricated or auto-submitted. The orchestrator pauses at two interrupts and cannot be configured past them.
 - **No fabrication.** Only keywords you explicitly check reach the tailored resume. Retrieval finds content you already have; it is never permission to claim something new.
 - **Local-first, stated precisely.** All generation runs on your hardware. Embedding and reranking use Voyage; nothing else leaves. See [What leaves your machine](#what-leaves-your-machine) rather than trusting a slogan.
-- **Measured, not assumed.** Ragas faithfulness is the automated proof that the no-fabrication rule holds. A guardrail without a test is a hope.
+- **Measured, not assumed.** Ragas faithfulness is the automated proof that the no-fabrication rule holds. A guardrail without a test is a hope — and `server/` currently has none, which is why its guardrail stories are not marked Done.
 - **One tier, one database.** `server` owns the structural store, `ai` owns the vector store, and neither holds the other's connection string. The boundary is enforced by configuration, not by discipline.
 - **Real browser session for applying.** The Chrome extension fills forms inside your actual logged-in session rather than a separate automated browser — more reliable, and it avoids anti-bot detection.
 - **Single-user by design.** No auth, no multi-tenancy — kept intentionally simple for personal use.
