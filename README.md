@@ -370,16 +370,16 @@ Server modules are named after the **resource** they expose; agents after the **
 
 ## Roadmap
 
-- [x] **Phase 0 — Architecture & Planning** (docs 01–05)
-- [x] **Phase 1 — Dashboard UI** — all screens, on JSON fixtures
-- [ ] Phase 2 — Foundation (DB setup, LLM validation, `$vectorSearch` index)
-- [ ] Phase 3 — Job Discovery Agent
-- [ ] Phase 4 — JD Match & Resume Tailor Agents *(the two screens exist; the agents behind them do not)*
-- [ ] Phase 5 — Application Agent (Chrome extension)
-- [ ] Phase 6 — Tracking & Follow-up *(swap the dashboard's fixtures for real API calls; Sheets sync)*
-- [ ] Phase 7 — Multi-agent Orchestration
-- [ ] Phase 8 — Eval & Guardrails
-- [ ] Phase 9 — Daily-use polish
+- ✅ **Phase 0 — Architecture & Planning** (docs 01–05)
+- ✅ **Phase 1 — Dashboard UI** — all screens, on JSON fixtures
+- ⬜ Phase 2 — Foundation (DB setup, LLM validation, `$vectorSearch` index)
+- ⬜ Phase 3 — Job Discovery Agent
+- ⬜ Phase 4 — JD Match & Resume Tailor Agents *(the two screens exist; the agents behind them do not)*
+- ⬜ Phase 5 — Application Agent (Chrome extension)
+- ⬜ Phase 6 — Tracking & Follow-up *(swap the dashboard's fixtures for real API calls; Sheets sync)*
+- ⬜ Phase 7 — Multi-agent Orchestration
+- ⬜ Phase 8 — Eval & Guardrails
+- ⬜ Phase 9 — Daily-use polish
 
 Full detail in [`05-Roadmap-Backlog.md`](05-Roadmap-Backlog.md).
 
