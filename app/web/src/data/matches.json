@@ -1,0 +1,95 @@
+{
+  "acme": {
+    "role": "Senior GenAI Engineer",
+    "company": {
+      "name": "Acme Corp",
+      "industry": "Document intelligence",
+      "size": "180\u2013250 employees",
+      "founded": 2016,
+      "site": "acme.example.com",
+      "blurb": "Acme builds document-understanding infrastructure for regulated industries. Series B, headquartered in Bengaluru with a remote-first engineering org."
+    },
+    "location": "Bengaluru",
+    "match": 91,
+    "present": [
+      "Python",
+      "FastAPI",
+      "LangChain",
+      "LangGraph",
+      "RAG",
+      "MongoDB",
+      "Vector search",
+      "React",
+      "Next.js",
+      "TypeScript",
+      "Docker",
+      "Redis",
+      "REST API design",
+      "Prompt engineering",
+      "Team leadership",
+      "CI/CD",
+      "Agentic workflows",
+      "MCP"
+    ],
+    "missing": [
+      {
+        "id": "k8s",
+        "label": "Kubernetes",
+        "mentions": 3,
+        "evidence": "deploy and operate agent services on Kubernetes"
+      },
+      {
+        "id": "vllm",
+        "label": "vLLM",
+        "mentions": 2,
+        "evidence": "high-throughput inference with vLLM or TGI"
+      },
+      {
+        "id": "eval",
+        "label": "LLM evaluation",
+        "mentions": 2,
+        "evidence": "own offline eval and regression suites"
+      },
+      {
+        "id": "terraform",
+        "label": "Terraform",
+        "mentions": 1,
+        "evidence": "infrastructure as code, Terraform preferred"
+      }
+    ],
+    "risks": [
+      {
+        "id": "yrs",
+        "title": "JD asks for 10+ years; your resume shows 8",
+        "detail": "Changing this would be a misrepresentation, so it is surfaced rather than offered as a keyword."
+      },
+      {
+        "id": "onsite",
+        "title": "On-site Bengaluru 5 days; your preference is hybrid",
+        "detail": "Worth knowing before you spend time on this application."
+      }
+    ],
+    "posted": "2h ago",
+    "source": "LinkedIn",
+    "type": "Full time",
+    "experience": "8\u201312 years",
+    "salary": "\u20b948\u201362 LPA",
+    "workplace": "On-site",
+    "deadline": "in 18 days",
+    "applicants": 34,
+    "summary": "Own the agentic layer of Acme's document-intelligence platform: retrieval, evaluation, and the serving path behind it. You will work with two other senior engineers and report to the Head of AI.",
+    "responsibilities": [
+      "Design and operate LangGraph-based agent workflows in production",
+      "Deploy and operate agent services on Kubernetes",
+      "Own offline eval and regression suites gating each release",
+      "Run high-throughput inference with vLLM or TGI",
+      "Partner with product on retrieval quality and latency budgets"
+    ],
+    "requirements": [
+      "8+ years building backend or platform systems in Python",
+      "Production experience with RAG and vector retrieval",
+      "Infrastructure as code, Terraform preferred",
+      "Track record leading a small team of engineers"
+    ]
+  }
+}

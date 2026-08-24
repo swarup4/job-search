@@ -1,0 +1,20 @@
+{
+  "staged": {
+    "id": "northwind",
+    "role": "Principal Engineer",
+    "company": "Northwind Data",
+    "location": "Bengaluru",
+    "ats": "Greenhouse",
+    "file": "~/jobpilot/resumes/northwind-v2.tex",
+    "fieldsMatched": 14,
+    "needsAnswer": 2
+  },
+  "submitted": [
+    { "id": "orbital", "role": "Technical Lead", "company": "Orbital Retail", "status": "Interview", "file": "orbital-v1.tex", "activity": "Round 2 · Thu 14:00", "followUp": null },
+    { "id": "kestrel", "role": "Lead Backend Engineer", "company": "Kestrel Fintech", "status": "Interview", "file": "kestrel-v1.tex", "activity": "Awaiting schedule", "followUp": "Nudge in 2d" },
+    { "id": "helix", "role": "Senior Full-Stack Engineer", "company": "Helix Digital", "status": "Viewed", "file": "helix-v1.tex", "activity": "Opened 6d ago", "followUp": "Nudge today" },
+    { "id": "vantage", "role": "Engineering Manager", "company": "Vantage Systems", "status": "Applied", "file": "vantage-v1.tex", "activity": "Submitted 3d ago", "followUp": "Nudge Fri" },
+    { "id": "sable", "role": "Staff Platform Engineer", "company": "Sable Logistics", "status": "Applied", "file": "sable-v1.tex", "activity": "Submitted 8d ago", "followUp": "Sent 2d ago" },
+    { "id": "ridgeline", "role": "Senior Platform Engineer", "company": "Ridgeline Media", "status": "Rejected", "file": "ridgeline-v1.tex", "activity": "Closed 11d ago", "followUp": null }
+  ]
+}

@@ -1,0 +1,88 @@
+{
+  "personal": {
+    "name": "Swarup Saha",
+    "headline": "Technical Lead — Full-Stack & GenAI",
+    "email": "[YOUR EMAIL]",
+    "phone": "[YOUR PHONE]",
+    "location": "Bengaluru, India",
+    "links": [
+      { "label": "LinkedIn", "value": "linkedin.com/in/[YOUR HANDLE]" },
+      { "label": "GitHub", "value": "github.com/[YOUR HANDLE]" },
+      { "label": "Portfolio", "value": "[YOUR SITE]" }
+    ]
+  },
+  "summary": "Technical lead with 8 years building backend platforms and, for the last three, agentic AI systems in production. Led a 6-engineer team delivering LangGraph workflows over a 2M+ document corpus, and owned the retrieval and evaluation path behind them.",
+  "experience": [
+    {
+      "id": "trigent-lead",
+      "title": "Technical Lead",
+      "company": "Trigent Software",
+      "location": "Bengaluru",
+      "start": "2021",
+      "end": "Present",
+      "current": true,
+      "bullets": [
+        "Led a 6-engineer team delivering agentic workflows on LangGraph",
+        "Built retrieval pipelines over 2M+ documents with MongoDB Atlas vector search",
+        "Cut inference cost 38% through batching and prompt caching",
+        "Introduced offline evaluation gates before each release"
+      ]
+    },
+    {
+      "id": "trigent-senior",
+      "title": "Senior Software Engineer",
+      "company": "Trigent Software",
+      "location": "Bengaluru",
+      "start": "2019",
+      "end": "2021",
+      "bullets": [
+        "Designed FastAPI services handling 4k req/s at p99 under 120ms",
+        "Migrated a monolith to modular services without downtime",
+        "Mentored four engineers through their first production launches"
+      ]
+    },
+    {
+      "id": "vertex",
+      "title": "Software Engineer",
+      "company": "Vertex Systems",
+      "location": "Pune",
+      "start": "2017",
+      "end": "2019",
+      "bullets": [
+        "Built React dashboards for a logistics platform used by 40+ clients",
+        "Owned the reporting pipeline and its Postgres schema"
+      ]
+    }
+  ],
+  "education": [
+    {
+      "id": "btech",
+      "degree": "B.Tech, Computer Science & Engineering",
+      "institution": "[YOUR UNIVERSITY]",
+      "location": "India",
+      "start": "2013",
+      "end": "2017",
+      "note": "First class"
+    }
+  ],
+  "skillGroups": [
+    { "name": "Languages", "items": ["Python", "TypeScript", "JavaScript", "Go", "SQL"] },
+    { "name": "Backend", "items": ["FastAPI", "Flask", "Django", "REST API design", "Celery"] },
+    { "name": "Frontend", "items": ["React", "Next.js", "Tailwind CSS"] },
+    { "name": "GenAI", "items": ["LangChain", "LangGraph", "MCP", "RAG", "Prompt engineering", "Agentic workflows"] },
+    { "name": "Data", "items": ["MongoDB", "Vector search", "Postgres", "Redis"] },
+    { "name": "Infrastructure", "items": ["Docker", "CI/CD", "Ollama"] },
+    { "name": "Leadership", "items": ["Team leadership", "Technical mentoring", "Architecture review"] }
+  ],
+  "certifications": [
+    { "id": "c1", "name": "MongoDB Associate Developer", "issuer": "MongoDB", "year": "2024" },
+    { "id": "c2", "name": "AWS Certified Solutions Architect — Associate", "issuer": "AWS", "year": "2023" },
+    { "id": "c3", "name": "Certified Kubernetes Application Developer", "issuer": "CNCF", "year": "2022" },
+    { "id": "c4", "name": "Professional Scrum Master I", "issuer": "Scrum.org", "year": "2021" },
+    { "id": "c5", "name": "Deep Learning Specialization", "issuer": "DeepLearning.AI", "year": "2021" },
+    { "id": "c6", "name": "Google Cloud Associate Engineer", "issuer": "Google Cloud", "year": "2020" }
+  ],
+  "resumeFile": "templates/base_resume.tex",
+  "lastIndexed": "2 days ago",
+  "chunks": 41
+}

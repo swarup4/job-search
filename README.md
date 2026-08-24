@@ -126,6 +126,7 @@ Two-stage retrieval: Voyage embed → `$vectorSearch` (top ~50) → fetch text f
 | Database — vector / RAG | [MongoDB Atlas](https://www.mongodb.com/atlas) (free M0 tier, `$vectorSearch`) |
 | Backend | [FastAPI](https://fastapi.tiangolo.com/) (Python, `uv`) |
 | Frontend | [Next.js](https://nextjs.org/) (JavaScript, App Router) |
+| UI | [Tailwind CSS](https://tailwindcss.com/) + [shadcn/ui](https://ui.shadcn.com/) (components copied in, not a dependency) |
 | Browser automation (discovery only) | [Playwright](https://playwright.dev/) |
 | Application autofill | Custom Chrome Extension (Manifest V3, TypeScript) |
 | Resume templating | [Jinja2](https://jinja.palletsprojects.com/) over a LaTeX template |
@@ -262,14 +263,13 @@ jobpilot/
 │   ├── web/                        # Next.js dashboard (JavaScript)
 │   │   ├── public/
 │   │   └── src/
-│   │       ├── app/                #   App Router — thin re-exports only
-│   │       ├── page/               #   the real screen components
-│   │       ├── component/          #   reusable UI
-│   │       ├── layout/             #   app shell, pending-review banner
-│   │       ├── routes/             #   path constants
-│   │       ├── api/                #   one client module per server module
-│   │       ├── hook/
-│   │       └── util/
+│   │       ├── app/                #   App Router — routes AND screens
+│   │       ├── component/          #   app components + ui/ primitives
+│   │       ├── layout/             #   AppShell · Sidebar · Topbar
+│   │       ├── routes/             #   path constants + sidebar IA
+│   │       ├── data/               #   JSON fixtures until `server` lands
+│   │       ├── hook/  util/
+│   │       └── style/              #   globals.scss (SCSS throughout)
 │   └── extension/                  # Chrome extension (MV3, TypeScript)
 │       └── src/
 │           ├── content.ts          #   thin entrypoints
