@@ -2,30 +2,29 @@ from __future__ import annotations
 
 from beanie import PydanticObjectId
 
+from errors import Conflict, Invalid, NotFound
 from modules.application import ApplicationStage, stage_application
 from modules.job import JobStatus, JobUpdate, update_job
-from modules.match import MatchNotFound, ReviewState, get_match
+from modules.match import ReviewState, get_match
 from modules.resume.models import ResumeStore, TailoredResume
 
 
-class ResumeNotFound(Exception):
+class ResumeNotFound(NotFound):
     def __init__(self, job_id: PydanticObjectId) -> None:
         super().__init__(f"no tailored resume for job {job_id}")
-        self.job_id = job_id
 
 
-class SelectionGateNotPassed(Exception):
+class SelectionGateNotPassed(Conflict):
     """FR-7.3 — tailoring before the user answered the interrupt."""
 
 
-class Fabrication(Exception):
+class Fabrication(Invalid):
     """NFR-8 — a keyword in the .tex that the user never checked."""
 
     def __init__(self, keywords: list[str]) -> None:
         super().__init__(
             "incorporated keywords the user did not select: " + ", ".join(sorted(keywords))
         )
-        self.keywords = keywords
 
 
 async def store_resume(payload: ResumeStore) -> TailoredResume:
@@ -81,14 +80,3 @@ async def _latest(job_id: PydanticObjectId) -> TailoredResume | None:
         .sort(-TailoredResume.version)
         .first_or_none()
     )
-
-
-__all__ = [
-    "Fabrication",
-    "MatchNotFound",
-    "ResumeNotFound",
-    "SelectionGateNotPassed",
-    "get_resume",
-    "list_versions",
-    "store_resume",
-]

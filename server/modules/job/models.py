@@ -5,7 +5,7 @@ from enum import StrEnum
 
 import pymongo
 from beanie import Document, PydanticObjectId
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 
 class JobStatus(StrEnum):
@@ -50,7 +50,10 @@ class Company(BaseModel):
     blurb: str | None = None
 
 
-class Job(Document):
+class JobContent(BaseModel):
+    """The posting as discovery found it. Shared by the document and both payloads,
+    so a field is declared once."""
+
     title: str
     company: Company
     location: str
@@ -59,7 +62,6 @@ class Job(Document):
     experience_band: str | None = None
     salary_text: str | None = None
 
-    jd_text: str
     summary: str | None = None
     responsibilities: list[str] = Field(default_factory=list)
     requirements: list[str] = Field(default_factory=list)
@@ -69,6 +71,10 @@ class Job(Document):
     posted_at: datetime | None = None
     deadline_at: datetime | None = None
     applicant_count: int | None = None
+
+
+class Job(Document, JobContent):
+    jd_text: str
 
     # FR-1.4 — discovery hashes the normalized posting and refuses a repeat.
     dedup_hash: str
@@ -91,23 +97,8 @@ class Job(Document):
         ]
 
 
-class JobCreate(BaseModel):
-    title: str
-    company: Company
-    location: str
+class JobCreate(JobContent):
     jd_text: str
-    source: JobSource
-    job_type: JobType | None = None
-    work_mode: WorkMode | None = None
-    experience_band: str | None = None
-    salary_text: str | None = None
-    summary: str | None = None
-    responsibilities: list[str] = Field(default_factory=list)
-    requirements: list[str] = Field(default_factory=list)
-    source_url: HttpUrl | None = None
-    posted_at: datetime | None = None
-    deadline_at: datetime | None = None
-    applicant_count: int | None = None
     dedup_hash: str | None = None
 
 
@@ -119,32 +110,17 @@ class JobUpdate(BaseModel):
     requirements: list[str] | None = None
 
 
-class JobRead(BaseModel):
-    id: PydanticObjectId = Field(serialization_alias="id")
-    title: str
-    company: Company
-    location: str
-    job_type: JobType | None
-    work_mode: WorkMode | None
-    experience_band: str | None
-    salary_text: str | None
-    summary: str | None
-    responsibilities: list[str]
-    requirements: list[str]
-    source: JobSource
-    source_url: HttpUrl | None
-    posted_at: datetime | None
-    deadline_at: datetime | None
-    applicant_count: int | None
+class JobRead(JobContent):
+    """`jd_text` and `dedup_hash` stay out — the dashboard never renders either."""
+
+    # Responses always carry every field; inheriting a default must not
+    # make it optional in the schema.
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
+    id: PydanticObjectId
     status: JobStatus
     shortlisted: bool
     discovered_at: datetime
-
-    @classmethod
-    def of(cls, job: Job) -> JobRead:
-        return cls(
-            id=job.id, **job.model_dump(exclude={"id", "jd_text", "dedup_hash", "updated_at"})
-        )
 
 
 class JobCreated(BaseModel):

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from errors import Conflict, NotFound
 from modules.profile.models import (
     ChunkWrite,
     Profile,
@@ -11,14 +12,17 @@ from modules.profile.models import (
 )
 
 
-class ProfileNotFound(Exception):
+class ProfileNotFound(NotFound):
     """No profile document yet — the user has not filled in My details."""
 
 
-class ChunkNotFound(Exception):
+class ProfileExists(Conflict):
+    """Single-user by design — the one profile is created once, then edited."""
+
+
+class ChunkNotFound(NotFound):
     def __init__(self, chunk_id: str) -> None:
         super().__init__(f"chunk {chunk_id} not found")
-        self.chunk_id = chunk_id
 
 
 async def get_profile() -> Profile:
@@ -29,10 +33,6 @@ async def get_profile() -> Profile:
     if profile is None:
         raise ProfileNotFound("no profile document")
     return profile
-
-
-class ProfileExists(Exception):
-    """Single-user by design — the one profile is created once, then edited."""
 
 
 async def create_profile(payload: ProfileCreate) -> Profile:
@@ -47,8 +47,7 @@ async def create_profile(payload: ProfileCreate) -> Profile:
 
 async def update_profile(payload: ProfileUpdate) -> Profile:
     profile = await get_profile()
-    changes = payload.model_dump(exclude_none=True)
-    for field, value in changes.items():
+    for field, value in payload.model_dump(exclude_none=True).items():
         setattr(profile, field, value)
     profile.updated_at = datetime.now(UTC)
     await profile.save()

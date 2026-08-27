@@ -5,7 +5,7 @@ from typing import Literal
 
 import pymongo
 from beanie import Document, PydanticObjectId
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 # --- resume material ---------------------------------------------------------
 
@@ -127,8 +127,8 @@ class Preferences(BaseModel):
 # --- documents ---------------------------------------------------------------
 
 
-class Profile(Document):
-    """Single-user by design (PRD §4). `email` is the profile's key."""
+class ProfileContent(BaseModel):
+    """Everything the user fills in on My details and Settings."""
 
     email: EmailStr  # mandatory — a resume without a contact address is not sendable
 
@@ -140,8 +140,12 @@ class Profile(Document):
     certifications: list[Certification] = Field(default_factory=list)
 
     preferences: Preferences = Field(default_factory=Preferences)
-
     resume_template_path: str = "templates/base_resume.tex"
+
+
+class Profile(Document, ProfileContent):
+    """Single-user by design (PRD §4). `email` is the profile's key."""
+
     last_indexed_at: datetime | None = None
     chunk_count: int = 0
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
@@ -169,21 +173,13 @@ class ResumeChunkText(Document):
         ]
 
 
-class ProfileCreate(BaseModel):
+class ProfileCreate(ProfileContent):
     """Creating a profile requires an email — there is no blank starting state."""
-
-    email: EmailStr
-    personal: Personal
-    summary: str | None = None
-    experience: list[Experience] = Field(default_factory=list)
-    education: list[Education] = Field(default_factory=list)
-    skill_groups: list[SkillGroup] = Field(default_factory=list)
-    certifications: list[Certification] = Field(default_factory=list)
-    preferences: Preferences = Field(default_factory=Preferences)
-    resume_template_path: str = "templates/base_resume.tex"
 
 
 class ProfileUpdate(BaseModel):
+    """Every field optional: a PATCH sends only what changed."""
+
     email: EmailStr | None = None
     personal: Personal | None = None
     summary: str | None = None
@@ -195,27 +191,18 @@ class ProfileUpdate(BaseModel):
     resume_template_path: str | None = None
 
 
+class ProfileRead(ProfileContent):
+    # Responses always carry every field; inheriting a default must not
+    # make it optional in the schema.
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
+    id: PydanticObjectId
+    last_indexed_at: datetime | None
+    chunk_count: int
+
+
 class ChunkWrite(BaseModel):
     chunk_id: str
     section: str
     text: str
     source_ref: str | None = None
-
-
-class ProfileRead(BaseModel):
-    id: PydanticObjectId
-    email: EmailStr
-    personal: Personal
-    summary: str | None
-    experience: list[Experience]
-    education: list[Education]
-    skill_groups: list[SkillGroup]
-    certifications: list[Certification]
-    preferences: Preferences
-    resume_template_path: str
-    last_indexed_at: datetime | None
-    chunk_count: int
-
-    @classmethod
-    def of(cls, profile: Profile) -> ProfileRead:
-        return cls(id=profile.id, **profile.model_dump(exclude={"id", "updated_at"}))

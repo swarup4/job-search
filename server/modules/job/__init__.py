@@ -3,6 +3,7 @@
 from modules.job.models import (
     Company,
     Job,
+    JobContent,
     JobCreate,
     JobCreated,
     JobRead,
@@ -21,6 +22,7 @@ __all__ = [
     "NAME",
     "Company",
     "Job",
+    "JobContent",
     "JobCreate",
     "JobCreated",
     "JobNotFound",

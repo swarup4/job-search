@@ -2,26 +2,30 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, LogIn } from "lucide-react";
+import { useFormik } from "formik";
+import { AlertTriangle, Eye, EyeOff, LogIn } from "lucide-react";
 import { AuthShell } from "@/component/AuthShell";
-import { AuthField } from "@/component/AuthField";
+import { Field, Input } from "@/component/ui/field";
 import { Button } from "@/component/ui/button";
+import { loginInitialValues, loginSchema } from "@/util/schema";
 import { ROUTES } from "@/routes";
 
-const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
-
 export default function Page() {
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [message, setMessage] = useState(null);
+    const [revealed, setRevealed] = useState(false);
 
-    const submit = (event) => {
-        event.preventDefault();
-        if (!email.trim()) return setMessage("Enter your email address.");
-        if (!EMAIL.test(email)) return setMessage("That does not look like an email address.");
-        if (!password) return setMessage("Enter your password.");
-        setMessage("No auth service is connected, so there is nothing to sign in to yet.");
-    };
+    const formik = useFormik({
+        initialValues: loginInitialValues,
+        validationSchema: loginSchema,
+        onSubmit: (_values, { setStatus }) => {
+            // PRD §4 — there is no auth service to call. Validating the input is the
+            // whole of what this screen can honestly do.
+            setStatus("No auth service is connected, so there is nothing to sign in to yet.");
+        },
+    });
+
+    const { touched, errors } = formik;
+    const emailError = touched.email && errors.email;
+    const passwordError = touched.password && errors.password;
 
     return (
         <AuthShell
@@ -36,25 +40,48 @@ export default function Page() {
                 </>
             }
         >
-            <form onSubmit={submit} noValidate className="mt-6 flex flex-col gap-4">
-                <AuthField
-                    label="Email"
-                    type="email"
-                    value={email}
-                    onChange={setEmail}
-                    placeholder="you@example.com"
-                    autoComplete="username"
-                />
-                <AuthField
-                    label="Password"
-                    type="password"
-                    value={password}
-                    onChange={setPassword}
-                    placeholder="••••••••"
-                    autoComplete="current-password"
-                />
+            <form onSubmit={formik.handleSubmit} noValidate className="mt-6 flex flex-col gap-4">
+                <Field label="Email" error={emailError}>
+                    <Input
+                        type="email"
+                        placeholder="you@example.com"
+                        autoComplete="username"
+                        invalid={Boolean(emailError)}
+                        {...formik.getFieldProps("email")}
+                    />
+                </Field>
 
-                {message ? <Notice text={message} /> : null}
+                <Field label="Password" error={passwordError}>
+                    <span className="relative block">
+                        <Input
+                            type={revealed ? "text" : "password"}
+                            placeholder="••••••••"
+                            autoComplete="current-password"
+                            className="pr-11"
+                            invalid={Boolean(passwordError)}
+                            {...formik.getFieldProps("password")}
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setRevealed((r) => !r)}
+                            aria-label={revealed ? "Hide password" : "Show password"}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        >
+                            {revealed ? (
+                                <EyeOff className="size-[15px]" />
+                            ) : (
+                                <Eye className="size-[15px]" />
+                            )}
+                        </button>
+                    </span>
+                </Field>
+
+                {formik.status ? (
+                    <p className="flex items-start gap-2 rounded-sm bg-risk px-3 py-2.5 text-[12.5px] leading-relaxed text-pretty text-risk-ink">
+                        <AlertTriangle className="mt-0.5 size-[13px] shrink-0" />
+                        {formik.status}
+                    </p>
+                ) : null}
 
                 <Button type="submit" className="mt-1 w-full">
                     <LogIn />
@@ -69,14 +96,5 @@ export default function Page() {
                 </Link>
             </form>
         </AuthShell>
-    );
-}
-
-function Notice({ text }) {
-    return (
-        <p className="flex items-start gap-2 rounded-sm bg-risk px-3 py-2.5 text-[12.5px] leading-relaxed text-pretty text-risk-ink">
-            <AlertTriangle className="mt-0.5 size-[13px] shrink-0" />
-            {text}
-        </p>
     );
 }

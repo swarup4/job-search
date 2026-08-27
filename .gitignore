@@ -31,3 +31,4 @@ app/extension/dist/
 *.out
 
 .DS_Store
+.vscode/settings.json
