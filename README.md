@@ -6,10 +6,10 @@ JobPilot discovers relevant job openings, analyzes how well they match your resu
 
 > ⚠️ **Personal project.** Built for single-user use. No auth system, no multi-tenant support, and not intended for public deployment as-is.
 
-> 🚧 **Only the dashboard UI exists so far.** Eleven Next.js screens render against JSON
-> fixtures; `server/` and `ai/` are still empty directories, so there is no API, no database, no
-> agents and no LLM calls. Everything below describes the intended system — see
-> [Current state](#current-state) for what actually runs today.
+> 🚧 **The dashboard and the API exist; the agents do not.** Eleven Next.js screens run, and
+> `server/` serves 28 REST endpoints over local MongoDB. `ai/` is still an empty directory, so
+> there are no agents, no RAG, and no LLM call anywhere in the system. Everything below describes
+> the intended system — see [Current state](#current-state) for what actually runs today.
 
 ---
 
@@ -33,11 +33,13 @@ JobPilot discovers relevant job openings, analyzes how well they match your resu
 
 ## Current state
 
-*Updated 2026-08-24.*
+*Updated 2026-08-27.*
 
 | Area | Status |
 |---|---|
-| Dashboard UI — 11 screens | **built**, rendering against JSON fixtures in `app/web/src/data/` |
+| Dashboard UI — 11 screens | **built**. My Details reads and writes the live API; eight screens still render JSON fixtures from `app/web/src/data/`; login and signup hold no data |
+| `app/web` → `server` wiring | **started** — one axios instance in `src/lib/`, one service per API module in `src/services/`, `ApiError` as the single failure shape |
+| Form validation | **built** — Formik (`useFormik`) with a Yup schema per form in `src/util/schema.js`; the server's own validation still decides |
 | `templates/base_resume.tex` | **written**; Jinja2 render verified — but never compiled by a TeX engine, so its LaTeX validity is unconfirmed |
 | `server/` — REST API, local MongoDB | **built** — six modules, eight collections, 28 endpoints over 20 paths, Beanie over local MongoDB. **No tests** (removed on request), so guardrail stories are not Done per Roadmap §4 |
 | `ai/` — agents, RAG, MCP, eval | not started (empty directory) |
@@ -46,18 +48,19 @@ JobPilot discovers relevant job openings, analyzes how well they match your resu
 ### What you can run today
 
 ```bash
-# dashboard — fixtures, nothing persisted
-cd app/web && npm install && npm run dev
-
-# REST API — needs a local mongod running
+# REST API — needs a local mongod running. Start this first:
+# My Details calls it, and that page errors if the API is down.
 cd server && uv venv && uv pip install -e . && .venv/bin/python main.py
+
+# dashboard
+cd app/web && npm install && npm run dev
 ```
 
 Open http://localhost:3000 for the dashboard, http://localhost:8000/docs for the API. Every screen
-navigates and the Resume Preview renders a real tailored `.tex` — but **the web app still reads JSON
-fixtures, not the API**; the two are not wired together yet. The
-[Getting Started](#getting-started) commands below target the full system and will still fail on the
-`ai/` and extension steps.
+navigates and the Resume Preview renders a real tailored `.tex`. **My Details is wired to the API** —
+it creates the one profile document and saves edits for real, and it is the only screen that does;
+the rest still read fixtures. The [Getting Started](#getting-started) commands below target the full
+system and will still fail on the `ai/` and extension steps.
 
 Screens that exist: pipeline board, job search, shortlist, job details, keyword selection, resume
 preview, staged applications, my details, settings, login, signup.
@@ -74,8 +77,9 @@ Manually job hunting at scale is repetitive: searching multiple sources daily, r
 
 ## Features
 
-The intended capability set. Only keyword selection and the resume preview have any
-implementation today, and both are UI against fixtures — see [Current state](#current-state).
+The intended capability set. Today only the profile round-trip is real; keyword selection and the
+resume preview are UI against fixtures, and no agent exists — see
+[Current state](#current-state).
 
 - 🔍 **Automated job discovery** — pulls fresh listings daily from Google/SerpAPI, Indeed (via MCP), LinkedIn, and Naukri
 - 🎯 **JD keyword matching & gap analysis** — extracts technical keywords from a JD, diffs them against your resume, and shows you exactly what's present vs. missing
@@ -173,6 +177,8 @@ Two-stage retrieval: Voyage embed → `$vectorSearch` (top ~50) → fetch text f
 | Backend | [FastAPI](https://fastapi.tiangolo.com/) (Python, `uv`) |
 | Frontend | [Next.js](https://nextjs.org/) (JavaScript, App Router) |
 | UI | [Tailwind CSS](https://tailwindcss.com/) + [shadcn/ui](https://ui.shadcn.com/) (components copied in, not a dependency) |
+| HTTP client | [axios](https://axios-http.com/) — one instance in `app/web/src/lib/`, with `ApiError` as the single failure shape |
+| Form state + validation | [Formik](https://formik.org/) (`useFormik`) + [Yup](https://github.com/jquense/yup) — one schema per form in `app/web/src/util/schema.js` |
 | Browser automation (discovery only) | [Playwright](https://playwright.dev/) |
 | Application autofill | Custom Chrome Extension (Manifest V3, TypeScript) |
 | Resume templating | [Jinja2](https://jinja.palletsprojects.com/) over a LaTeX template |
@@ -182,11 +188,11 @@ Two-stage retrieval: Voyage embed → `$vectorSearch` (top ~50) → fetch text f
 
 ## Getting Started
 
-> **These instructions describe the finished system and do not work yet.** Missing today:
+> **These instructions describe the finished system and do not all work yet.** Missing today:
 > no root `pyproject.toml` (so `uv sync` fails), no root `package.json` (so a root `npm install`
-> fails), no `server/.env.example` or `ai/.env.example` to copy, no `server/main.py`, no
-> `ai/orchestration/worker.py`, and no `app/extension/`. To run the dashboard, use
-> [What you can run today](#what-you-can-run-today) instead.
+> fails), no `ai/.env.example` to copy, no `ai/orchestration/worker.py`, and no `app/extension/`.
+> `server/` and `app/web/` both run today — see
+> [What you can run today](#what-you-can-run-today) for the commands that work.
 
 ### Prerequisites
 
@@ -231,7 +237,8 @@ Three services, each startable independently:
 
 ```bash
 # 1. REST API + local MongoDB
-uv run uvicorn server.main:app --reload --host 127.0.0.1 --port 8000
+#    Run from server/ — main.py imports `config`, not `server.config`
+cd server && uv run uvicorn main:app --reload --host 127.0.0.1 --port 8000
 
 # 2. AI worker — agents, RAG, scheduled discovery
 uv run celery -A ai.orchestration.worker worker --beat
@@ -258,11 +265,18 @@ Each service reads its own `.env`. The split is deliberate — it makes it impos
 **`server/.env`** — structural data, no Atlas access:
 
 ```bash
-MONGODB_LOCAL_URI=mongodb://localhost:27017/jobpilot
-REDIS_URL=redis://localhost:6379
-GOOGLE_SHEETS_CREDENTIALS_PATH=./credentials/sheets.json
-GOOGLE_SHEET_ID=<your-sheet-id>
+MONGODB_LOCAL_URI=mongodb://127.0.0.1:27017
+MONGODB_DB_NAME=jobpilot
+HOST=127.0.0.1
+PORT=8000
+WEB_ORIGIN=http://localhost:3000
 ```
+
+Those five are everything `server` reads today, and each has a default in code — an absent `.env`
+still boots against a local mongod. `.env` is loaded once, in `server/config/__init__.py`, anchored
+to `server/.env` rather than the process's working directory. `REDIS_URL` and the Google Sheets
+credentials arrive with Phases 3 and 6; there is no settings class, so a variable nothing reads is
+simply ignored.
 
 **`ai/.env`** — vectors and inference, no local DB access:
 
@@ -288,8 +302,11 @@ INDEED_MCP_URL=<your-indeed-mcp-endpoint>
 **`app/web/.env.local`**:
 
 ```bash
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+NEXT_PUBLIC_API_URL=http://127.0.0.1:8000/api
 ```
+
+The `/api` suffix is part of the value — `src/lib/axiosInstance.js` uses it as the axios `baseURL`
+verbatim and appends no prefix of its own.
 
 > The Voyage key belongs to `ai/.env` alone — never `server/.env`, and never anything `NEXT_PUBLIC_` prefixed, which would ship it to every browser.
 >
@@ -323,8 +340,10 @@ jobpilot/
 │   │       ├── component/          #   app components + ui/ primitives
 │   │       ├── layout/             #   AppShell · Sidebar · Topbar
 │   │       ├── routes/             #   path constants + sidebar IA
-│   │       ├── data/               #   JSON fixtures until `server` lands
-│   │       ├── hook/  util/
+│   │       ├── lib/                #   axiosInstance.js — the one client + ApiError
+│   │       ├── services/           #   one file per API module; screens import "@/services"
+│   │       ├── data/               #   JSON fixtures, for screens not yet on services/
+│   │       ├── hook/  util/        #   util/schema.js — Yup schemas + their initialValues
 │   │       └── style/              #   globals.scss (SCSS throughout)
 │   └── extension/                  # Chrome extension (MV3, TypeScript)
 │       └── src/
@@ -336,13 +355,14 @@ jobpilot/
 │
 ├── server/                         # REST APIs + local MongoDB
 │   ├── main.py                     #   mounts module routers, nothing else
+│   ├── errors.py                   #   NotFound/Conflict/Invalid → HTTP, in one handler
 │   ├── modules/                    #   job · match · resume · application · event · profile
 │   │   └── <name>/
 │   │       ├── __init__.py         #     public interface
 │   │       ├── router.py
 │   │       ├── service.py          #     domain logic and this module's queries
 │   │       └── models.py
-│   └── config/                     #   settings.py · database.py · deps.py
+│   └── config/                     #   __init__.py (loads .env) · database.py
 │
 ├── ai/                             # agents, RAG, orchestration, MCP
 │   ├── agents/                     #   discovery · matching · tailoring · application · tracking
@@ -377,12 +397,12 @@ Server modules are named after the **resource** they expose; agents after the **
 ## Roadmap
 
 - ✅ **Phase 0 — Architecture & Planning** (docs 01–05)
-- ✅ **Phase 1 — Dashboard UI** — all screens, on JSON fixtures
+- ✅ **Phase 1 — Dashboard UI** — all screens, plus Formik/Yup validation on every form
 - ⬜ Phase 2 — Foundation (DB setup, LLM validation, `$vectorSearch` index)
 - ⬜ Phase 3 — Job Discovery Agent
 - ⬜ Phase 4 — JD Match & Resume Tailor Agents *(the two screens exist; the agents behind them do not)*
 - ⬜ Phase 5 — Application Agent (Chrome extension)
-- ⬜ Phase 6 — Tracking & Follow-up *(swap the dashboard's fixtures for real API calls; Sheets sync)*
+- 🟡 Phase 6 — Tracking & Follow-up *(fixture → API swap started: My Details is live, the other screens are not; Sheets sync not started)*
 - ⬜ Phase 7 — Multi-agent Orchestration
 - ⬜ Phase 8 — Eval & Guardrails
 - ⬜ Phase 9 — Daily-use polish
