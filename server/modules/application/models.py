@@ -5,7 +5,7 @@ from enum import StrEnum
 
 import pymongo
 from beanie import Document, PydanticObjectId
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, computed_field
 
 
 class ApplicationStatus(StrEnum):
@@ -44,16 +44,20 @@ class ScreeningAnswer(BaseModel):
     answered_by_user: bool = False
 
 
-class Application(Document):
+class ApplicationTarget(BaseModel):
+    """Where this application goes and which .tex belongs to it."""
+
     job_id: PydanticObjectId
     resume_id: PydanticObjectId
-
     tex_path: str
     ats: AtsPlatform = AtsPlatform.OTHER
     apply_url: HttpUrl | None = None
 
-    status: ApplicationStatus = ApplicationStatus.STAGED
 
+class ApplicationProgress(BaseModel):
+    """Everything the pipeline board reads. Only a human moves any of it forward."""
+
+    status: ApplicationStatus = ApplicationStatus.STAGED
     fields_filled: list[FieldFill] = Field(default_factory=list)
     screening_answers: list[ScreeningAnswer] = Field(default_factory=list)
 
@@ -68,6 +72,8 @@ class Application(Document):
     follow_up_due_at: datetime | None = None
     follow_up_sent_at: datetime | None = None
 
+
+class Application(Document, ApplicationTarget, ApplicationProgress):
     class Settings:
         name = "applications"
         indexes = [
@@ -75,10 +81,6 @@ class Application(Document):
             pymongo.IndexModel([("status", pymongo.ASCENDING), ("staged_at", pymongo.DESCENDING)]),
             pymongo.IndexModel([("follow_up_due_at", pymongo.ASCENDING)]),
         ]
-
-    @property
-    def needs_answer(self) -> int:
-        return sum(1 for answer in self.screening_answers if not answer.answer)
 
 
 class AnswerBank(Document):
@@ -96,12 +98,8 @@ class AnswerBank(Document):
         indexes = [pymongo.IndexModel([("key", pymongo.ASCENDING)], unique=True)]
 
 
-class ApplicationStage(BaseModel):
-    job_id: PydanticObjectId
-    resume_id: PydanticObjectId
-    tex_path: str
-    ats: AtsPlatform = AtsPlatform.OTHER
-    apply_url: HttpUrl | None = None
+class ApplicationStage(ApplicationTarget):
+    """What `resume` posts once a .tex exists for the job."""
 
 
 class ApplicationFill(BaseModel):
@@ -118,29 +116,14 @@ class StatusTransition(BaseModel):
     confirmed_by_user: bool = False
 
 
-class ApplicationRead(BaseModel):
-    id: PydanticObjectId
-    job_id: PydanticObjectId
-    resume_id: PydanticObjectId
-    tex_path: str
-    ats: AtsPlatform
-    apply_url: HttpUrl | None
-    status: ApplicationStatus
-    fields_filled: list[FieldFill]
-    screening_answers: list[ScreeningAnswer]
-    needs_answer: int
-    approved_by_user: bool
-    staged_at: datetime
-    submitted_at: datetime | None
-    last_activity_at: datetime | None
-    last_activity_note: str | None
-    follow_up_due_at: datetime | None
-    follow_up_sent_at: datetime | None
+class ApplicationRead(ApplicationTarget, ApplicationProgress):
+    # Responses always carry every field; inheriting a default must not
+    # make it optional in the schema.
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
 
-    @classmethod
-    def of(cls, application: Application) -> ApplicationRead:
-        return cls(
-            id=application.id,
-            needs_answer=application.needs_answer,
-            **application.model_dump(exclude={"id"}),
-        )
+    id: PydanticObjectId
+
+    @computed_field
+    @property
+    def needs_answer(self) -> int:
+        return sum(1 for answer in self.screening_answers if not answer.answer)

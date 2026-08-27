@@ -9,7 +9,6 @@ dependencies = [
     "beanie>=2.2.0",
     "pymongo>=4.15.0",
     "pydantic[email]>=2.9.0",
-    "pydantic-settings>=2.6.0",
     "python-dotenv>=1.0.1",
 ]
 

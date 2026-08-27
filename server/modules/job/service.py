@@ -5,13 +5,13 @@ from datetime import UTC, datetime
 
 from beanie import PydanticObjectId
 
+from errors import NotFound
 from modules.job.models import Job, JobCreate, JobCreated, JobStatus, JobUpdate
 
 
-class JobNotFound(Exception):
+class JobNotFound(NotFound):
     def __init__(self, job_id: PydanticObjectId) -> None:
         super().__init__(f"job {job_id} not found")
-        self.job_id = job_id
 
 
 def compute_dedup_hash(payload: JobCreate) -> str:
@@ -66,9 +66,11 @@ async def count_jobs(status: JobStatus | None = None) -> int:
 async def update_job(job_id: PydanticObjectId, payload: JobUpdate) -> Job:
     job = await get_job(job_id)
     changes = payload.model_dump(exclude_none=True)
-    if changes:
-        for field, value in changes.items():
-            setattr(job, field, value)
-        job.updated_at = datetime.now(UTC)
-        await job.save()
+    if not changes:
+        return job
+
+    for field, value in changes.items():
+        setattr(job, field, value)
+    job.updated_at = datetime.now(UTC)
+    await job.save()
     return job

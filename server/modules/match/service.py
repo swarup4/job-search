@@ -4,8 +4,10 @@ from datetime import UTC, datetime
 
 from beanie import PydanticObjectId
 
-from modules.job import JobNotFound, JobStatus, JobUpdate, get_job, update_job
+from errors import Invalid, NotFound
+from modules.job import JobStatus, JobUpdate, get_job, update_job
 from modules.match.models import (
+    KeywordReview,
     KeywordSelection,
     Match,
     MatchWrite,
@@ -14,16 +16,14 @@ from modules.match.models import (
 )
 
 
-class MatchNotFound(Exception):
+class MatchNotFound(NotFound):
     def __init__(self, job_id: PydanticObjectId) -> None:
         super().__init__(f"no match for job {job_id}")
-        self.job_id = job_id
 
 
-class UnknownKeyword(Exception):
+class UnknownKeyword(Invalid):
     def __init__(self, keys: list[str]) -> None:
         super().__init__(f"not in this match's missing list: {', '.join(sorted(keys))}")
-        self.keys = keys
 
 
 async def write_match(payload: MatchWrite) -> Match:
@@ -37,9 +37,7 @@ async def write_match(payload: MatchWrite) -> Match:
         # must not inherit an approval given against different keywords.
         for field, value in payload.model_dump(exclude={"job_id"}).items():
             setattr(match, field, value)
-        match.review.state = ReviewState.PENDING
-        match.review.selected_keys = []
-        match.review.reviewed_at = None
+        match.review = KeywordReview()
         match.scored_at = datetime.now(UTC)
 
     await match.save()
@@ -63,9 +61,11 @@ async def record_selection(job_id: PydanticObjectId, payload: KeywordSelection) 
     if unknown:
         raise UnknownKeyword(unknown)
 
-    match.review.state = ReviewState.SKIPPED if payload.skip else ReviewState.SELECTED
-    match.review.selected_keys = [] if payload.skip else list(dict.fromkeys(payload.selected_keys))
-    match.review.reviewed_at = datetime.now(UTC)
+    match.review = KeywordReview(
+        state=ReviewState.SKIPPED if payload.skip else ReviewState.SELECTED,
+        selected_keys=[] if payload.skip else list(dict.fromkeys(payload.selected_keys)),
+        reviewed_at=datetime.now(UTC),
+    )
     await match.save()
     return match
 
@@ -74,14 +74,3 @@ async def pending_counts() -> PendingCounts:
     return PendingCounts(
         keyword_selections=await Match.find(Match.review.state == ReviewState.PENDING).count()
     )
-
-
-__all__ = [
-    "JobNotFound",
-    "MatchNotFound",
-    "UnknownKeyword",
-    "get_match",
-    "pending_counts",
-    "record_selection",
-    "write_match",
-]

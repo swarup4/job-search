@@ -1,6 +1,6 @@
 """Public interface of the event module."""
 
-from modules.event.models import Actor, Event, EventAppend, EventRead, EventType
+from modules.event.models import Actor, Event, EventAppend, EventFacts, EventRead, EventType
 from modules.event.router import router
 from modules.event.service import append_event, list_events
 
@@ -11,6 +11,7 @@ __all__ = [
     "Actor",
     "Event",
     "EventAppend",
+    "EventFacts",
     "EventRead",
     "EventType",
     "append_event",

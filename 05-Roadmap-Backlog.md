@@ -11,7 +11,8 @@
 
 ## 1. Roadmap (10 phases, single-user scope)
 
-Phases 0 and 1 are complete. The week estimates on Phases 2–9 count from the start of Phase 2, so
+Phases 0 and 1 are complete; Phase 2 is partly done — the REST API and data layer are built, the
+infrastructure around them is not. The week estimates on Phases 2–9 count from the start of Phase 2, so
 the original ~8–10 week figure still describes the work that remains.
 
 ### Phase 0 — Architecture & Planning ✅ complete
@@ -28,13 +29,20 @@ the original ~8–10 week figure still describes the work that remains.
 - `templates/base_resume.tex` written, Jinja2 render verified (never TeX-compiled)
 - **No backend behind any of it** — see [Implementation status](#implementation-status)
 
-### Phase 2 — Foundation (Week 1)
-- Define target role/location profile schema
-- Set up local MongoDB (structural data) + MongoDB Atlas free tier (vector-search collections) + Redis
-- Create `$vectorSearch` index on Atlas `jobs.jd_embedding`
-- Set up MongoDB MCP Server
-- Stand up LangGraph project skeleton with a no-op orchestrator
-- Pick and validate local LLM (Ollama for dev) — confirm tool-calling reliability
+### Phase 2 — Foundation (Week 1) 🚧 partial
+- ✅ Define target role/location profile schema — `profile.preferences`, see [doc 06](docs/06-Data-Model-ER.md)
+- ✅ FastAPI app + Beanie ODM over local MongoDB — six modules, eight collections, 28 endpoints over 20 paths
+- ✅ Local MongoDB structural store, with indexes created at startup
+- ⬜ MongoDB Atlas free tier + `$vectorSearch` index on `jd_embedding`
+- ⬜ Redis + Celery
+- ⬜ Set up MongoDB MCP Server *(superseded — structural data goes through `jobpilot_api` over HTTP;
+  see the FR-8.1 note in doc 02)*
+- ⬜ Stand up LangGraph project skeleton with a no-op orchestrator
+- ⬜ Pick and validate local LLM (Ollama for dev) — confirm tool-calling reliability
+
+**Not done and load-bearing:** `server/` has no tests. They were written and removed on request
+(2026-08-24), so the guardrail stories below cannot meet the §4 Definition of Done until they
+return — the enforcement is in the code, but the proof is not.
 
 ### Phase 3 — Job Discovery Agent (Weeks 2–3)
 - Integrate Indeed MCP + SerpAPI/Google CSE
@@ -114,12 +122,20 @@ artefacts exist, story incomplete. `—` — not started.
 ### Epic 1: Infrastructure & Data Layer
 | ID | Story | Priority | Status |
 |---|---|---|---|
-| INFRA-1 | Set up local MongoDB + Atlas free tier + `$vectorSearch` index | Must | — |
-| INFRA-2 | Set up MongoDB MCP Server | Must | — |
+| INFRA-1 | Set up local MongoDB + Atlas free tier + `$vectorSearch` index | Must | Partial — local store done, Atlas not started |
+| INFRA-2 | Set up MongoDB MCP Server | Must | Superseded — see FR-8.1 note in doc 02 |
 | INFRA-3 | Set up Redis + Celery for scheduling | Must | — |
 | INFRA-4 | Validate local LLM tool-calling reliability (Ollama, target model) | Must | — |
 | INFRA-5 | Set up Langfuse/Phoenix for eval/observability | Should | — |
 | INFRA-6 | CI/CD via GitHub Actions (lint/test on push) | Could | — |
+| API-1 | FastAPI app shell — thin `main.py`, localhost bind, CORS for web + extension | Must | Done |
+| API-2 | Beanie documents for all eight local collections, `ObjectId` keys | Must | Done |
+| API-3 | `job` module — create with dedup-hash check, list by status, shortlist | Must | Done |
+| API-4 | `match` module — write score/keywords, record the user's selection | Must | Done |
+| API-5 | `resume` module — store versioned `.tex` + selection set, reject unselected keywords | Must | Done |
+| API-6 | `application` module — stage, record fill, status transitions, answer bank | Must | Done |
+| API-7 | `event` + `profile` modules — audit log, profile, RAG chunk-text hop | Must | Done |
+| API-8 | Test suite for the API and its guardrails | Must | Removed on request — see Phase 2 note |
 
 ### Epic 2: Job Discovery
 | ID | Story | Priority | Status |

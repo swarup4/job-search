@@ -5,7 +5,7 @@ from enum import StrEnum
 
 import pymongo
 from beanie import Document, PydanticObjectId
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class EventType(StrEnum):
@@ -32,14 +32,16 @@ class Actor(StrEnum):
     SCHEDULER = "scheduler"
 
 
-class Event(Document):
-    job_id: PydanticObjectId | None = None
-    application_id: PydanticObjectId | None = None
-
+class EventFacts(BaseModel):
     event_type: EventType
     actor: Actor
+    job_id: PydanticObjectId | None = None
+    application_id: PydanticObjectId | None = None
     notes: str | None = None
     payload: dict[str, object] = Field(default_factory=dict)
+
+
+class Event(Document, EventFacts):
     occurred_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     class Settings:
@@ -53,25 +55,14 @@ class Event(Document):
         ]
 
 
-class EventAppend(BaseModel):
-    event_type: EventType
-    actor: Actor
-    job_id: PydanticObjectId | None = None
-    application_id: PydanticObjectId | None = None
-    notes: str | None = None
-    payload: dict[str, object] = Field(default_factory=dict)
+class EventAppend(EventFacts):
+    """Append-only: there is no update or delete on an event."""
 
 
-class EventRead(BaseModel):
+class EventRead(EventFacts):
+    # Responses always carry every field; inheriting a default must not
+    # make it optional in the schema.
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
     id: PydanticObjectId
-    job_id: PydanticObjectId | None
-    application_id: PydanticObjectId | None
-    event_type: EventType
-    actor: Actor
-    notes: str | None
-    payload: dict[str, object]
     occurred_at: datetime
-
-    @classmethod
-    def of(cls, event: Event) -> EventRead:
-        return cls(id=event.id, **event.model_dump(exclude={"id"}))
