@@ -18,6 +18,7 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+*.egg-info/
 
 # Node
 node_modules/
@@ -30,3 +31,4 @@ app/extension/dist/
 *.out
 
 .DS_Store
+.vscode/settings.json

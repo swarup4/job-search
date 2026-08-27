@@ -9,95 +9,47 @@ import { Field, Input, Textarea } from "@/component/ui/field";
 import { Button } from "@/component/ui/button";
 import { Badge } from "@/component/ui/badge";
 import { ROUTES } from "@/routes";
-import profile from "@/data/profile.json";
-import board from "@/data/board.json";
-import search from "@/data/search.json";
+import { getProfile, getShellCounts } from "@/services";
+import { ProfileIdentity } from "@/component/ProfileIdentity";
+import { EmptyProfile } from "@/component/EmptyProfile";
 import { cn } from "@/util/cn";
 
-export default function Page() {
-    const { personal, summary, experience, education, skillGroups, certifications } = profile;
+// Reads live data through axios, which Next cannot see the way it sees its own
+// fetch(). Without this the page is prerendered at build time and the profile is
+// frozen into the bundle — and a build with the API down would fail outright.
+export const dynamic = "force-dynamic";
+
+export default async function Page() {
+    const [profile, counts] = await Promise.all([getProfile(), getShellCounts()]);
+
+    if (!profile) {
+        return (
+            <AppShell active={ROUTES.profile} counts={counts}>
+                <EmptyProfile />
+            </AppShell>
+        );
+    }
+
+    const {
+        personal = {},
+        summary,
+        experience = [],
+        education = [],
+        skill_groups: skillGroups = [],
+        certifications = [],
+    } = profile;
     const totalSkills = skillGroups.reduce((n, g) => n + g.items.length, 0);
 
     return (
-        <AppShell
-            active={ROUTES.profile}
-            counts={{
-        pending: board.pending.keywordSelections + board.pending.applicationsToSubmit,
-        shortlisted: search.shortlistedCount,
-      }}
-        >
+        <AppShell active={ROUTES.profile} counts={counts}>
             <PageHeader
                 title="My details"
                 subtitle="Your resume material. Tailoring may only draw on what exists here — that constraint is what makes the no-fabrication rule enforceable."
-            >
-                <Button size="sm">
-                    <Save />
-                    Save changes
-                </Button>
-            </PageHeader>
+            />
 
             <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
                 <div className="flex flex-col gap-5">
-                    {/* PERSONAL */}
-                    <Panel>
-                        <PanelHeader>
-                            <PanelTitle>Personal details</PanelTitle>
-                        </PanelHeader>
-                        <PanelBody className="flex flex-col gap-5 py-5">
-                            <div className="flex flex-wrap items-center gap-4">
-                                <span className="grid size-16 shrink-0 place-items-center rounded-full bg-primary-tint text-[20px] font-semibold text-primary">
-                                    {personal.name.split(" ").map((p) => p[0]).join("")}
-                                </span>
-                                <div className="min-w-0">
-                                    <p className="text-[18px] font-semibold">{personal.name}</p>
-                                    <p className="mt-0.5 text-[13.5px] text-muted-foreground">{personal.headline}</p>
-                                </div>
-                                <span className="grow" />
-                                <Button variant="outline" size="sm">
-                                    <Pencil />
-                                    Replace photo
-                                </Button>
-                            </div>
-
-                            <div className="grid gap-5 sm:grid-cols-2">
-                                <Field label="Full name"><Input defaultValue={personal.name} /></Field>
-                                <Field label="Headline" hint="Context for scoring. Never written into the resume.">
-                                    <Input defaultValue={personal.headline} />
-                                </Field>
-                                <Field label="Email"><Input defaultValue={personal.email} /></Field>
-                                <Field label="Phone"><Input defaultValue={personal.phone} /></Field>
-                                <Field label="Location" className="sm:col-span-2">
-                                    <Input defaultValue={personal.location} />
-                                </Field>
-                            </div>
-
-                            <div>
-                                <p className="mb-2.5 text-[13px] font-medium">Links</p>
-                                <div className="flex flex-col gap-3">
-                                    {personal.links.map((l) => (
-                                        <div key={l.label} className="flex flex-wrap items-center gap-3">
-                                            <span className="w-20 shrink-0 text-[13px] text-muted-foreground">
-                                                {l.label}
-                                            </span>
-                                            <Input defaultValue={l.value} className="min-w-[240px] grow" />
-                                        </div>
-                                    ))}
-                                    <button className="inline-flex w-fit items-center gap-1.5 text-[13px] font-medium text-primary hover:underline">
-                                        <Plus className="size-[14px]" />
-                                        Add link
-                                    </button>
-                                </div>
-                            </div>
-                        </PanelBody>
-                    </Panel>
-
-                    {/* SUMMARY */}
-                    <Panel>
-                        <PanelHeader><PanelTitle>Professional summary</PanelTitle></PanelHeader>
-                        <PanelBody className="py-5">
-                            <Textarea defaultValue={summary} className="min-h-[124px]" />
-                        </PanelBody>
-                    </Panel>
+                    <ProfileIdentity profile={profile} />
 
                     {/* EXPERIENCE */}
                     <Panel>

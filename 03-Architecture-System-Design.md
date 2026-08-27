@@ -83,21 +83,47 @@ All agents run as LangGraph nodes in a single Python process (no A2A needed at s
 Vector search requires either Atlas or a Docker-based local `mongot` (native macOS build doesn't exist). Given macOS as the primary dev environment, vector-search-relevant data goes to **Atlas free tier**; everything else stays on **local MongoDB**, keeping the bulk of personal data off any cloud service.
 
 ### 3.2 Local MongoDB (structural)
+
+*As implemented in `server/modules/`. Every `_id` is an `ObjectId`; foreign keys are plain indexed
+`ObjectId` fields. Full field lists, indexes and rationale: [doc 06](docs/06-Data-Model-ER.md).*
 ```
-profile        { skills, certs, preferences, resume_master_data }
-jobs           { title, company, location, jd_text, source_url, posted_date, dedup_hash }
-matches        { job_id, match_score, present_keywords[], missing_keywords[], risk_flags[] }
-applications   { job_id, tex_version, tex_path, cover_letter, status, staged_at, submitted_at, approved_by_user }
-events         { job_id, event_type, timestamp, notes }
+profile            { email UK, personal, summary, experience[], education[], skill_groups[],
+                     certifications[], preferences, resume_template_path, chunk_count }
+resume_chunk_text  { chunk_id UK, section, text, source_ref }
+jobs               { title, company{}, location, job_type, work_mode, experience_band, salary_text,
+                     jd_text, summary, responsibilities[], requirements[], source, source_url,
+                     posted_at, deadline_at, dedup_hash UK, status, shortlisted }
+matches            { job_id UK, score, present[], missing[], risks[], review{state,
+                     selected_keys[], reviewed_at}, model_name }
+resumes            { job_id + version UK, match_id, file_path, template_path, selected_keys[],
+                     incorporated[], declined[], changes[] }
+applications       { job_id, resume_id, tex_path, ats, apply_url, status, fields_filled[],
+                     screening_answers[], approved_by_user, staged_at, submitted_at,
+                     follow_up_due_at }
+answer_bank        { key UK, question, answer, tags[], used_count }
+events             { job_id, application_id, event_type, actor, notes, payload, occurred_at }
 ```
+
+Three differences from the original sketch, each deliberate:
+
+- **`resumes` is its own collection.** The sketch put `tex_version`/`tex_path` on `applications`. A
+  job can be re-tailored, so the `.tex` needs its own versioned record with the selection set that
+  produced it — that record is what makes NFR-8 auditable.
+- **No `cover_letter`.** Out of v1 scope (PRD §5).
+- **`answer_bank` added.** FR-5.2 needs reusable screening answers; they are not per-application.
 
 ### 3.3 MongoDB Atlas (vector-search)
 ```
 jobs.jd_embedding          { job_id, embedding_vector, indexed via $vectorSearch }
-profile.resume_chunks      { chunk_id, section, text, embedding_vector, indexed via $vectorSearch }
+profile.resume_chunks      { chunk_id, section, embedding_vector, indexed via $vectorSearch }
 ```
 
-`job_id` is the shared join key across both stores.
+`job_id` and `chunk_id` are the join keys across the two stores.
+
+**Atlas holds vectors and identifiers only — never resume or JD prose.** The chunk `text` stays in
+local `resume_chunk_text`, and retrieval fetches it from `server` between the vector search and the
+rerank. Text at rest in a cloud database is a more durable exposure than text in an inference
+request.
 
 ### 3.4 Data Flow for a Single Job (end to end)
 1. Job Discovery Agent writes raw job → local `jobs`

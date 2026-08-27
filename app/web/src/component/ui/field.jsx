@@ -1,20 +1,29 @@
 import { cn } from "@/util/cn";
 
-function Field({ label, hint, children, className }) {
+// `label` and `hint` are optional: an unlabelled field (a summary textarea, a links
+// row) would otherwise reserve a blank label line and inherit the gap above it.
+// `error` replaces the hint rather than stacking under it, so the field does not
+// grow a line and shove the form down the moment validation fires.
+function Field({ label, hint, error, children, className }) {
     return (
         <label className={cn("flex flex-col gap-2", className)}>
-            <span className="text-[13px] font-medium">{label}</span>
+            {label ? <span className="text-[13px] font-medium">{label}</span> : null}
             {children}
-            {hint ? <span className="text-[12px] text-muted-foreground">{hint}</span> : null}
+            {error ? (
+                <span className="text-[12px] text-risk-muted">{error}</span>
+            ) : hint ? (
+                <span className="text-[12px] text-muted-foreground">{hint}</span>
+            ) : null}
         </label>
     );
 }
 
-function Input({ className, ...props }) {
+function Input({ className, invalid, ...props }) {
     return (
         <input
             className={cn(
                 "h-11 w-full rounded-sm border border-input bg-card px-3.5 text-[14px] outline-none transition-colors placeholder:text-muted-foreground focus:border-primary",
+                invalid && "border-risk-rule focus:border-risk-solid",
                 className
             )}
             {...props}
@@ -22,11 +31,12 @@ function Input({ className, ...props }) {
     );
 }
 
-function Textarea({ className, ...props }) {
+function Textarea({ className, invalid, ...props }) {
     return (
         <textarea
             className={cn(
                 "min-h-[104px] w-full resize-y rounded-sm border border-input bg-card px-3.5 py-2.5 text-[14px] leading-relaxed outline-none transition-colors placeholder:text-muted-foreground focus:border-primary",
+                invalid && "border-risk-rule focus:border-risk-solid",
                 className
             )}
             {...props}

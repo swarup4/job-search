@@ -6,10 +6,16 @@ JobPilot discovers relevant job openings, analyzes how well they match your resu
 
 > ⚠️ **Personal project.** Built for single-user use. No auth system, no multi-tenant support, and not intended for public deployment as-is.
 
+> 🚧 **Only the dashboard UI exists so far.** Eleven Next.js screens render against JSON
+> fixtures; `server/` and `ai/` are still empty directories, so there is no API, no database, no
+> agents and no LLM calls. Everything below describes the intended system — see
+> [Current state](#current-state) for what actually runs today.
+
 ---
 
 ## Table of Contents
 
+- [Current state](#current-state)
 - [Why](#why)
 - [Features](#features)
 - [Architecture](#architecture)
@@ -25,11 +31,51 @@ JobPilot discovers relevant job openings, analyzes how well they match your resu
 
 ---
 
+## Current state
+
+*Updated 2026-08-24.*
+
+| Area | Status |
+|---|---|
+| Dashboard UI — 11 screens | **built**, rendering against JSON fixtures in `app/web/src/data/` |
+| `templates/base_resume.tex` | **written**; Jinja2 render verified — but never compiled by a TeX engine, so its LaTeX validity is unconfirmed |
+| `server/` — REST API, local MongoDB | **built** — six modules, eight collections, 28 endpoints over 20 paths, Beanie over local MongoDB. **No tests** (removed on request), so guardrail stories are not Done per Roadmap §4 |
+| `ai/` — agents, RAG, MCP, eval | not started (empty directory) |
+| `app/extension/` — Chrome MV3 | not started |
+
+### What you can run today
+
+```bash
+# dashboard — fixtures, nothing persisted
+cd app/web && npm install && npm run dev
+
+# REST API — needs a local mongod running
+cd server && uv venv && uv pip install -e . && .venv/bin/python main.py
+```
+
+Open http://localhost:3000 for the dashboard, http://localhost:8000/docs for the API. Every screen
+navigates and the Resume Preview renders a real tailored `.tex` — but **the web app still reads JSON
+fixtures, not the API**; the two are not wired together yet. The
+[Getting Started](#getting-started) commands below target the full system and will still fail on the
+`ai/` and extension steps.
+
+Screens that exist: pipeline board, job search, shortlist, job details, keyword selection, resume
+preview, staged applications, my details, settings, login, signup.
+
+> **Login and signup are interface only.** They authenticate nothing, and they contradict this
+> project's own single-user design (PRD §4, SRS §42). They exist because they were asked for; either
+> the design docs get amended or the screens get removed. Tracked as TRACK-12 in the roadmap.
+
+---
+
 ## Why
 
 Manually job hunting at scale is repetitive: searching multiple sources daily, reading every JD to judge fit, tailoring a resume without over- or under-claiming skills, filling near-identical application forms across ATS platforms, and tracking it all in a spreadsheet. JobPilot automates the repetitive parts while keeping a human decision at every step that matters — what gets added to your resume, and whether an application actually gets submitted.
 
 ## Features
+
+The intended capability set. Only keyword selection and the resume preview have any
+implementation today, and both are UI against fixtures — see [Current state](#current-state).
 
 - 🔍 **Automated job discovery** — pulls fresh listings daily from Google/SerpAPI, Indeed (via MCP), LinkedIn, and Naukri
 - 🎯 **JD keyword matching & gap analysis** — extracts technical keywords from a JD, diffs them against your resume, and shows you exactly what's present vs. missing
@@ -111,7 +157,7 @@ So resume and JD prose **does** reach Voyage's API in flight. What never leaves 
 
 Two-stage retrieval: Voyage embed → `$vectorSearch` (top ~50) → fetch text from `server` → Voyage rerank → top ~5.
 
-> **Notes on the design docs.** Three decisions supersede the planning documents. (1) The dashboard is Next.js, not Streamlit/Gradio. (2) Agents reach structural data through `server`'s REST API rather than the MongoDB MCP Server (SRS FR-8.1) — one validation boundary, and no DB credentials in the agent process. (3) **SRS NFR-3 forbids sending any data to third-party inference APIs; using Voyage narrows that to "all generation is local."** If the original absolute guarantee matters more than retrieval quality, swap `ai/rag/embeddings.py` and `reranking.py` for a local embedding model — the rest of the pipeline is unchanged. Docs 02 and 03 still describe the earlier shape.
+> **Notes on the design docs.** Three decisions supersede the planning documents. (1) The dashboard is Next.js, not Streamlit/Gradio. (2) Agents reach structural data through `server`'s REST API rather than the MongoDB MCP Server (SRS FR-8.1) — one validation boundary, and no DB credentials in the agent process. (3) **SRS NFR-3 forbids sending any data to third-party inference APIs; using Voyage narrows that to "all generation is local."** If the original absolute guarantee matters more than retrieval quality, swap `ai/rag/embeddings.py` and `reranking.py` for a local embedding model — the rest of the pipeline is unchanged. (4) **Login and signup screens exist**, which PRD §4 and SRS §42 rule out; they are UI only and authenticate nothing. Docs 02 and 03 still describe the earlier shape.
 
 ## Tech Stack
 
@@ -135,6 +181,12 @@ Two-stage retrieval: Voyage embed → `$vectorSearch` (top ~50) → fetch text f
 | Observability | [Langfuse](https://langfuse.com/) or [Phoenix](https://phoenix.arize.com/) (self-hosted) |
 
 ## Getting Started
+
+> **These instructions describe the finished system and do not work yet.** Missing today:
+> no root `pyproject.toml` (so `uv sync` fails), no root `package.json` (so a root `npm install`
+> fails), no `server/.env.example` or `ai/.env.example` to copy, no `server/main.py`, no
+> `ai/orchestration/worker.py`, and no `app/extension/`. To run the dashboard, use
+> [What you can run today](#what-you-can-run-today) instead.
 
 ### Prerequisites
 
@@ -257,6 +309,9 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 
 Organized by **capability**, not by technical layer. Each module is a vertical slice.
 
+**This is the target layout.** Today `app/web/`, `server/` and `templates/` exist; `ai/` and
+`app/extension/` are empty or absent. See [Current state](#current-state).
+
 ```
 jobpilot/
 ├── app/
@@ -264,6 +319,7 @@ jobpilot/
 │   │   ├── public/
 │   │   └── src/
 │   │       ├── app/                #   App Router — routes AND screens
+│   │       │                       #   incl. login/ signup/ and jobs/[id]/{keywords,preview}
 │   │       ├── component/          #   app components + ui/ primitives
 │   │       ├── layout/             #   AppShell · Sidebar · Topbar
 │   │       ├── routes/             #   path constants + sidebar IA
@@ -285,8 +341,7 @@ jobpilot/
 │   │       ├── __init__.py         #     public interface
 │   │       ├── router.py
 │   │       ├── service.py          #     domain logic and this module's queries
-│   │       ├── models.py
-│   │       └── tests/
+│   │       └── models.py
 │   └── config/                     #   settings.py · database.py · deps.py
 │
 ├── ai/                             # agents, RAG, orchestration, MCP
@@ -316,19 +371,21 @@ Server modules are named after the **resource** they expose; agents after the **
 | [02 — Software Requirements Specification](02-SRS-Software-Requirements-Specification.md) | Functional & non-functional requirements |
 | [03 — Architecture & System Design](03-Architecture-System-Design.md) | Component design, data architecture, deployment |
 | [04 — UI/UX Wireframes & User Flows](04-UIUX-Wireframes-User-Flows.md) | Screens and end-to-end flows |
-| [05 — Roadmap & Backlog](05-Roadmap-Backlog.md) | Phased roadmap, epics, sprint breakdown |
+| [05 — Roadmap & Backlog](05-Roadmap-Backlog.md) | Phased roadmap, epics, sprint breakdown — carries a per-story status column |
+| [06 — Data Model / ER](docs/06-Data-Model-ER.md) | ER diagram, every collection's fields and indexes, and where each guardrail is enforced in the schema |
 
 ## Roadmap
 
-- [x] Project planning & architecture
-- [ ] Phase 0 — Foundation (DB setup, LLM validation, `$vectorSearch` index)
-- [ ] Phase 1 — Job Discovery Agent
-- [ ] Phase 2 — JD Match & Resume Tailor Agents
-- [ ] Phase 3 — Application Agent (Chrome extension)
-- [ ] Phase 4 — Tracking Dashboard
-- [ ] Phase 5 — Multi-agent Orchestration
-- [ ] Phase 6 — Eval & Guardrails
-- [ ] Phase 7 — Daily-use polish
+- [x] **Phase 0 — Architecture & Planning** (docs 01–05)
+- [x] **Phase 1 — Dashboard UI** — all screens, on JSON fixtures
+- [~] **Phase 2 — Foundation** — REST API and local data layer built; Atlas, Redis/Celery and LLM validation still open
+- [ ] Phase 3 — Job Discovery Agent
+- [ ] Phase 4 — JD Match & Resume Tailor Agents *(the two screens exist; the agents behind them do not)*
+- [ ] Phase 5 — Application Agent (Chrome extension)
+- [ ] Phase 6 — Tracking & Follow-up *(swap the dashboard's fixtures for real API calls; Sheets sync)*
+- [ ] Phase 7 — Multi-agent Orchestration
+- [ ] Phase 8 — Eval & Guardrails
+- [ ] Phase 9 — Daily-use polish
 
 Full detail in [`05-Roadmap-Backlog.md`](05-Roadmap-Backlog.md).
 
@@ -337,10 +394,12 @@ Full detail in [`05-Roadmap-Backlog.md`](05-Roadmap-Backlog.md).
 - **Human approval at every consequential step.** Resume content and application submission both require explicit user action — nothing is fabricated or auto-submitted. The orchestrator pauses at two interrupts and cannot be configured past them.
 - **No fabrication.** Only keywords you explicitly check reach the tailored resume. Retrieval finds content you already have; it is never permission to claim something new.
 - **Local-first, stated precisely.** All generation runs on your hardware. Embedding and reranking use Voyage; nothing else leaves. See [What leaves your machine](#what-leaves-your-machine) rather than trusting a slogan.
-- **Measured, not assumed.** Ragas faithfulness is the automated proof that the no-fabrication rule holds. A guardrail without a test is a hope.
+- **Measured, not assumed.** Ragas faithfulness is the automated proof that the no-fabrication rule holds. A guardrail without a test is a hope — and `server/` currently has none, which is why its guardrail stories are not marked Done.
 - **One tier, one database.** `server` owns the structural store, `ai` owns the vector store, and neither holds the other's connection string. The boundary is enforced by configuration, not by discipline.
 - **Real browser session for applying.** The Chrome extension fills forms inside your actual logged-in session rather than a separate automated browser — more reliable, and it avoids anti-bot detection.
 - **Single-user by design.** No auth, no multi-tenancy — kept intentionally simple for personal use.
+  *(Exception on record: `/login` and `/signup` screens exist as UI only and authenticate nothing.
+  They contradict this principle and are unresolved — see [Current state](#current-state).)*
 
 ## License
 
