@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from beanie import PydanticObjectId
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Query, status
 
 from modules.job import service
-from modules.job.models import JobCreate, JobCreated, JobRead, JobStatus, JobUpdate
+from modules.job.models import Job, JobCreate, JobCreated, JobRead, JobStatus, JobUpdate
 
 router = APIRouter(tags=["job"])
 
@@ -16,9 +16,8 @@ async def list_jobs(
     company: str | None = None,
     limit: int = Query(default=50, le=200),
     skip: int = 0,
-) -> list[JobRead]:
-    jobs = await service.list_jobs(job_status, shortlisted, company, limit, skip)
-    return [JobRead.of(job) for job in jobs]
+) -> list[Job]:
+    return await service.list_jobs(job_status, shortlisted, company, limit, skip)
 
 
 @router.post("", response_model=JobCreated, status_code=status.HTTP_201_CREATED)
@@ -27,16 +26,10 @@ async def create_job(payload: JobCreate) -> JobCreated:
 
 
 @router.get("/{job_id}", response_model=JobRead)
-async def get_job(job_id: PydanticObjectId) -> JobRead:
-    try:
-        return JobRead.of(await service.get_job(job_id))
-    except service.JobNotFound as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+async def get_job(job_id: PydanticObjectId) -> Job:
+    return await service.get_job(job_id)
 
 
 @router.patch("/{job_id}", response_model=JobRead)
-async def update_job(job_id: PydanticObjectId, payload: JobUpdate) -> JobRead:
-    try:
-        return JobRead.of(await service.update_job(job_id, payload))
-    except service.JobNotFound as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+async def update_job(job_id: PydanticObjectId, payload: JobUpdate) -> Job:
+    return await service.update_job(job_id, payload)

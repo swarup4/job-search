@@ -1,6 +1,12 @@
 """Public interface of the resume module."""
 
-from modules.resume.models import LineChange, ResumeRead, ResumeStore, TailoredResume
+from modules.resume.models import (
+    LineChange,
+    ResumeRead,
+    ResumeStore,
+    TailoredOutput,
+    TailoredResume,
+)
 from modules.resume.router import router
 from modules.resume.service import (
     Fabrication,
@@ -21,6 +27,7 @@ __all__ = [
     "ResumeRead",
     "ResumeStore",
     "SelectionGateNotPassed",
+    "TailoredOutput",
     "TailoredResume",
     "get_resume",
     "list_versions",

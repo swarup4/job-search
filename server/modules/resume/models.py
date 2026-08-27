@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 
 import pymongo
 from beanie import Document, PydanticObjectId
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class LineChange(BaseModel):
@@ -16,21 +16,25 @@ class LineChange(BaseModel):
     previous: str | None = None
 
 
-class TailoredResume(Document):
-    """FR-4.4 — a .tex path and the selection set that produced it. No PDF in v1."""
+class TailoredOutput(BaseModel):
+    """What the tailoring agent produced for one job."""
 
     job_id: PydanticObjectId
-    match_id: PydanticObjectId
-
-    version: int = Field(default=1, ge=1)
     file_path: str
     template_path: str = "templates/base_resume.tex"
-
-    # The audit trail NFR-8 requires: every line above traces back to these.
-    selected_keys: list[str] = Field(default_factory=list)
     incorporated: list[str] = Field(default_factory=list)
     declined: list[str] = Field(default_factory=list)
     changes: list[LineChange] = Field(default_factory=list)
+
+
+class TailoredResume(Document, TailoredOutput):
+    """FR-4.4 — a .tex path and the selection set that produced it. No PDF in v1."""
+
+    match_id: PydanticObjectId
+    version: int = Field(default=1, ge=1)
+
+    # The audit trail NFR-8 requires: every changed line traces back to these.
+    selected_keys: list[str] = Field(default_factory=list)
 
     rendered_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
@@ -43,30 +47,17 @@ class TailoredResume(Document):
         ]
 
 
-class ResumeStore(BaseModel):
+class ResumeStore(TailoredOutput):
     """What the tailoring agent posts once it has written the file."""
 
-    job_id: PydanticObjectId
-    file_path: str
-    incorporated: list[str] = Field(default_factory=list)
-    declined: list[str] = Field(default_factory=list)
-    changes: list[LineChange] = Field(default_factory=list)
-    template_path: str = "templates/base_resume.tex"
 
+class ResumeRead(TailoredOutput):
+    # Responses always carry every field; inheriting a default must not
+    # make it optional in the schema.
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
 
-class ResumeRead(BaseModel):
     id: PydanticObjectId
-    job_id: PydanticObjectId
     match_id: PydanticObjectId
     version: int
-    file_path: str
-    template_path: str
     selected_keys: list[str]
-    incorporated: list[str]
-    declined: list[str]
-    changes: list[LineChange]
     rendered_at: datetime
-
-    @classmethod
-    def of(cls, resume: TailoredResume) -> ResumeRead:
-        return cls(id=resume.id, **resume.model_dump(exclude={"id"}))

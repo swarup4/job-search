@@ -5,7 +5,7 @@ from enum import StrEnum
 
 import pymongo
 from beanie import Document, PydanticObjectId
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class ReviewState(StrEnum):
@@ -51,18 +51,20 @@ class KeywordReview(BaseModel):
         return self
 
 
-class Match(Document):
-    job_id: PydanticObjectId
+class MatchFindings(BaseModel):
+    """What the matching agent produced. The JD vector goes to Atlas, never here."""
 
+    job_id: PydanticObjectId
     score: int = Field(ge=0, le=100)
     present: list[PresentKeyword] = Field(default_factory=list)
     missing: list[MissingKeyword] = Field(default_factory=list)
     risks: list[RiskFlag] = Field(default_factory=list)
-
-    review: KeywordReview = Field(default_factory=KeywordReview)
-
     # Which local model produced this, so a re-score is comparable.
     model_name: str | None = None
+
+
+class Match(Document, MatchFindings):
+    review: KeywordReview = Field(default_factory=KeywordReview)
     scored_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     class Settings:
@@ -74,15 +76,18 @@ class Match(Document):
         ]
 
 
-class MatchWrite(BaseModel):
+class MatchWrite(MatchFindings):
     """What the matching agent posts. The vector goes to Atlas, never here."""
 
-    job_id: PydanticObjectId
-    score: int = Field(ge=0, le=100)
-    present: list[PresentKeyword] = Field(default_factory=list)
-    missing: list[MissingKeyword] = Field(default_factory=list)
-    risks: list[RiskFlag] = Field(default_factory=list)
-    model_name: str | None = None
+
+class MatchRead(MatchFindings):
+    # Responses always carry every field; inheriting a default must not
+    # make it optional in the schema.
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
+    id: PydanticObjectId
+    review: KeywordReview
+    scored_at: datetime
 
 
 class KeywordSelection(BaseModel):
@@ -90,22 +95,6 @@ class KeywordSelection(BaseModel):
 
     selected_keys: list[str] = Field(default_factory=list)
     skip: bool = False
-
-
-class MatchRead(BaseModel):
-    id: PydanticObjectId
-    job_id: PydanticObjectId
-    score: int
-    present: list[PresentKeyword]
-    missing: list[MissingKeyword]
-    risks: list[RiskFlag]
-    review: KeywordReview
-    model_name: str | None
-    scored_at: datetime
-
-    @classmethod
-    def of(cls, match: Match) -> MatchRead:
-        return cls(id=match.id, **match.model_dump(exclude={"id"}))
 
 
 class PendingCounts(BaseModel):

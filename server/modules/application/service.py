@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 
 from beanie import PydanticObjectId
 
+from errors import Conflict, NotFound
 from modules.application.models import (
     AnswerBank,
     Application,
@@ -14,31 +15,29 @@ from modules.application.models import (
 )
 
 
-class ApplicationNotFound(Exception):
+class ApplicationNotFound(NotFound):
     def __init__(self, application_id: PydanticObjectId) -> None:
         super().__init__(f"application {application_id} not found")
-        self.application_id = application_id
 
 
-class SubmitNotConfirmed(Exception):
+class SubmitNotConfirmed(Conflict):
     """FR-5.3 / NFR-7 — nothing may report itself as submitted on its own."""
 
 
 async def stage_application(payload: ApplicationStage) -> Application:
-    existing = await Application.find_one(
+    """Re-tailoring a job updates the staged application rather than adding a second one."""
+    application = await Application.find_one(
         Application.job_id == payload.job_id,
         Application.status == ApplicationStatus.STAGED,
     )
-    if existing is not None:
-        existing.resume_id = payload.resume_id
-        existing.tex_path = payload.tex_path
-        existing.ats = payload.ats
-        existing.apply_url = payload.apply_url
-        await existing.save()
-        return existing
+    if application is None:
+        application = Application(**payload.model_dump())
+        await application.insert()
+        return application
 
-    application = Application(**payload.model_dump())
-    await application.insert()
+    for field, value in payload.model_dump().items():
+        setattr(application, field, value)
+    await application.save()
     return application
 
 
@@ -104,8 +103,7 @@ async def set_status(
 async def due_for_follow_up(now: datetime | None = None) -> list[Application]:
     moment = now or datetime.now(UTC)
     return await Application.find(
-        Application.follow_up_due_at != None,
-        Application.follow_up_due_at <= moment,
+        {"follow_up_due_at": {"$ne": None, "$lte": moment}},
     ).to_list()
 
 
