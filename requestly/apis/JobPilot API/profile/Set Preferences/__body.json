@@ -1,0 +1,6 @@
+{
+  "$schema": "https://assets.requestly.com/local/v1.15.0/body.json",
+  "contentType": "json",
+  "raw": "{\n  \"targets\": {\n    \"roles\": [\n      \"string\"\n    ],\n    \"locations\": [\n      \"string\"\n    ],\n    \"work_mode\": \"string\",\n    \"min_experience\": 0,\n    \"max_experience\": 0,\n    \"min_salary\": \"string\"\n  },\n  \"company\": {\n    \"preferred\": [\n      \"string\"\n    ],\n    \"excluded\": [\n      \"string\"\n    ],\n    \"sizes\": [\n      {\n        \"label\": \"string\",\n        \"on\": false\n      }\n    ],\n    \"industries\": [\n      \"string\"\n    ],\n    \"avoid_staffing\": false\n  },\n  \"discovery\": {\n    \"schedule_cron\": \"0 6 * * *\",\n    \"min_match\": 70,\n    \"dedupe\": true,\n    \"respect_robots\": true,\n    \"sources\": [\n      {\n        \"name\": \"string\",\n        \"on\": true,\n        \"found\": 0\n      }\n    ]\n  },\n  \"applications\": {\n    \"follow_up_days\": 5,\n    \"sheet_sync\": false,\n    \"sheet_name\": \"string\",\n    \"auto_submit\": false\n  },\n  \"ai\": {\n    \"llm\": \"qwen2.5:32b\",\n    \"llm_host\": \"http://localhost:11434\",\n    \"embed_model\": \"string\",\n    \"rerank\": true,\n    \"judge\": \"local (Ollama)\"\n  }\n}",
+  "rawContentType": "application/json"
+}

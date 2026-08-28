@@ -1,0 +1,23 @@
+[
+  {
+    "id": 0,
+    "key": "job_id",
+    "value": "",
+    "isEnabled": false,
+    "description": ""
+  },
+  {
+    "id": 1,
+    "key": "event_type",
+    "value": "",
+    "isEnabled": false,
+    "description": ""
+  },
+  {
+    "id": 2,
+    "key": "limit",
+    "value": "100",
+    "isEnabled": false,
+    "description": ""
+  }
+]

@@ -1,0 +1,6 @@
+{
+  "$schema": "https://assets.requestly.com/local/v1.15.0/body.json",
+  "contentType": "json",
+  "raw": "{\n  \"fields_filled\": [\n    {\n      \"selector\": \"string\",\n      \"label\": \"string\",\n      \"value\": \"string\",\n      \"source\": \"string\",\n      \"highlighted\": true\n    }\n  ],\n  \"screening_answers\": [\n    {\n      \"question\": \"string\",\n      \"answer\": \"string\",\n      \"answered_by_user\": false\n    }\n  ]\n}",
+  "rawContentType": "application/json"
+}
