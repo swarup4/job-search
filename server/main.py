@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -10,9 +8,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from config.database import connect, disconnect
 from errors import DomainError, handle_domain_error
-from modules import application, event, job, match, profile, resume
+from modules import application, event, job, match, profile, resume, user
 
-MODULES = (job, match, resume, application, event, profile)
+MODULES = (job, match, resume, application, event, profile, user)
 
 
 @asynccontextmanager
@@ -23,7 +21,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="JobPilot API", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="JobPilot API", version="1.0.0", lifespan=lifespan)
 
     app.add_middleware(
         CORSMiddleware,

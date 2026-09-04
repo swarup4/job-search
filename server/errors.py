@@ -4,8 +4,6 @@ A service raises the error that describes what went wrong; the handler registere
 in `main.py` turns it into a response. Routers catch nothing.
 """
 
-from __future__ import annotations
-
 from fastapi import Request
 from fastapi.responses import JSONResponse
 

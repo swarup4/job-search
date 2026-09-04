@@ -1,0 +1,125 @@
+%% ============================================================
+%%  SWARUP SAHA — Resume Template 5: Teal Timeline
+%%  Design: left connecting rail + dots per role, teal accent, rounded skill chips
+%% ============================================================
+%% !TEX program = pdflatex
+
+\documentclass[10pt, letterpaper]{article}
+
+\usepackage[top=0.12in, bottom=0.12in, left=0.55in, right=0.55in]{geometry}
+\usepackage[table]{xcolor}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{microtype}
+\usepackage{parskip}
+\setlength{\parskip}{0pt}
+\usepackage{fontawesome5}
+\usepackage{ragged2e}
+\usepackage{tikz}
+\usepackage[skins,breakable]{tcolorbox}
+\usepackage[T1]{fontenc}
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+
+\definecolor{accent}{HTML}{0F6E56}
+\definecolor{accentlight}{HTML}{9FE1CB}
+\definecolor{textmain}{HTML}{1A1A1A}
+\definecolor{textmuted}{HTML}{757B80}
+\definecolor{tagbg}{HTML}{E1F5EE}
+\definecolor{tagtext}{HTML}{085041}
+\colorlet{ACCENT}{accent}
+
+\hypersetup{colorlinks=true, urlcolor=accent, linkcolor=accent,
+  pdfauthor={Swarup Saha}, pdftitle={Swarup Saha --- Resume}}
+\pagestyle{empty}
+
+\titleformat{\section}
+  {\color{accent}\fontsize{10}{12}\bfseries\MakeUppercase}{}{0em}{}
+  [\vspace{-4pt}\textcolor{accent}{\rule{\linewidth}{0.6pt}}\vspace{2pt}]
+\titlespacing{\section}{0pt}{2pt}{1pt}
+
+\setlist[itemize]{leftmargin=12pt, itemsep=0pt, parsep=0pt, topsep=0pt,
+  label=\textcolor{textmain}{\textbullet}}
+
+\newcommand{\educrow}[3]{\par\noindent{\fontsize{9.5}{11}\bfseries\color{textmain}#1}\hfill{\fontsize{9}{10.5}\color{textmuted}#3}\\{\fontsize{9}{10.5}\color{textmuted}#2}\par\vspace{0pt}}
+\newcommand{\contactitem}[2]{{\color{accent}#1}\ {\color{textmuted}\fontsize{9}{11}\selectfont #2}}
+\newcommand{\certrow}[3]{\noindent{\fontsize{9.5}{11}\bfseries\color{textmain}#1}{\color{textmuted}\ \ \textbar\ \ }{\color{textmuted}#2}\hfill{\fontsize{9}{11}\color{textmuted}#3}\\[2pt]}
+\newcommand{\skilltag}[1]{\tikz[baseline=-0.6ex]{\node[fill=tagbg, rounded corners=5pt, inner sep=4pt, text=tagtext, font=\fontsize{8.5}{10}\selectfont]{#1};}}
+
+%% Timeline role block: colored left rail via tcolorbox borderline, dot marker at top
+\tcbset{timeline/.style={
+  breakable, enhanced, colback=white, boxrule=0pt, left=10pt, right=0pt, top=0.5pt, bottom=0.5pt,
+  borderline west={1.4pt}{0pt}{accentlight},
+  before skip=0pt, after skip=0pt
+}}
+\newcommand{\timelinerole}[4]{%
+  \begin{tcolorbox}[timeline]
+  \tikz[baseline=-0.5ex]{\fill[accent] (0,0) circle (2.3pt);}\hspace{2pt}%
+  {\fontsize{10.5}{13}\bfseries\color{textmain}#1}\ {\color{textmuted}--- #2}
+  \hfill{\fontsize{9}{11}\color{textmuted}#3}\\[2pt]
+  {\fontsize{8.4}{11}\color{textmain}
+  \begin{itemize}#4\end{itemize}}
+  \end{tcolorbox}}
+
+\begin{document}
+
+\begin{center}
+  {\fontsize{19}{22}\bfseries\color{textmain} SWARUP SAHA}\\[2pt]
+  {\fontsize{9.5}{11}\color{accent} Technical Lead \& Full Stack / GenAI Engineer}\\[4pt]
+  \contactitem{\faPhone}{+91-90358-45781}\enspace
+  \contactitem{\faEnvelope}{\href{mailto:swarup.saha004@hotmail.com}{swarup.saha004@hotmail.com}}\enspace
+  \contactitem{\faMapMarker*}{Bengaluru, India}\enspace
+  \contactitem{\faLinkedin}{\href{https://linkedin.com/in/swarup-saha-d7}{linkedin.com/in/swarup-saha-d7}}\enspace
+  \contactitem{\faGithub}{\href{https://github.com/swarup4}{github.com/swarup4}}
+\end{center}
+\vspace{-2pt}
+\textcolor{accent}{\rule{\linewidth}{1pt}}
+
+\section{\faUser\ Professional Summary}
+{\fontsize{8.4}{11}\color{textmain}
+Technical Lead and Full Stack / GenAI Engineer with 12.4 years of experience building scalable
+web applications and AI-powered systems. Deep expertise in MERN/MEAN stack, LangChain,
+LangGraph, Azure OpenAI, and Agentic AI/RAG pipelines. Proven track record delivering
+multi-tenant SaaS platforms, ML models, and LLM-based products at enterprise scale. Skilled
+at leading cross-functional agile teams and owning full SDLC from design to deployment.}
+
+\section{\faCogs\ Technical Skills}
+\vspace{2pt}
+\skilltag{JavaScript}\ \skilltag{TypeScript}\ \skilltag{React.js}\ \skilltag{Node.js}\ \skilltag{Python}\ \skilltag{FastAPI}\
+\skilltag{LangChain}\ \skilltag{LangGraph}\ \skilltag{Azure OpenAI}\ \skilltag{MongoDB}\ \skilltag{PostgreSQL}\ \skilltag{Redis}\
+\skilltag{AWS}\ \skilltag{Azure}\ \skilltag{Docker}\ \skilltag{CI/CD}\ \skilltag{Agentic AI}\ \skilltag{RAG}\ \skilltag{Microservices}
+\section{\faBriefcase\ Work Experience}
+\timelinerole{Technical Lead}{Trigent Software Pvt. Ltd.}{Jul 2023 -- Present \textperiodcentered\ Bengaluru}{%
+  \item Architected a multi-tenant, cloud-native SaaS platform (Zeltri) for care homes using MERN stack, FastAPI, MongoDB Atlas, Redis, and Azure with strict RBAC/ABAC across 10+ facilities.
+  \item Integrated Agentic AI, Multi-Agent Orchestration \& RAG pipelines using LangChain, LangGraph, MCP, LangSmith, and Azure OpenAI for semantic search and automated workflows.}
+
+\timelinerole{Technical Lead}{Encora Inc.}{Aug 2022 -- Jun 2023 \textperiodcentered\ Bengaluru}{%
+  \item Developed an ML model (Random Forest + XGBoost) to predict loan eligibility and detect fraud for Brightside.
+  \item Built a serverless backend on AWS Lambda, Node.js, and MySQL with CI/CD via Azure DevOps and hardened security practices.}
+
+\timelinerole{Senior Software Engineer}{Larsen \& Toubro Infotech (LTI)}{May 2019 -- Jul 2022 \textperiodcentered\ Bengaluru}{%
+  \item Built an AI-powered Virtual Assistant chatbot for Travelers using RASA, Python, and MongoDB with Azure Service Bus \& RabbitMQ; developed full-stack features with React, Redux, and Node.js on AWS Lambda.}
+
+\timelinerole{Senior Software Engineer}{Mphasis Ltd.}{Jun 2017 -- May 2019 \textperiodcentered\ Bengaluru}{%
+  \item Built EcoReach, an IoT commissioning tool for Automatic Circuit Breakers with Schneider Electric, using Angular.js, Node.js, and Socket.IO.}
+
+\timelinerole{UI Developer}{Harman Connected Services}{Aug 2015 -- Jun 2017 \textperiodcentered\ Bengaluru}{%
+  \item Engineered the I2E retail store management and supply chain optimization tool for EYC using Angular Material, Angular.js, Node.js, and MySQL.}
+
+\timelinerole{UI / Web Developer}{SMACera \& Gowyn Technologies}{Apr 2014 -- Aug 2015}{%
+  \item Contributed to E-commerce CMS development for client P\&G (Angular.js, HTML \& CSS) and built LIMOUSINE GROUP, a PHP-based car booking site for Canada, using HTML, CSS \& Bootstrap.}
+
+\section{\faGraduationCap\ Education}
+\educrow{MCA --- Machine Learning \& Artificial Intelligence}{Amity University, Delhi}{Jul 2022 -- Aug 2024}
+\educrow{BSc. IT --- Information Technology}{Kuvempu University, Delhi}{Jun 2010 -- May 2013}
+\educrow{GNIIT --- Diploma in Information Technology}{NIIT University, Delhi}{Jun 2009 -- May 2012}
+
+\section{\faCertificate\ Certifications}
+\certrow{Azure Ai Cloud Developer Associate}{Microsoft Azure}{July 2026}
+\certrow{Azure AI Apps and Agents Developer Associate}{Microsoft Azure}{Jun 2026}
+\certrow{AWS Certified Developer Associate}{AWS}{Jun 2026}
+
+\end{document}
