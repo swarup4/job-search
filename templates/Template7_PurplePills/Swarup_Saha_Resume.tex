@@ -1,0 +1,156 @@
+%% ============================================================
+%%  SWARUP SAHA — Resume Template 7: Purple Pills
+%%  Design: filled pill-shaped section labels, rounded skill chips, date badges
+%% ============================================================
+%% !TEX program = pdflatex
+
+\documentclass[10pt, letterpaper]{article}
+
+\usepackage[top=0.40in, bottom=0.40in, left=0.60in, right=0.60in]{geometry}
+\usepackage[table]{xcolor}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{microtype}
+\usepackage{parskip}
+\usepackage{fontawesome5}
+\usepackage{ragged2e}
+\usepackage{tikz}
+\usepackage[T1]{fontenc}
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+
+\definecolor{accent}{HTML}{534AB7}
+\definecolor{accentdark}{HTML}{3C3489}
+\definecolor{textmain}{HTML}{1A1A1A}
+\definecolor{textmuted}{HTML}{757B80}
+\definecolor{tagbg}{HTML}{EEEDFE}
+\definecolor{tagtext}{HTML}{3C3489}
+\definecolor{datebg}{HTML}{CECBF6}
+\definecolor{datetext}{HTML}{26215C}
+\colorlet{ACCENT}{accent}
+
+\hypersetup{colorlinks=true, urlcolor=accent, linkcolor=accent,
+  pdfauthor={Swarup Saha}, pdftitle={Swarup Saha --- Resume}}
+\pagestyle{empty}
+
+\titlespacing{\section}{0pt}{10pt}{4pt}
+\titleformat{\section}{}{}{0em}{}
+
+\newcommand{\seclabel}[1]{\noindent\tikz[baseline=-0.5ex]{\node[fill=accent, rounded corners=6.5pt, inner sep=5pt, text=white, font=\fontsize{8.5}{10}\bfseries\selectfont]{\MakeUppercase{#1}};}\par\vspace{4pt}}
+
+\setlist[itemize]{leftmargin=14pt, itemsep=0.5pt, parsep=0pt, topsep=0.5pt,
+  label=\textcolor{textmain}{\textbullet}}
+
+\newcommand{\contactitem}[2]{{\color{accent}#1}\ {\color{textmuted}\fontsize{9}{11}\selectfont #2}}
+\newcommand{\educrow}[3]{\noindent{\fontsize{10}{12}\bfseries\color{textmain}#1}\hfill\tikz[baseline=-0.5ex]{\node[fill=datebg, rounded corners=6pt, inner sep=4pt, text=datetext, font=\fontsize{8}{10}\selectfont]{#3};}\\{\fontsize{9.5}{11}\color{textmuted}#2}\vspace{5pt}}
+\newcommand{\certrow}[3]{\noindent{\fontsize{9.5}{11}\bfseries\color{textmain}#1}{\color{textmuted}\ \ \textbar\ \ }{\color{textmuted}#2}\hfill\tikz[baseline=-0.5ex]{\node[fill=datebg, rounded corners=6pt, inner sep=4pt, text=datetext, font=\fontsize{8}{10}\selectfont]{#3};}\\[7pt]}
+\newcommand{\skilltag}[1]{\tikz[baseline=-0.6ex]{\node[fill=tagbg, rounded corners=5pt, inner sep=4pt, text=tagtext, font=\fontsize{8.5}{10}\selectfont]{#1};}}
+
+\newcommand{\jobtitle}[4]{%
+  \vspace{1pt}\noindent
+  {\fontsize{10.5}{13}\bfseries\color{textmain}#1}\ {\color{textmuted}--- #2}
+  \hfill\tikz[baseline=-0.5ex]{\node[fill=datebg, rounded corners=6pt, inner sep=4pt, text=datetext, font=\fontsize{8}{10}\selectfont]{#3\ \textperiodcentered\ #4};}\vspace{2pt}}
+\newcommand{\projectlabel}[1]{\vspace{1pt}\noindent{\fontsize{9.5}{11}\bfseries\itshape\color{accentdark}#1}\vspace{1pt}}
+
+\begin{document}
+
+\begin{center}
+  {\fontsize{22}{26}\bfseries\color{textmain} SWARUP SAHA}\\[3pt]
+  {\fontsize{11}{13}\color{accent} Technical Lead \& Full Stack / GenAI Engineer}\\[6pt]
+  \contactitem{\faPhone}{+91-90358-45781}\enspace
+  \contactitem{\faEnvelope}{\href{mailto:swarup.saha004@hotmail.com}{swarup.saha004@hotmail.com}}\enspace
+  \contactitem{\faMapMarker*}{Bengaluru, India}\enspace
+  \contactitem{\faLinkedin}{\href{https://linkedin.com/in/swarup-saha-d7}{linkedin.com/in/swarup-saha-d7}}\enspace
+  \contactitem{\faGithub}{\href{https://github.com/swarup4}{github.com/swarup4}}
+\end{center}
+\vspace{4pt}
+
+\seclabel{Summary}
+{\fontsize{9}{13}\color{textmain}
+Technical Lead and Full Stack / GenAI Engineer with 12.4 years of experience building scalable
+web applications and AI-powered systems. Deep expertise in MERN/MEAN stack, LangChain,
+LangGraph, Azure OpenAI, and Agentic AI/RAG pipelines. Proven track record delivering
+multi-tenant SaaS platforms, ML models, and LLM-based products at enterprise scale. Skilled
+at leading cross-functional agile teams and owning full SDLC from design to deployment.}
+
+\seclabel{Skills}
+\skilltag{JavaScript}\ \skilltag{TypeScript}\ \skilltag{React.js}\ \skilltag{Redux}\ \skilltag{Next.js}\ \skilltag{Angular}\ \skilltag{Tailwind CSS}\\[4pt]
+\skilltag{Node.js}\ \skilltag{Express.js}\ \skilltag{Python}\ \skilltag{FastAPI}\ \skilltag{Flask}\ \skilltag{MongoDB}\ \skilltag{PostgreSQL}\ \skilltag{MySQL}\\[4pt]
+\skilltag{Agentic AI}\ \skilltag{RASA}\ \skilltag{LangChain}\ \skilltag{LangGraph}\ \skilltag{LangSmith}\ \skilltag{Azure OpenAI}\ \skilltag{MCP}\ \skilltag{CrewAI}\\[4pt]
+\skilltag{AWS}\ \skilltag{Azure}\ \skilltag{Docker}\ \skilltag{Nginx}\ \skilltag{Git}\ \skilltag{CI/CD}\ \skilltag{Jenkins}\ \skilltag{Azure DevOps}\\[4pt]
+\skilltag{Jest}\ \skilltag{Mocha}\ \skilltag{XSS/CSRF}\ \skilltag{RBAC/ABAC}\ \skilltag{Agile/Scrum}\ \skilltag{Microservices}
+\vspace{4pt}
+
+\seclabel{Experience}
+
+\jobtitle{Technical Lead}{Trigent Software Pvt. Ltd.}{Jul 2023 -- Present}{Bengaluru}
+\projectlabel{Zeltri (Multi-Tenant Elder Care Management Platform)}
+\begin{itemize}
+  \item Architected a multi-tenant, cloud-native SaaS platform for care homes and assisted-living providers using MERN stack, FastAPI, MongoDB Atlas, Redis, and Azure; enforced strict tenant isolation, RBAC/ABAC security, and scalable REST APIs across 10+ facilities.
+  \item Integrated Agentic AI, Multi-Agent Orchestration \& RAG pipelines using LangChain, LangGraph, MCP, LangSmith, and Azure OpenAI with MongoDB Atlas as vector stores to enable semantic document search, email intelligence, conversational assistance, and automated task workflows.
+\end{itemize}
+\projectlabel{CV (AI-Powered Social Media Reels Generation)}
+\begin{itemize}
+  \item Developed an end-to-end AI-powered content pipeline for automated Reels creation across YouTube, Instagram, and Facebook; integrated Azure OpenAI (script generation), multilingual translation, Whisper (TTS), Midjourney (image gen), and RunwayML (video render), reducing production cycles by 60\%.
+\end{itemize}
+\projectlabel{PlanITRoI (Refurbished Laptop Price Prediction \& Specification Extraction)}
+\begin{itemize}
+  \item Designed microservices-based data pipelines using Node.js, Python, and PostgreSQL with event-driven processing for large-scale web scraping and data normalization.
+  \item Developed ML models for spec extraction and price prediction using KNN with fuzzy logic, Random Forest, and LLM-assisted enrichment, improving pricing accuracy and catalog quality.
+\end{itemize}
+\projectlabel{Sizeright (Shoe Measurement \& Sizing Solution)}
+\begin{itemize}
+  \item Built a cloud-native Flask web widget on AWS for real-time shoe sizing; developed scalable RESTful APIs with predictive ML models (Random Forest, KNN) for accurate measurement recommendations.
+\end{itemize}
+
+\jobtitle{Technical Lead}{Encora Inc.}{Aug 2022 -- Jun 2023}{Bengaluru}
+\begin{itemize}
+  \item Developed an ML model (Random Forest + XGBoost) for Brightside to predict loan eligibility and detect fraud by analyzing credit scores, employment, and financial history.
+  \item Built a serverless, cloud-native backend on AWS Lambda, Node.js, and MySQL for scalable loan evaluation services; implemented CI/CD pipelines using Azure DevOps and enforced security best practices including SQL injection prevention, XSS protection, and rate limiting.
+  \item Authored unit tests and integration tests using Jest, Chai, and Mocha to ensure code coverage and vulnerability remediation across critical loan processing modules.
+  \item Designed and implemented ETL pipelines using Python and AWS Glue for automated data extraction and transformation, streamlining ML model training workflows.
+\end{itemize}
+
+\jobtitle{Senior Software Engineer}{Larsen \& Toubro Infotech (LTI)}{May 2019 -- Jul 2022}{Bengaluru}
+\begin{itemize}
+  \item Built an AI-powered Virtual Assistant chatbot for Travelers (insurance domain) using RASA, Python, and MongoDB, significantly improving automated query resolution; used Azure Service Bus \& RabbitMQ for event-driven message processing and Tableau for reporting and visualization.
+  \item Developed full-stack features with React, Redux, Node.js, and integrated AWS Lambda, Amplify, S3, API Gateway, and EC2 for scalable policy data access; managed deployments via Jenkins CI/CD pipelines and wrote unit tests using Sinon, Supertest, and Mocha.
+\end{itemize}
+
+\jobtitle{Senior Software Engineer}{Mphasis Ltd.}{Jun 2017 -- May 2019}{Bengaluru}
+\begin{itemize}
+  \item Collaborated with Schneider Electric to build EcoReach, an IoT commissioning tool for Automatic Circuit Breakers using Angular.js, Node.js, and Socket.IO for real-time device data retrieval and cloud-based analysis.
+\end{itemize}
+
+\jobtitle{UI Developer}{Harman Connected Services}{Aug 2015 -- Jun 2017}{Bengaluru}
+\begin{itemize}
+  \item Engineered the I2E retail store management and supply chain optimization tool for EYC using Angular Material, Angular.js, Node.js, and MySQL.
+\end{itemize}
+
+\jobtitle{UI Developer}{SMACera Technologies (Mindtree Ltd.)}{Dec 2014 -- Aug 2015}{Bengaluru}
+\begin{itemize}
+  \item Contributed to E-commerce CMS development for client P\&G using Angular.js and HTML \& CSS, working on various product websites.
+\end{itemize}
+
+\jobtitle{Web Developer}{Gowyn Technologies Pvt. Ltd.}{Apr 2014 -- Nov 2014}{Delhi}
+\begin{itemize}
+  \item Built and maintained LIMOUSINE GROUP, a PHP-based car booking site for Canada, using HTML, CSS, \& Bootstrap to deliver premium car services.
+\end{itemize}
+
+\vspace{3pt}
+\seclabel{Education}
+\educrow{MCA --- Machine Learning \& Artificial Intelligence}{Amity University, Delhi}{Jul 2022 -- Aug 2024}
+\educrow{BSc. IT --- Information Technology}{Kuvempu University, Delhi}{Jun 2010 -- May 2013}
+\educrow{GNIIT --- Diploma in Information Technology}{NIIT University, Delhi}{Jun 2009 -- May 2012}
+
+\vspace{3pt}
+\seclabel{Certifications}
+\certrow{Azure Ai Cloud Developer Associate}{Microsoft Azure}{July 2026}
+\certrow{Azure AI Apps and Agents Developer Associate}{Microsoft Azure}{Jun 2026}
+\certrow{AWS Certified Developer Associate}{AWS}{Jun 2026}
+\certrow{Building AI Agents with MongoDB}{MongoDB}{May 2026}
+
+\end{document}
