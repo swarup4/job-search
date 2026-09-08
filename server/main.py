@@ -8,9 +8,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from config.database import connect, disconnect
 from errors import DomainError, handle_domain_error
-from modules import application, event, job, match, profile, resume, user
+from modules import account, application, event, job, match, profile, resume, user
 
-MODULES = (job, match, resume, application, event, profile, user)
+MODULES = (job, match, resume, application, event, profile, user, account)
 
 
 @asynccontextmanager

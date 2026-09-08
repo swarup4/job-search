@@ -1,4 +1,4 @@
-from modules.user.models import Login, SignUp, User
+from modules.user.models import Login, SignUp, User, UserResponse
 
 
 async def sign_up(user: SignUp) -> User:
@@ -7,7 +7,7 @@ async def sign_up(user: SignUp) -> User:
     return data
 
 
-async def login(user: Login) -> User | None:
+async def login(user: Login) -> UserResponse | None:
     query: dict[str, str | bool] = {"status": True, **user.model_dump()}
     return await User.find_one(query)
 
