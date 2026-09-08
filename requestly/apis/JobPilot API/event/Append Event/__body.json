@@ -1,0 +1,6 @@
+{
+  "$schema": "https://assets.requestly.com/local/v1.15.0/body.json",
+  "contentType": "json",
+  "raw": "{\n  \"event_type\": \"job_discovered\",\n  \"actor\": \"user\",\n  \"job_id\": \"5eb7cf5a86d9755df3a6c593\",\n  \"application_id\": \"5eb7cf5a86d9755df3a6c593\",\n  \"notes\": \"string\",\n  \"payload\": {}\n}",
+  "rawContentType": "application/json"
+}

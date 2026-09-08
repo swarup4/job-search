@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from beanie import PydanticObjectId
 
 from errors import Conflict, Invalid, NotFound

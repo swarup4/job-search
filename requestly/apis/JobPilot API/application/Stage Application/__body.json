@@ -1,0 +1,6 @@
+{
+  "$schema": "https://assets.requestly.com/local/v1.15.0/body.json",
+  "contentType": "json",
+  "raw": "{\n  \"job_id\": \"5eb7cf5a86d9755df3a6c593\",\n  \"resume_id\": \"5eb7cf5a86d9755df3a6c593\",\n  \"tex_path\": \"string\",\n  \"ats\": \"workday\",\n  \"apply_url\": \"string\"\n}",
+  "rawContentType": "application/json"
+}

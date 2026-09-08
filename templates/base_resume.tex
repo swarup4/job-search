@@ -18,84 +18,250 @@
 % The body may only use the custom commands defined below. Nothing here ever
 % receives LLM-written prose.
 
-\documentclass[11pt,a4paper]{article}
 
-\usepackage[T1]{fontenc}
-\usepackage[utf8]{inputenc}
-\usepackage{lmodern}
-\usepackage[margin=0.7in]{geometry}
-\usepackage[hidelinks]{hyperref}
-\usepackage{enumitem}
+\documentclass[10pt, letterpaper]{article}
+
+%% ── Packages ─────────────────────────────────────────────────
+\usepackage[
+  top=0.40in, bottom=0.40in,
+  left=0.60in, right=0.60in
+]{geometry}
+\usepackage[table]{xcolor}
 \usepackage{titlesec}
+\usepackage{enumitem}
 \usepackage{tabularx}
-\usepackage{xcolor}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{microtype}
+\usepackage{parskip}
+\usepackage{multicol}
+\usepackage{booktabs}
+\usepackage{colortbl}
+\usepackage{fontawesome5}
+\usepackage{ragged2e}
 
+%% ── Font & Encoding Fix ──────────────────────────────────────
+\usepackage[T1]{fontenc}
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+
+%% ── Colors ───────────────────────────────────────────────────
+\definecolor{accent}{HTML}{1F5C99}
+\definecolor{textmain}{HTML}{1A1A1A}
+\definecolor{textmuted}{HTML}{757B80}
+\definecolor{rowshade}{HTML}{EBF2FA}
+\definecolor{tagbg}{HTML}{EBF2FA}
+\definecolor{tagtext}{HTML}{1F5C99}
+\colorlet{ACCENT}{accent}
+
+%% ── Hyperlinks ───────────────────────────────────────────────
+\hypersetup{
+  colorlinks=true,
+  urlcolor=accent,
+  linkcolor=accent,
+  pdfauthor={Swarup Saha},
+  pdftitle={Swarup Saha --- Resume}
+}
+
+%% ── No page numbers ──────────────────────────────────────────
 \pagestyle{empty}
-\setlength{\parindent}{0pt}
-\definecolor{accent}{HTML}{2F6F6A}
 
-\titleformat{\section}{\large\bfseries\color{accent}}{}{0pt}{}[\vspace{-0.55em}\rule{\linewidth}{0.4pt}]
-\titlespacing{\section}{0pt}{1.1em}{0.55em}
+%% ── Section heading style ────────────────────────────────────
+\titleformat{\section}
+  {\color{accent}\fontsize{10}{12}\bfseries\MakeUppercase}
+  {}{0em}{}
+  [\vspace{-4pt}\textcolor{accent}{\rule{\linewidth}{0.6pt}}\vspace{2pt}]
+\titlespacing{\section}{0pt}{10pt}{2pt}
 
-% --- the only commands the body uses ----------------------------------------
-\newcommand{\jobtitle}[3]{%
-  \textbf{#1}\hfill\textit{#3}\par
-  \textsc{#2}\par\vspace{0.15em}}
+%% ── Bullet list style ────────────────────────────────────────
+\setlist[itemize]{
+  leftmargin=14pt,
+  itemsep=0.5pt,
+  parsep=0pt,
+  topsep=0.5pt,
+  label=\textcolor{textmain}{\textbullet}
+}
 
-\newcommand{\skillrow}[2]{\textbf{#1} & #2 \\}
+%% ── Borderless striped table column ─────────────────────────
+\newcolumntype{V}{>{\raggedright\arraybackslash}X}
 
-\newcommand{\certrow}[3]{\textbf{#1}\hfill#3\par\textit{#2}\par\vspace{0.25em}}
+%% ── Skills label+value row ───────────────────────────────────
+\newcolumntype{L}{>{\vspace{2pt}\raggedright\bfseries\color{textmain}\arraybackslash}p{2.6cm}<{\vspace{2pt}}}
+\newcolumntype{R}{>{\vspace{2pt}\raggedright\arraybackslash\color{textmain}}X<{\vspace{2pt}}}
 
-\newcommand{\degreerow}[4]{%
-  \textbf{#1}\hfill\textit{#4}\par
-  \textsc{#2} \textemdash{} #3\par\vspace{0.25em}}
+%% ── Convenience commands ─────────────────────────────────────
+\newcommand{\jobtitle}[4]{%
+  \vspace{1pt}
+  \noindent
+  {\fontsize{11}{13}\bfseries\color{textmain}#1}
+  {\color{textmuted}\ \ \textbar\ \ }
+  {\color{textmuted}#2}
+  \hfill
+  {\fontsize{9.5}{11}\color{textmuted}#3\ \textperiodcentered\ #4}
+  \vspace{1pt}
+}
 
-\newenvironment{bullets}
-  {\begin{itemize}[leftmargin=1.15em,itemsep=0.12em,topsep=0.15em,parsep=0pt]}
-  {\end{itemize}}
+\newcommand{\projectlabel}[1]{%
+  \vspace{1pt}
+  \noindent{\fontsize{9.5}{11}\bfseries\itshape\color{accent}#1}
+  \vspace{1pt}
+}
 
-\newenvironment{skillsblock}
-  {\begin{tabularx}{\linewidth}{@{}l>{\raggedright\arraybackslash}X@{}}}
-  {\end{tabularx}}
+\newcommand{\educrow}[3]{%
+  \noindent
+  {\fontsize{10}{12}\bfseries\color{textmain}#1}
+  \hfill
+  {\fontsize{9.5}{11}\color{textmuted}#3}\\
+  {\fontsize{9.5}{11}\color{textmuted}#2}
+  \vspace{4pt}
+}
 
+\newcommand{\contactitem}[2]{%
+  {\color{accent}#1}\ {\color{textmuted}\fontsize{9}{11}\selectfont #2}%
+}
+
+%% ── Certification row (bold name | grey issuer, date right, muted) ─
+\newcommand{\certrow}[3]{%
+  \noindent
+  {\fontsize{9.5}{11}\bfseries\color{textmain}#1}
+  {\color{textmuted}\ \ \textbar\ \ }
+  {\color{textmuted}#2}
+  \hfill
+  {\fontsize{9}{11}\color{textmuted}#3}\\[7pt]
+}
+
+%% ════════════════════════════════════════════════════════════
 \begin{document}
+%% ════════════════════════════════════════════════════════════
 
+%% ── NAME & CONTACT ───────────────────────────────────────────
 \begin{center}
-  {\LARGE\bfseries \VAR{ personal.name | tex }}\par\vspace{0.3em}
-  \VAR{ personal.headline | tex }\par\vspace{0.25em}
-  \VAR{ personal.location | tex } \textbullet{} \VAR{ personal.email | tex } \textbullet{} \VAR{ personal.phone | tex }\par\vspace{0.15em}
-  \BLOCK{ for link in personal.links }\VAR{ link.value | tex }\BLOCK{ if not loop.last } \textbullet{} \BLOCK{ endif }\BLOCK{ endfor }
-
+  {\fontsize{24}{28}\bfseries\color{accent} SWARUP SAHA}\\[4pt]
+  {\fontsize{11}{13}\color{textmuted} Technical Lead \& Full Stack / GenAI Engineer}\\[6pt]
+  \contactitem{\faPhone}{+91-90358-45781}\enspace
+  \contactitem{\faEnvelope}{\href{mailto:swarup.saha004@hotmail.com}{swarup.saha004@hotmail.com}}\enspace
+  \contactitem{\faMapMarker*}{Bengaluru, India}\enspace
+  \contactitem{\faLinkedin}{\href{https://linkedin.com/in/swarup-saha-d7}{linkedin.com/in/swarup-saha-d7}}\enspace
+  
+  \contactitem{\faGithub}{\href{https://github.com/swarup4}{github.com/swarup4}}
 \end{center}
 
-\section{Summary}
-\VAR{ summary | tex }
+\vspace{-2pt}
+\textcolor{accent}{\rule{\linewidth}{1pt}}
+\vspace{0pt}
 
-\section{Technical Skills}
-\begin{skillsblock}
-\BLOCK{ for group in skillGroups }
-  \skillrow{\VAR{ group.name | tex }}{\VAR{ group['items'] | join(', ') | tex }}
-\BLOCK{ endfor }
-\end{skillsblock}
+%% ── PROFESSIONAL SUMMARY ─────────────────────────────────────
+\section{\faUser\ Professional Summary}
 
-\section{Experience}
-\BLOCK{ for job in experience }
-\jobtitle{\VAR{ job.title | tex }}{\VAR{ job.company | tex }}{\VAR{ job.start | tex }--\VAR{ job.end | tex }}
-\begin{bullets}
-\BLOCK{ for bullet in job.bullets }
-  \item \VAR{ bullet | tex }
-\BLOCK{ endfor }
-\end{bullets}
-\BLOCK{ endfor }
+{\fontsize{9}{13}\color{textmain}
+  Technical Lead and Full Stack / GenAI Engineer with 12.4 years of experience building scalable
+  web applications and AI-powered systems. Deep expertise in MERN/MEAN stack, LangChain,
+  LangGraph, Azure OpenAI, and Agentic AI/RAG pipelines. Proven track record delivering
+  multi-tenant SaaS platforms, ML models, and LLM-based products at enterprise scale. Skilled
+  at leading cross-functional agile teams and owning full SDLC from design to deployment.
+}
 
-\section{Education}
-\BLOCK{ for school in education }
-\degreerow{\VAR{ school.degree | tex }}{\VAR{ school.institution | tex }}{\VAR{ school.location | tex }}{\VAR{ school.start | tex }--\VAR{ school.end | tex }}
-\BLOCK{ endfor }
+%% ── TECHNICAL SKILLS ─────────────────────────────────────────
+\section{\faCogs\ Technical Skills}
 
-\section{Certifications}
-\BLOCK{ for cert in certifications }
-\certrow{\VAR{ cert.name | tex }}{\VAR{ cert.issuer | tex }}{\VAR{ cert.year | tex }}
-\BLOCK{ endfor }
+\vspace{3pt}
+{\small\setlength{\arrayrulewidth}{0pt}%
+\renewcommand{\arraystretch}{1.4}%
+\rowcolors{1}{rowshade}{white}%
+\begin{tabularx}{\linewidth}{VVVV}
+  \rule[-10pt]{0pt}{26pt}JavaScript, TypeScript         & React.js, Redux, Next.js         & Angular, Angular.js              & Tailwind CSS, Material UI \\
+  \rule[-10pt]{0pt}{26pt}Node.js, Express.js            & Python, FastAPI, Flask           & HTML5, CSS3/SCSS                 & MongoDB, PostgreSQL, MySQL \\
+  \rule[-10pt]{0pt}{26pt}Agentic AI, Multi-Agent, RASA & Redis, MongoDB Atlas, PGVector & LangChain, LangGraph, LangSmith, Azure OpenAI & MCP, A2A, CrewAI, N8N, Tableau \\
+  \rule[-10pt]{0pt}{26pt}AWS, Azure                     & Azure Service Bus, RabbitMQ      & Docker, Nginx, Git               & CI/CD, Jenkins, Azure DevOps \\
+  \rule[-10pt]{0pt}{26pt}Jest, Sinon, Supertest, Mocha  & XSS/CSRF, SQL Injection, RBAC/ABAC & Agile/Scrum                   & Microservices, Event-Driven \\
+\end{tabularx}}
+\vspace{1pt}
+
+%% ── WORK EXPERIENCE ──────────────────────────────────────────
+\section{\faBriefcase\ Work Experience}
+
+%% ---- Trigent ----
+\jobtitle{Technical Lead}{Trigent Software Pvt. Ltd.}{Jul 2023 -- Present}{Bengaluru, India}
+
+\projectlabel{Zeltri (Multi-Tenant Elder Care Management Platform)}
+\begin{itemize}
+  \item Architected a multi-tenant, cloud-native SaaS platform for care homes and assisted-living providers using MERN stack, FastAPI, MongoDB Atlas, Redis, and Azure; enforced strict tenant isolation, RBAC/ABAC security, and scalable REST APIs across 10+ facilities.
+  \item Integrated Agentic AI, Multi-Agent Orchestration \& RAG pipelines using LangChain, LangGraph, MCP, LangSmith, and Azure OpenAI with MongoDB Atlas as vector stores to enable semantic document search, email intelligence, conversational assistance, and automated task workflows.
+\end{itemize}
+
+\projectlabel{CV (AI-Powered Social Media Reels Generation)}
+\begin{itemize}
+  \item Developed an end-to-end AI-powered content pipeline for automated Reels creation across YouTube, Instagram, and Facebook; integrated Azure OpenAI (script generation), multilingual translation, Whisper (TTS), Midjourney (image gen), and RunwayML (video render), reducing production cycles by 60\%.
+\end{itemize}
+
+\projectlabel{PlanITRoI (Refurbished Laptop Price Prediction \& Specification Extraction)}
+\begin{itemize}
+  \item Designed microservices-based data pipelines using Node.js, Python, and PostgreSQL with event-driven processing for large-scale web scraping and data normalization.
+  \item Developed ML models for spec extraction and price prediction using KNN with fuzzy logic, Random Forest, and LLM-assisted enrichment, improving pricing accuracy and catalog quality.
+\end{itemize}
+
+\projectlabel{Sizeright (Shoe Measurement \& Sizing Solution)}
+\begin{itemize}
+  \item Built a cloud-native Flask web widget on AWS for real-time shoe sizing; developed scalable RESTful APIs with predictive ML models (Random Forest, KNN) for accurate measurement recommendations.
+\end{itemize}
+
+%% ---- Encora ----
+\jobtitle{Technical Lead}{Encora Inc.}{Aug 2022 -- Jun 2023}{Bengaluru, India}
+\begin{itemize}
+  \item Developed an ML model (Random Forest + XGBoost) for Brightside to predict loan eligibility and detect fraud by analyzing credit scores, employment, and financial history.
+  \item Built a serverless, cloud-native backend on AWS Lambda, Node.js, and MySQL for scalable loan evaluation services; implemented CI/CD pipelines using Azure DevOps and enforced security best practices including SQL injection prevention, XSS protection, and rate limiting.
+  \item Authored unit tests and integration tests using Jest, Chai, and Mocha to ensure code coverage and vulnerability remediation across critical loan processing modules.
+  \item Designed and implemented ETL pipelines using Python and AWS Glue for automated data extraction and transformation, streamlining ML model training workflows.
+\end{itemize}
+
+%% ---- LTI ----
+\jobtitle{Senior Software Engineer}{Larsen \& Toubro Infotech (LTI)}{May 2019 -- Jul 2022}{Bengaluru, India}
+\begin{itemize}
+  \item Built an AI-powered Virtual Assistant chatbot for Travelers (insurance domain) using RASA, Python, and MongoDB, significantly improving automated query resolution; used Azure Service Bus \& RabbitMQ for event-driven message processing and Tableau for reporting and visualization.
+  \item Developed full-stack features with React, Redux, Node.js, and integrated AWS Lambda, Amplify, S3, API Gateway, and EC2 for scalable policy data access; managed deployments via Jenkins CI/CD pipelines and wrote unit tests using Sinon, Supertest, and Mocha.
+\end{itemize}
+
+%% ---- Mphasis ----
+\jobtitle{Senior Software Engineer}{Mphasis Ltd.}{Jun 2017 -- May 2019}{Bengaluru, India}
+\begin{itemize}
+  \item Collaborated with Schneider Electric to build EcoReach, an IoT commissioning tool for Automatic Circuit Breakers using Angular.js, Node.js, and Socket.IO for real-time device data retrieval and cloud-based analysis.
+\end{itemize}
+
+%% ---- Harman ----
+\jobtitle{UI Developer}{Harman Connected Services}{Aug 2015 -- Jun 2017}{Bengaluru, India}
+\begin{itemize}
+  \item Engineered the I2E retail store management and supply chain optimization tool for EYC using Angular Material, Angular.js, Node.js, and MySQL.
+\end{itemize}
+
+%% ---- SMACera ----
+\jobtitle{UI Developer}{SMACera Technologies (Mindtree Ltd.)}{Dec 2014 -- Aug 2015}{Bengaluru, India}
+\begin{itemize}
+  \item Contributed to E-commerce CMS development for client P\&G using Angular.js and HTML \& CSS, working on various product websites.
+\end{itemize}
+
+%% ---- Gowyn ----
+\jobtitle{Web Developer}{Gowyn Technologies Pvt. Ltd.}{Apr 2014 -- Nov 2014}{Delhi, India}
+\begin{itemize}
+  \item Built and maintained LIMOUSINE GROUP, a PHP-based car booking site for Canada, using HTML, CSS, \& Bootstrap to deliver premium car services.
+\end{itemize}
+
+\vspace{3pt}
+%% ── EDUCATION ────────────────────────────────────────────────
+\section{\faGraduationCap\ Education}
+\educrow{MCA --- Machine Learning \& Artificial Intelligence}{Amity University, Delhi}{Jul 2022 -- Aug 2024}
+
+\educrow{BSc. IT --- Information Technology}{Kuvempu University, Delhi}{Jun 2010 -- May 2013}
+
+\educrow{GNIIT --- Diploma in Information Technology}{NIIT University, Delhi}{Jun 2009 -- May 2012}
+
+\vspace{3pt}
+%% ── CERTIFICATIONS ───────────────────────────────────────────
+\section{\faCertificate\ Certifications}
+
+\certrow{Azure Ai Cloud Developer Associate}{Microsoft Azure}{July 2026}
+\certrow{Azure AI Apps and Agents Developer Associate}{Microsoft Azure}{Jun 2026}
+\certrow{AWS Certified Developer Associate}{AWS}{Jun 2026}
+\certrow{Building AI Agents with MongoDB}{MongoDB}{May 2026}
 
 \end{document}
+%% ════════════════════════════════════════════════════════════

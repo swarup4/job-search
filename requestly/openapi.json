@@ -1,0 +1,2226 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "JobPilot API",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/job": {
+      "get": {
+        "tags": [
+          "job"
+        ],
+        "summary": "List Jobs",
+        "operationId": "list_jobs_api_job_get",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/JobStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "shortlisted",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Shortlisted"
+            }
+          },
+          {
+            "name": "company",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Company"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Skip"
+            }
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "job"
+        ],
+        "summary": "Create Job",
+        "operationId": "create_job_api_job_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobCreate"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/job/{job_id}": {
+      "get": {
+        "tags": [
+          "job"
+        ],
+        "summary": "Get Job",
+        "operationId": "get_job_api_job__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "job"
+        ],
+        "summary": "Update Job",
+        "operationId": "update_job_api_job__job_id__patch",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobUpdate"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/match": {
+      "post": {
+        "tags": [
+          "match"
+        ],
+        "summary": "Write Match",
+        "operationId": "write_match_api_match_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MatchWrite"
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "/api/match/pending": {
+      "get": {
+        "tags": [
+          "match"
+        ],
+        "summary": "Pending",
+        "operationId": "pending_api_match_pending_get"
+      }
+    },
+    "/api/match/{job_id}": {
+      "get": {
+        "tags": [
+          "match"
+        ],
+        "summary": "Get Match",
+        "operationId": "get_match_api_match__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          }
+        ]
+      }
+    },
+    "/api/match/{job_id}/selection": {
+      "post": {
+        "tags": [
+          "match"
+        ],
+        "summary": "Record Selection",
+        "description": "Resolves the FR-7.3 keyword interrupt. There is no bulk variant on purpose.",
+        "operationId": "record_selection_api_match__job_id__selection_post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeywordSelection"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/resume": {
+      "post": {
+        "tags": [
+          "resume"
+        ],
+        "summary": "Store Resume",
+        "operationId": "store_resume_api_resume_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResumeStore"
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "/api/resume/{job_id}": {
+      "get": {
+        "tags": [
+          "resume"
+        ],
+        "summary": "Get Resume",
+        "operationId": "get_resume_api_resume__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          }
+        ]
+      }
+    },
+    "/api/resume/{job_id}/versions": {
+      "get": {
+        "tags": [
+          "resume"
+        ],
+        "summary": "List Versions",
+        "operationId": "list_versions_api_resume__job_id__versions_get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          }
+        ]
+      }
+    },
+    "/api/application": {
+      "get": {
+        "tags": [
+          "application"
+        ],
+        "summary": "List Applications",
+        "operationId": "list_applications_api_application_get",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ApplicationStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "application"
+        ],
+        "summary": "Stage Application",
+        "operationId": "stage_application_api_application_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationStage"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/application/answer-bank": {
+      "get": {
+        "tags": [
+          "application"
+        ],
+        "summary": "Answer Bank",
+        "description": "Read by the extension's background worker for screening questions.",
+        "operationId": "answer_bank_api_application_answer_bank_get"
+      }
+    },
+    "/api/application/for-job/{job_id}": {
+      "get": {
+        "tags": [
+          "application"
+        ],
+        "summary": "Get For Job",
+        "operationId": "get_for_job_api_application_for_job__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          }
+        ]
+      }
+    },
+    "/api/application/{application_id}": {
+      "get": {
+        "tags": [
+          "application"
+        ],
+        "summary": "Get Application",
+        "operationId": "get_application_api_application__application_id__get",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          }
+        ]
+      }
+    },
+    "/api/application/{application_id}/fill": {
+      "post": {
+        "tags": [
+          "application"
+        ],
+        "summary": "Record Fill",
+        "operationId": "record_fill_api_application__application_id__fill_post",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationFill"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/application/{application_id}/status": {
+      "patch": {
+        "tags": [
+          "application"
+        ],
+        "summary": "Set Status",
+        "operationId": "set_status_api_application__application_id__status_patch",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatusTransition"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/event": {
+      "get": {
+        "tags": [
+          "event"
+        ],
+        "summary": "List Events",
+        "operationId": "list_events_api_event_get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/PydanticObjectId"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "event_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/EventType"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Event Type"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "event"
+        ],
+        "summary": "Append Event",
+        "operationId": "append_event_api_event_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventAppend"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/profile": {
+      "get": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Get Profile",
+        "operationId": "get_profile_api_profile_get"
+      },
+      "post": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Create Profile",
+        "operationId": "create_profile_api_profile_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileCreate"
+              }
+            }
+          },
+          "required": true
+        }
+      },
+      "patch": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Update Profile",
+        "operationId": "update_profile_api_profile_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileUpdate"
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "/api/profile/preferences": {
+      "get": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Get Preferences",
+        "operationId": "get_preferences_api_profile_preferences_get"
+      },
+      "put": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Set Preferences",
+        "operationId": "set_preferences_api_profile_preferences_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Preferences"
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "/api/profile/chunks": {
+      "get": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Get Chunks",
+        "description": "The RAG second hop. `ai/rag/retrieval.py` calls this between the two stages.",
+        "operationId": "get_chunks_api_profile_chunks_get",
+        "parameters": [
+          {
+            "name": "chunk_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "title": "Chunk Id"
+            }
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Replace Chunks",
+        "operationId": "replace_chunks_api_profile_chunks_put",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ChunkWrite"
+                },
+                "title": "Chunks"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/profile/chunks/{chunk_id}": {
+      "get": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Get Chunk",
+        "operationId": "get_chunk_api_profile_chunks__chunk_id__get",
+        "parameters": [
+          {
+            "name": "chunk_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Chunk Id"
+            }
+          }
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_health_get"
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AIPreferences": {
+        "properties": {
+          "llm": {
+            "type": "string",
+            "title": "Llm",
+            "default": "qwen2.5:32b"
+          },
+          "llm_host": {
+            "type": "string",
+            "title": "Llm Host",
+            "default": "http://localhost:11434"
+          },
+          "embed_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Embed Model"
+          },
+          "rerank": {
+            "type": "boolean",
+            "title": "Rerank",
+            "default": true
+          },
+          "judge": {
+            "type": "string",
+            "title": "Judge",
+            "default": "local (Ollama)"
+          }
+        },
+        "type": "object",
+        "title": "AIPreferences",
+        "description": "Names only. Endpoints and keys live in each tier's own settings, never here."
+      },
+      "Actor": {
+        "type": "string",
+        "enum": [
+          "user",
+          "agent",
+          "extension",
+          "scheduler"
+        ],
+        "title": "Actor",
+        "description": "Who caused it. The audit trail behind every guardrail claim."
+      },
+      "ApplicationFill": {
+        "properties": {
+          "fields_filled": {
+            "items": {
+              "$ref": "#/components/schemas/FieldFill"
+            },
+            "type": "array",
+            "title": "Fields Filled"
+          },
+          "screening_answers": {
+            "items": {
+              "$ref": "#/components/schemas/ScreeningAnswer"
+            },
+            "type": "array",
+            "title": "Screening Answers"
+          }
+        },
+        "type": "object",
+        "title": "ApplicationFill",
+        "description": "The extension reporting what it filled. Reporting only \u2014 it submits nothing."
+      },
+      "ApplicationPreferences": {
+        "properties": {
+          "follow_up_days": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Follow Up Days",
+            "default": 5
+          },
+          "sheet_sync": {
+            "type": "boolean",
+            "title": "Sheet Sync",
+            "default": false
+          },
+          "sheet_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sheet Name"
+          },
+          "auto_submit": {
+            "type": "boolean",
+            "const": false,
+            "title": "Auto Submit",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "ApplicationPreferences"
+      },
+      "ApplicationStage": {
+        "properties": {
+          "job_id": {
+            "$ref": "#/components/schemas/PydanticObjectId"
+          },
+          "resume_id": {
+            "$ref": "#/components/schemas/PydanticObjectId"
+          },
+          "tex_path": {
+            "type": "string",
+            "title": "Tex Path"
+          },
+          "ats": {
+            "$ref": "#/components/schemas/AtsPlatform",
+            "default": "other"
+          },
+          "apply_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2083,
+                "minLength": 1,
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Apply Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "resume_id",
+          "tex_path"
+        ],
+        "title": "ApplicationStage",
+        "description": "What `resume` posts once a .tex exists for the job."
+      },
+      "ApplicationStatus": {
+        "type": "string",
+        "enum": [
+          "staged",
+          "applied",
+          "viewed",
+          "interview",
+          "offer",
+          "rejected",
+          "withdrawn"
+        ],
+        "title": "ApplicationStatus",
+        "description": "STAGED is pre-submit. Everything after it is a human's doing."
+      },
+      "AtsPlatform": {
+        "type": "string",
+        "enum": [
+          "workday",
+          "greenhouse",
+          "lever",
+          "linkedin_easy_apply",
+          "other"
+        ],
+        "title": "AtsPlatform"
+      },
+      "Certification": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "issuer": {
+            "type": "string",
+            "title": "Issuer"
+          },
+          "year": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "name",
+          "issuer"
+        ],
+        "title": "Certification"
+      },
+      "ChunkWrite": {
+        "properties": {
+          "chunk_id": {
+            "type": "string",
+            "title": "Chunk Id"
+          },
+          "section": {
+            "type": "string",
+            "title": "Section"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "source_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Ref"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chunk_id",
+          "section",
+          "text"
+        ],
+        "title": "ChunkWrite"
+      },
+      "Company": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "industry": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Industry"
+          },
+          "size": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Size"
+          },
+          "founded": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Founded"
+          },
+          "site": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site"
+          },
+          "blurb": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blurb"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "Company",
+        "description": "Denormalized onto the job \u2014 the company rail on the job page reads only this."
+      },
+      "CompanyPreferences": {
+        "properties": {
+          "preferred": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Preferred"
+          },
+          "excluded": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Excluded"
+          },
+          "sizes": {
+            "items": {
+              "$ref": "#/components/schemas/CompanySize"
+            },
+            "type": "array",
+            "title": "Sizes"
+          },
+          "industries": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Industries"
+          },
+          "avoid_staffing": {
+            "type": "boolean",
+            "title": "Avoid Staffing",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "CompanyPreferences"
+      },
+      "CompanySize": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "on": {
+            "type": "boolean",
+            "title": "On",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "label"
+        ],
+        "title": "CompanySize"
+      },
+      "DiscoveryPreferences": {
+        "properties": {
+          "schedule_cron": {
+            "type": "string",
+            "title": "Schedule Cron",
+            "default": "0 6 * * *"
+          },
+          "min_match": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Min Match",
+            "default": 70
+          },
+          "dedupe": {
+            "type": "boolean",
+            "title": "Dedupe",
+            "default": true
+          },
+          "respect_robots": {
+            "type": "boolean",
+            "const": true,
+            "title": "Respect Robots",
+            "default": true
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/DiscoverySource"
+            },
+            "type": "array",
+            "title": "Sources"
+          }
+        },
+        "type": "object",
+        "title": "DiscoveryPreferences"
+      },
+      "DiscoverySource": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "on": {
+            "type": "boolean",
+            "title": "On",
+            "default": true
+          },
+          "found": {
+            "type": "integer",
+            "title": "Found",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "DiscoverySource"
+      },
+      "Education": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "degree": {
+            "type": "string",
+            "title": "Degree"
+          },
+          "institution": {
+            "type": "string",
+            "title": "Institution"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "degree",
+          "institution"
+        ],
+        "title": "Education"
+      },
+      "EventAppend": {
+        "properties": {
+          "event_type": {
+            "$ref": "#/components/schemas/EventType"
+          },
+          "actor": {
+            "$ref": "#/components/schemas/Actor"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PydanticObjectId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "application_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PydanticObjectId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event_type",
+          "actor"
+        ],
+        "title": "EventAppend",
+        "description": "Append-only: there is no update or delete on an event."
+      },
+      "EventType": {
+        "type": "string",
+        "enum": [
+          "job_discovered",
+          "job_shortlisted",
+          "match_scored",
+          "keywords_selected",
+          "keywords_skipped",
+          "resume_tailored",
+          "application_staged",
+          "application_filled",
+          "status_changed",
+          "follow_up_drafted",
+          "follow_up_sent",
+          "sheet_synced"
+        ],
+        "title": "EventType"
+      },
+      "Experience": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "company": {
+            "type": "string",
+            "title": "Company"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "start": {
+            "type": "string",
+            "title": "Start"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          },
+          "current": {
+            "type": "boolean",
+            "title": "Current",
+            "default": false
+          },
+          "bullets": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Bullets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "title",
+          "company",
+          "start"
+        ],
+        "title": "Experience"
+      },
+      "FieldFill": {
+        "properties": {
+          "selector": {
+            "type": "string",
+            "title": "Selector"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "highlighted": {
+            "type": "boolean",
+            "title": "Highlighted",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "selector",
+          "label",
+          "value",
+          "source"
+        ],
+        "title": "FieldFill",
+        "description": "What the extension put in one field. FR-5.4 \u2014 an unmarked fill is a silent edit."
+      },
+      "JobCreate": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "company": {
+            "$ref": "#/components/schemas/Company"
+          },
+          "location": {
+            "type": "string",
+            "title": "Location"
+          },
+          "job_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "work_mode": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkMode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "experience_band": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Experience Band"
+          },
+          "salary_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Salary Text"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "responsibilities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Responsibilities"
+          },
+          "requirements": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Requirements"
+          },
+          "source": {
+            "$ref": "#/components/schemas/JobSource"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2083,
+                "minLength": 1,
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "posted_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Posted At"
+          },
+          "deadline_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deadline At"
+          },
+          "applicant_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Applicant Count"
+          },
+          "jd_text": {
+            "type": "string",
+            "title": "Jd Text"
+          },
+          "dedup_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dedup Hash"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "company",
+          "location",
+          "source",
+          "jd_text"
+        ],
+        "title": "JobCreate"
+      },
+      "JobSource": {
+        "type": "string",
+        "enum": [
+          "linkedin",
+          "indeed",
+          "naukri",
+          "serpapi",
+          "career_page"
+        ],
+        "title": "JobSource"
+      },
+      "JobStatus": {
+        "type": "string",
+        "enum": [
+          "new",
+          "reviewed",
+          "tailored",
+          "applied",
+          "archived"
+        ],
+        "title": "JobStatus",
+        "description": "Pipeline column on the dashboard board."
+      },
+      "JobType": {
+        "type": "string",
+        "enum": [
+          "full_time",
+          "contract",
+          "part_time",
+          "internship"
+        ],
+        "title": "JobType"
+      },
+      "JobUpdate": {
+        "properties": {
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "shortlisted": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shortlisted"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "responsibilities": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Responsibilities"
+          },
+          "requirements": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requirements"
+          }
+        },
+        "type": "object",
+        "title": "JobUpdate"
+      },
+      "KeywordSelection": {
+        "properties": {
+          "selected_keys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Selected Keys"
+          },
+          "skip": {
+            "type": "boolean",
+            "title": "Skip",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "KeywordSelection",
+        "description": "The user's answer at the interrupt. An empty list is a valid answer."
+      },
+      "LineChange": {
+        "properties": {
+          "line_no": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Line No"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "previous": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous"
+          }
+        },
+        "type": "object",
+        "required": [
+          "line_no",
+          "text"
+        ],
+        "title": "LineChange",
+        "description": "One tailored line of the .tex, kept with what it replaced so the diff\nscreen and the source screen can never disagree."
+      },
+      "MatchWrite": {
+        "properties": {
+          "job_id": {
+            "$ref": "#/components/schemas/PydanticObjectId"
+          },
+          "score": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Score"
+          },
+          "present": {
+            "items": {
+              "$ref": "#/components/schemas/PresentKeyword"
+            },
+            "type": "array",
+            "title": "Present"
+          },
+          "missing": {
+            "items": {
+              "$ref": "#/components/schemas/MissingKeyword"
+            },
+            "type": "array",
+            "title": "Missing"
+          },
+          "risks": {
+            "items": {
+              "$ref": "#/components/schemas/RiskFlag"
+            },
+            "type": "array",
+            "title": "Risks"
+          },
+          "model_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "score"
+        ],
+        "title": "MatchWrite",
+        "description": "What the matching agent posts. The vector goes to Atlas, never here."
+      },
+      "MissingKeyword": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "mentions": {
+            "type": "integer",
+            "title": "Mentions",
+            "default": 1
+          },
+          "evidence": {
+            "type": "string",
+            "title": "Evidence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "evidence"
+        ],
+        "title": "MissingKeyword"
+      },
+      "Personal": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "headline": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Headline"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "links": {
+            "items": {
+              "$ref": "#/components/schemas/ProfileLink"
+            },
+            "type": "array",
+            "title": "Links"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "Personal"
+      },
+      "Preferences": {
+        "properties": {
+          "targets": {
+            "$ref": "#/components/schemas/TargetPreferences"
+          },
+          "company": {
+            "$ref": "#/components/schemas/CompanyPreferences"
+          },
+          "discovery": {
+            "$ref": "#/components/schemas/DiscoveryPreferences"
+          },
+          "applications": {
+            "$ref": "#/components/schemas/ApplicationPreferences"
+          },
+          "ai": {
+            "$ref": "#/components/schemas/AIPreferences"
+          }
+        },
+        "type": "object",
+        "title": "Preferences"
+      },
+      "PresentKeyword": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "chunk_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chunk Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label"
+        ],
+        "title": "PresentKeyword",
+        "description": "Already in the resume. Read-only on the selection screen."
+      },
+      "ProfileCreate": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "personal": {
+            "$ref": "#/components/schemas/Personal"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "experience": {
+            "items": {
+              "$ref": "#/components/schemas/Experience"
+            },
+            "type": "array",
+            "title": "Experience"
+          },
+          "education": {
+            "items": {
+              "$ref": "#/components/schemas/Education"
+            },
+            "type": "array",
+            "title": "Education"
+          },
+          "skill_groups": {
+            "items": {
+              "$ref": "#/components/schemas/SkillGroup"
+            },
+            "type": "array",
+            "title": "Skill Groups"
+          },
+          "certifications": {
+            "items": {
+              "$ref": "#/components/schemas/Certification"
+            },
+            "type": "array",
+            "title": "Certifications"
+          },
+          "preferences": {
+            "$ref": "#/components/schemas/Preferences"
+          },
+          "resume_template_path": {
+            "type": "string",
+            "title": "Resume Template Path",
+            "default": "templates/base_resume.tex"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "personal"
+        ],
+        "title": "ProfileCreate",
+        "description": "Creating a profile requires an email \u2014 there is no blank starting state."
+      },
+      "ProfileLink": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "value"
+        ],
+        "title": "ProfileLink"
+      },
+      "ProfileUpdate": {
+        "properties": {
+          "email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "email"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "personal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Personal"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "experience": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Experience"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Experience"
+          },
+          "education": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Education"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Education"
+          },
+          "skill_groups": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SkillGroup"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skill Groups"
+          },
+          "certifications": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Certification"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Certifications"
+          },
+          "preferences": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Preferences"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "resume_template_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resume Template Path"
+          }
+        },
+        "type": "object",
+        "title": "ProfileUpdate",
+        "description": "Every field optional: a PATCH sends only what changed."
+      },
+      "PydanticObjectId": {
+        "type": "string",
+        "maxLength": 24,
+        "minLength": 24,
+        "pattern": "^[0-9a-f]{24}$",
+        "example": "5eb7cf5a86d9755df3a6c593"
+      },
+      "ResumeStore": {
+        "properties": {
+          "job_id": {
+            "$ref": "#/components/schemas/PydanticObjectId"
+          },
+          "file_path": {
+            "type": "string",
+            "title": "File Path"
+          },
+          "template_path": {
+            "type": "string",
+            "title": "Template Path",
+            "default": "templates/base_resume.tex"
+          },
+          "incorporated": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Incorporated"
+          },
+          "declined": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Declined"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/LineChange"
+            },
+            "type": "array",
+            "title": "Changes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "file_path"
+        ],
+        "title": "ResumeStore",
+        "description": "What the tailoring agent posts once it has written the file."
+      },
+      "RiskFlag": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "title",
+          "detail"
+        ],
+        "title": "RiskFlag",
+        "description": "FR-2.4 \u2014 surfaced, never selectable. Acting on one would be a misrepresentation."
+      },
+      "ScreeningAnswer": {
+        "properties": {
+          "question": {
+            "type": "string",
+            "title": "Question"
+          },
+          "answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer"
+          },
+          "answered_by_user": {
+            "type": "boolean",
+            "title": "Answered By User",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "question"
+        ],
+        "title": "ScreeningAnswer"
+      },
+      "SkillGroup": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "SkillGroup",
+        "description": "Maps one-to-one onto a \\skillrow in the template."
+      },
+      "StatusTransition": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/ApplicationStatus"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "confirmed_by_user": {
+            "type": "boolean",
+            "title": "Confirmed By User",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "StatusTransition"
+      },
+      "TargetPreferences": {
+        "properties": {
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Roles"
+          },
+          "locations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Locations"
+          },
+          "work_mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Mode"
+          },
+          "min_experience": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Experience"
+          },
+          "max_experience": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Experience"
+          },
+          "min_salary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Salary"
+          }
+        },
+        "type": "object",
+        "title": "TargetPreferences"
+      },
+      "WorkMode": {
+        "type": "string",
+        "enum": [
+          "on_site",
+          "hybrid",
+          "remote"
+        ],
+        "title": "WorkMode"
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8000",
+      "description": "local \u2014 server/main.py"
+    }
+  ]
+}

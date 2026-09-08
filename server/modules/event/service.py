@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from beanie import PydanticObjectId
 
 from modules.event.models import Event, EventAppend, EventType

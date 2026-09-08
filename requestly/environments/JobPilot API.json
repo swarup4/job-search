@@ -1,0 +1,17 @@
+{
+  "$schema": "https://assets.requestly.com/local/v1.15.0/environment.json",
+  "id": "0ae06d25-f3e6-4701-81fa-5d6dc06779a9",
+  "variables": {
+    "base_url": {
+      "id": "2fe886dd-5dda-4b66-b1fd-17cf298fd721",
+      "syncValue": "http://127.0.0.1:8000",
+      "type": "string",
+      "isEnabled": true,
+      "rank": "a0",
+      "createdAt": "2026-08-28T06:13:00.268341Z",
+      "updatedAt": "2026-08-28T06:13:00.268341Z",
+      "createdBy": null,
+      "updatedBy": null
+    }
+  }
+}

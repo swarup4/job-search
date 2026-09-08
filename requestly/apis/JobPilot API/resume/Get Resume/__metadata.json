@@ -1,0 +1,10 @@
+{
+  "$schema": "https://assets.requestly.com/local/v1.15.0/metadata.json",
+  "type": "api",
+  "entryType": "http",
+  "id": "8ba7798d-8aa5-47e9-8be8-783360ce54af",
+  "rank": "a1",
+  "url": "{{base_url}}/api/resume/{{job_id}}",
+  "method": "GET",
+  "contentType": "none"
+}
