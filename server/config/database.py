@@ -4,6 +4,7 @@ from beanie import init_beanie
 from pymongo import AsyncMongoClient
 from pymongo.asynchronous.database import AsyncDatabase
 
+from modules.account import Account
 from modules.application import AnswerBank, Application
 from modules.event import Event
 from modules.job import Job
@@ -17,7 +18,18 @@ _client: AsyncMongoClient | None = None
 
 def document_models() -> list[type]:
     """Every Beanie document in the local store, through its module's public interface."""
-    return [Job, Match, TailoredResume, Application, AnswerBank, Event, Profile, ResumeChunkText, User]
+    return [
+        Job,
+        Match,
+        TailoredResume,
+        Application,
+        AnswerBank,
+        Event,
+        Profile,
+        ResumeChunkText,
+        User,
+        Account,
+    ]
 
 
 async def connect() -> AsyncDatabase:

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from beanie import Document
+from beanie import Document, PydanticObjectId
 from pydantic import BaseModel, Field
 
 
@@ -16,6 +16,13 @@ class Login(BaseModel):
     email: str
     password: str
 
+
+class UserResponse(BaseModel):
+    _id: PydanticObjectId
+    name: str
+    email: str
+    profilePicture: str
+    
 
 class User(Document):
     name: str = Field(None, description="Name")
