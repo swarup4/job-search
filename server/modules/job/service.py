@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 
 from beanie import PydanticObjectId
 
-from errors import NotFound
+from config.errors import NotFound
 from modules.job.models import Job, JobCreate, JobCreated, JobStatus, JobUpdate
 
 
