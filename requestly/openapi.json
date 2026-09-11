@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "JobPilot API",
-    "version": "0.1.0"
+    "version": "1.0.0"
   },
   "paths": {
     "/api/job": {
@@ -148,6 +148,45 @@
         }
       }
     },
+    "/api/match/pending": {
+      "get": {
+        "tags": [
+          "match"
+        ],
+        "summary": "Pending",
+        "operationId": "pending_api_match_pending_get"
+      }
+    },
+    "/api/match/selection/{job_id}": {
+      "post": {
+        "tags": [
+          "match"
+        ],
+        "summary": "Record Selection",
+        "description": "Resolves the FR-7.3 keyword interrupt. There is no bulk variant on purpose.",
+        "operationId": "record_selection_api_match_selection__job_id__post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeywordSelection"
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/match": {
       "post": {
         "tags": [
@@ -165,15 +204,6 @@
           },
           "required": true
         }
-      }
-    },
-    "/api/match/pending": {
-      "get": {
-        "tags": [
-          "match"
-        ],
-        "summary": "Pending",
-        "operationId": "pending_api_match_pending_get"
       }
     },
     "/api/match/{job_id}": {
@@ -195,14 +225,13 @@
         ]
       }
     },
-    "/api/match/{job_id}/selection": {
-      "post": {
+    "/api/resume/versions/{job_id}": {
+      "get": {
         "tags": [
-          "match"
+          "resume"
         ],
-        "summary": "Record Selection",
-        "description": "Resolves the FR-7.3 keyword interrupt. There is no bulk variant on purpose.",
-        "operationId": "record_selection_api_match__job_id__selection_post",
+        "summary": "List Versions",
+        "operationId": "list_versions_api_resume_versions__job_id__get",
         "parameters": [
           {
             "name": "job_id",
@@ -212,17 +241,7 @@
               "$ref": "#/components/schemas/PydanticObjectId"
             }
           }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/KeywordSelection"
-              }
-            }
-          }
-        }
+        ]
       }
     },
     "/api/resume": {
@@ -263,13 +282,156 @@
         ]
       }
     },
-    "/api/resume/{job_id}/versions": {
+    "/api/template/render/{template_id}": {
       "get": {
         "tags": [
-          "resume"
+          "template"
         ],
-        "summary": "List Versions",
-        "operationId": "list_versions_api_resume__job_id__versions_get",
+        "summary": "Render Template",
+        "operationId": "render_template_api_template_render__template_id__get",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          }
+        ]
+      }
+    },
+    "/api/template/preview/{template_id}": {
+      "get": {
+        "tags": [
+          "template"
+        ],
+        "summary": "Template Preview",
+        "operationId": "template_preview_api_template_preview__template_id__get",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          }
+        ]
+      }
+    },
+    "/api/template": {
+      "get": {
+        "tags": [
+          "template"
+        ],
+        "summary": "List Templates",
+        "operationId": "list_templates_api_template_get",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ]
+      }
+    },
+    "/api/template/upload": {
+      "post": {
+        "tags": [
+          "template"
+        ],
+        "summary": "Upload Template",
+        "description": "The layout is read from the .tex itself, so the upload is the file and\nlittle else. A `%%! skills=grid location=city` line in the .tex overrides it.",
+        "operationId": "upload_template_api_template_upload_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_template_api_template_upload_post"
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "/api/template/getTemplate/{template_id}": {
+      "get": {
+        "tags": [
+          "template"
+        ],
+        "summary": "Get Template",
+        "operationId": "get_template_api_template_getTemplate__template_id__get",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          }
+        ]
+      }
+    },
+    "/api/template/updateTemplate/{template_id}": {
+      "patch": {
+        "tags": [
+          "template"
+        ],
+        "summary": "Update Template",
+        "operationId": "update_template_api_template_updateTemplate__template_id__patch",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemplateUpdate"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/application/answer-bank": {
+      "get": {
+        "tags": [
+          "application"
+        ],
+        "summary": "Answer Bank",
+        "description": "Read by the extension's background worker for screening questions.",
+        "operationId": "answer_bank_api_application_answer_bank_get"
+      }
+    },
+    "/api/application/for-job/{job_id}": {
+      "get": {
+        "tags": [
+          "application"
+        ],
+        "summary": "Get For Job",
+        "operationId": "get_for_job_api_application_for_job__job_id__get",
         "parameters": [
           {
             "name": "job_id",
@@ -280,6 +442,64 @@
             }
           }
         ]
+      }
+    },
+    "/api/application/fill/{application_id}": {
+      "post": {
+        "tags": [
+          "application"
+        ],
+        "summary": "Record Fill",
+        "operationId": "record_fill_api_application_fill__application_id__post",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationFill"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/application/status/{application_id}": {
+      "patch": {
+        "tags": [
+          "application"
+        ],
+        "summary": "Set Status",
+        "operationId": "set_status_api_application_status__application_id__patch",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatusTransition"
+              }
+            }
+          }
+        }
       }
     },
     "/api/application": {
@@ -326,35 +546,6 @@
         }
       }
     },
-    "/api/application/answer-bank": {
-      "get": {
-        "tags": [
-          "application"
-        ],
-        "summary": "Answer Bank",
-        "description": "Read by the extension's background worker for screening questions.",
-        "operationId": "answer_bank_api_application_answer_bank_get"
-      }
-    },
-    "/api/application/for-job/{job_id}": {
-      "get": {
-        "tags": [
-          "application"
-        ],
-        "summary": "Get For Job",
-        "operationId": "get_for_job_api_application_for_job__job_id__get",
-        "parameters": [
-          {
-            "name": "job_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/PydanticObjectId"
-            }
-          }
-        ]
-      }
-    },
     "/api/application/{application_id}": {
       "get": {
         "tags": [
@@ -372,64 +563,6 @@
             }
           }
         ]
-      }
-    },
-    "/api/application/{application_id}/fill": {
-      "post": {
-        "tags": [
-          "application"
-        ],
-        "summary": "Record Fill",
-        "operationId": "record_fill_api_application__application_id__fill_post",
-        "parameters": [
-          {
-            "name": "application_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/PydanticObjectId"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ApplicationFill"
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/application/{application_id}/status": {
-      "patch": {
-        "tags": [
-          "application"
-        ],
-        "summary": "Set Status",
-        "operationId": "set_status_api_application__application_id__status_patch",
-        "parameters": [
-          {
-            "name": "application_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/PydanticObjectId"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/StatusTransition"
-              }
-            }
-          }
-        }
       }
     },
     "/api/event": {
@@ -637,6 +770,113 @@
         ]
       }
     },
+    "/api/user/login": {
+      "post": {
+        "tags": [
+          "user"
+        ],
+        "summary": "Login",
+        "operationId": "login_api_user_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/modules__user__models__Login"
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "/api/user/signup": {
+      "post": {
+        "tags": [
+          "user"
+        ],
+        "summary": "Signup",
+        "operationId": "signup_api_user_signup_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/modules__user__models__SignUp"
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "/api/user/": {
+      "get": {
+        "tags": [
+          "user"
+        ],
+        "summary": "Get All User",
+        "operationId": "get_all_user_api_user__get"
+      }
+    },
+    "/api/account/signup": {
+      "post": {
+        "tags": [
+          "account"
+        ],
+        "summary": "Sign Up",
+        "operationId": "sign_up_api_account_signup_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/modules__account__models__SignUp"
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "/api/account/login": {
+      "post": {
+        "tags": [
+          "account"
+        ],
+        "summary": "Login",
+        "operationId": "login_api_account_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/modules__account__models__Login"
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "/api/account": {
+      "get": {
+        "tags": [
+          "account"
+        ],
+        "summary": "List Accounts",
+        "operationId": "list_accounts_api_account_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ]
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health",
@@ -814,6 +1054,46 @@
           "other"
         ],
         "title": "AtsPlatform"
+      },
+      "Body_upload_template_api_template_upload_post": {
+        "properties": {
+          "tex": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "Tex",
+            "description": ".tex source carrying {{TOKEN}} placeholders"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "preview": {
+            "anyOf": [
+              {
+                "type": "string",
+                "contentMediaType": "application/octet-stream"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preview",
+            "description": "optional PNG"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tex"
+        ],
+        "title": "Body_upload_template_api_template_upload_post"
       },
       "Certification": {
         "properties": {
@@ -1008,6 +1288,14 @@
           "label"
         ],
         "title": "CompanySize"
+      },
+      "ContactStyle": {
+        "type": "string",
+        "enum": [
+          "contactitem",
+          "plain"
+        ],
+        "title": "ContactStyle"
       },
       "DiscoveryPreferences": {
         "properties": {
@@ -1257,6 +1545,13 @@
             },
             "type": "array",
             "title": "Bullets"
+          },
+          "projects": {
+            "items": {
+              "$ref": "#/components/schemas/ExperienceProject"
+            },
+            "type": "array",
+            "title": "Projects"
           }
         },
         "type": "object",
@@ -1267,6 +1562,35 @@
           "start"
         ],
         "title": "Experience"
+      },
+      "ExperienceProject": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "bullets": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Bullets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label"
+        ],
+        "title": "ExperienceProject",
+        "description": "A named piece of work inside one role \u2014 renders as a \\projectlabel."
+      },
+      "ExperienceStyle": {
+        "type": "string",
+        "enum": [
+          "jobtitle",
+          "timelinerole"
+        ],
+        "title": "ExperienceStyle"
       },
       "FieldFill": {
         "properties": {
@@ -1608,6 +1932,14 @@
         ],
         "title": "LineChange",
         "description": "One tailored line of the .tex, kept with what it replaced so the diff\nscreen and the source screen can never disagree."
+      },
+      "LocationStyle": {
+        "type": "string",
+        "enum": [
+          "full",
+          "city"
+        ],
+        "title": "LocationStyle"
       },
       "MatchWrite": {
         "properties": {
@@ -2114,6 +2446,14 @@
         "title": "SkillGroup",
         "description": "Maps one-to-one onto a \\skillrow in the template."
       },
+      "SkillsStyle": {
+        "type": "string",
+        "enum": [
+          "grid",
+          "pills"
+        ],
+        "title": "SkillsStyle"
+      },
       "StatusTransition": {
         "properties": {
           "status": {
@@ -2206,6 +2546,77 @@
         "type": "object",
         "title": "TargetPreferences"
       },
+      "TemplateStyle": {
+        "properties": {
+          "contact": {
+            "$ref": "#/components/schemas/ContactStyle",
+            "default": "contactitem"
+          },
+          "skills": {
+            "$ref": "#/components/schemas/SkillsStyle",
+            "default": "pills"
+          },
+          "experience": {
+            "$ref": "#/components/schemas/ExperienceStyle",
+            "default": "jobtitle"
+          },
+          "location": {
+            "$ref": "#/components/schemas/LocationStyle",
+            "default": "full"
+          },
+          "columns": {
+            "type": "integer",
+            "maximum": 6.0,
+            "minimum": 1.0,
+            "title": "Columns",
+            "default": 4
+          }
+        },
+        "type": "object",
+        "title": "TemplateStyle",
+        "description": "How this design lays out the blocks that differ between templates.\n\nAll of it except `location` is read off the uploaded .tex \u2014 see\n`service.infer_style`. A `%%!` directive line in the .tex overrides any of it."
+      },
+      "TemplateUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "style": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TemplateStyle"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "TemplateUpdate",
+        "description": "Every field optional: a PATCH sends only what changed."
+      },
       "WorkMode": {
         "type": "string",
         "enum": [
@@ -2214,6 +2625,112 @@
           "remote"
         ],
         "title": "WorkMode"
+      },
+      "modules__account__models__Login": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "Login"
+      },
+      "modules__account__models__SignUp": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "title": "Password"
+          },
+          "profile_picture": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Picture"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "email",
+          "password"
+        ],
+        "title": "SignUp"
+      },
+      "modules__user__models__Login": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "Login"
+      },
+      "modules__user__models__SignUp": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          },
+          "profilePicture": {
+            "type": "string",
+            "title": "Profilepicture"
+          },
+          "refreshToken": {
+            "type": "string",
+            "title": "Refreshtoken"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "email",
+          "password",
+          "profilePicture",
+          "refreshToken"
+        ],
+        "title": "SignUp"
       }
     }
   },

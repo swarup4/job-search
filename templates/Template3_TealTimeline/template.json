@@ -1,0 +1,9 @@
+{
+  "name": "Teal Timeline",
+  "contact": "contactitem",
+  "skills": "pills",
+  "per_row": 6,
+  "row_sep": "\\\n",
+  "experience": "timelinerole",
+  "location": "city"
+}

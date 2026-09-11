@@ -3,7 +3,7 @@ from fastapi import APIRouter
 from modules.user import service
 from modules.user.models import Login, SignUp, User, UserResponse
 
-router = APIRouter()
+router = APIRouter(tags=["user"])
 
 
 @router.post("/login", response_model=UserResponse)

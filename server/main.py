@@ -10,9 +10,19 @@ from config.database import connect, disconnect
 from config.errors import DomainError, handle_domain_error
 from config.logging import configure_logging
 from middleware import REQUEST_ID_HEADER, AccessLogMiddleware, ErrorHandlingMiddleware
-from modules import account, application, event, job, match, profile, resume, user
+from modules import (
+    account,
+    application,
+    event,
+    job,
+    match,
+    profile,
+    resume,
+    template,
+    user,
+)
 
-MODULES = (job, match, resume, application, event, profile, user, account)
+MODULES = (job, match, resume, template, application, event, profile, user, account)
 
 
 @asynccontextmanager

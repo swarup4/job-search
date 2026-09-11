@@ -21,6 +21,13 @@ class Personal(BaseModel):
     links: list[ProfileLink] = Field(default_factory=list)
 
 
+class ExperienceProject(BaseModel):
+    """A named piece of work inside one role — renders as a \\projectlabel."""
+
+    label: str
+    bullets: list[str] = Field(default_factory=list)
+
+
 class Experience(BaseModel):
     key: str
     title: str
@@ -29,7 +36,11 @@ class Experience(BaseModel):
     start: str
     end: str | None = None
     current: bool = False
+
+    # Bullets attached to the role itself. Roles that group their work under
+    # project names use `projects` instead; a role may use either or both.
     bullets: list[str] = Field(default_factory=list)
+    projects: list[ExperienceProject] = Field(default_factory=list)
 
 
 class Education(BaseModel):

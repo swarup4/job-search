@@ -11,6 +11,7 @@ from modules.job import Job
 from modules.match import Match
 from modules.profile import Profile, ResumeChunkText
 from modules.resume import TailoredResume
+from modules.template import Template
 from modules.user import User
 
 _client: AsyncMongoClient | None = None
@@ -29,6 +30,7 @@ def document_models() -> list[type]:
         ResumeChunkText,
         User,
         Account,
+        Template,
     ]
 
 

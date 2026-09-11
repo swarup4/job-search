@@ -1,0 +1,6 @@
+{
+  "$schema": "https://assets.requestly.com/local/v1.15.0/body.json",
+  "contentType": "json",
+  "raw": "{\n  \"name\": \"string\",\n  \"status\": false,\n  \"style\": {\n    \"contact\": \"contactitem\",\n    \"skills\": \"grid\",\n    \"experience\": \"jobtitle\",\n    \"location\": \"full\",\n    \"columns\": 4,\n    \"per_row\": 7,\n    \"row_sep\": \"\\\\\\\\[4pt]\\n\"\n  }\n}",
+  "rawContentType": "application/json"
+}
