@@ -2,20 +2,14 @@
 
 import { useFormik, getIn } from "formik";
 import { AlertTriangle, Check, Loader2, Pencil, Plus, Save } from "lucide-react";
-import { ApiError, updateProfile } from "@/services";
+// MOCK: saving is stubbed while demoing the UI without a backend.
+// import { ApiError, updateProfile } from "@/services";
+import { ApiError } from "@/services";
 import { Panel, PanelBody, PanelHeader, PanelTitle } from "@/component/ui/panel";
 import { Field, Input, Textarea } from "@/component/ui/field";
 import { Button } from "@/component/ui/button";
 import { profileIdentityInitialValues, profileIdentitySchema } from "@/util/schema";
 
-/**
- * The editable half of My details. Client-side because it saves; the read-only
- * sections below it on the page stay server-rendered.
- *
- * `email` is mandatory and is the profile's key — Yup catches a blank or malformed
- * one before the request, and the server's own 422 still surfaces here if it
- * objects to something the schema does not know about.
- */
 export function ProfileIdentity({ profile }) {
     const formik = useFormik({
         initialValues: profileIdentityInitialValues(profile),
@@ -23,20 +17,19 @@ export function ProfileIdentity({ profile }) {
         onSubmit: async (values, { setStatus, resetForm }) => {
             setStatus(null);
             try {
-                await updateProfile({
-                    email: values.email,
-                    personal: {
-                        name: values.name,
-                        headline: values.headline || null,
-                        phone: values.phone || null,
-                        location: values.location || null,
-                        links: values.links,
-                    },
-                    summary: values.summary || null,
-                });
-                setStatus({ ok: true, message: "Saved." });
-                // New clean baseline, so the confirmation hides itself the moment you
-                // start editing again instead of claiming stale changes are saved.
+                // await updateProfile({
+                //     email: values.email,
+                //     personal: {
+                //         name: values.name,
+                //         headline: values.headline || null,
+                //         phone: values.phone || null,
+                //         location: values.location || null,
+                //         links: values.links,
+                //     },
+                //     summary: values.summary || null,
+                // });
+                await new Promise((resolve) => setTimeout(resolve, 400));
+                setStatus({ ok: true, message: "Saved (mock — not persisted)." });
                 resetForm({ values });
             } catch (error) {
                 setStatus({
@@ -134,8 +127,6 @@ export function ProfileIdentity({ profile }) {
                                         <span className="w-20 shrink-0 text-[13px] text-muted-foreground">
                                             {link.label}
                                         </span>
-                                        {/* getIn, not errors[name]: Formik shapes errors like
-                                            values, so `links.0.value` is a path, not a key. */}
                                         <Field
                                             className="min-w-[240px] grow"
                                             error={getIn(errors, `links.${i}.value`)}

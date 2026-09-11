@@ -7,13 +7,7 @@ import { Badge } from "@/component/ui/badge";
 import { Panel } from "@/component/ui/panel";
 import { buttonVariants } from "@/component/ui/button";
 import { ROUTES } from "@/routes";
-import { cn } from "@/util/cn";
 
-/**
- * The job row / card, shared by Search and Shortlist so the two can't drift.
- * `from` is the section the user is browsing — it rides along in every link so
- * the sidebar keeps that section highlighted.
- */
 export function JobList({ jobs, view = "list", from }) {
   const Item = view === "grid" ? GridCard : ListRow;
   return (
@@ -41,7 +35,6 @@ function ListRow({ job, from }) {
 
         <div className="min-w-[230px] grow">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            {/* the title is the way into the JD — no separate "View JD" button */}
             <Link
               href={ROUTES.job(job.id, from)}
               className="text-[16.5px] font-medium leading-tight hover:text-primary hover:underline hover:decoration-primary/40 hover:underline-offset-4"
