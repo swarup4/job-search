@@ -1,39 +1,10 @@
 @use "sass:list";
 @use "sass:map";
 
-// =============================================================================
-// JobPilot — the single stylesheet. All SCSS.
-//
-// Design system — Zobstar idiom, teal & white. Values lifted from the reference
-// template's own stylesheet, not eyeballed:
-//   font       Noto Sans JP, 15px base
-//   radius     4px everywhere · 30px pills for buttons · 50% avatars
-//   elevation  0 0 40px rgba(82,85,90,.1) — a soft AMBIENT shadow, no offset.
-//              White cards floating on a tinted page, separated by air.
-//
-// Brand is teal. Teal marks what you already have, and drives primary action.
-// Three signals beyond it: amber = act · red = risk · green = added line.
-// Nothing else is coloured.
-//
-// Order below: Tailwind entry · tokens · base styles · @theme · @utility ·
-// component classes in @layer components.
-// =============================================================================
+// Do NOT add tw-animate-css: Sass cannot parse its --value() syntax and
+// `next build` fails.
+@use "tailwindcss";
 
-// Plain @import works: sass-loader puts node_modules on the Sass load path, so
-// Sass resolves the package and PostCSS + Tailwind expand the result.
-//
-// Do NOT add tw-animate-css. Its @utility blocks use Tailwind's --value()
-// syntax, which Sass cannot parse — `next build` dies with "Expected
-// expression" at tw-animate.css 1:5801. `next dev` hides the problem.
-@import "tailwindcss";
-
-// No @custom-variant here: the app uses zero `dark:` utilities, so it was
-// generating nothing. The .dark block below is a plain class selector and works
-// without it. If you ever write `dark:` utilities, add
-//   @custom-variant dark (&:is(.dark *));
-// back — otherwise Tailwind keys them to prefers-color-scheme, not the .dark class.
-
-// ---- compile-time constants -------------------------------------------------
 $radius: 4px;
 $radius-pill: 30px;
 $font-size-base: 15px;
@@ -45,20 +16,17 @@ $elevation: (
   soft:  (0 0 18px 0 rgba(44, 44, 81, 0.08), 0 0 18px 0 rgba(0, 0, 0, 0.28)),
 );
 
-/// Emit the three elevation variables for a theme.
-/// $i: 1 = light, 2 = dark — so the two themes can never define different sets.
+// $i: 1 = light, 2 = dark
 @mixin elevation($i) {
   @each $name, $pair in $elevation {
     --elev-#{$name}: #{list.nth($pair, $i)};
   }
 }
 
-// ---- light ------------------------------------------------------------------
 :root {
   --radius: #{$radius};
   --radius-pill: #{$radius-pill};
 
-  // page is faintly tinted so white cards read as raised
   --background: oklch(0.9825 0.0035 250);
   --foreground: oklch(0.3126 0.0654 281.9);
   --card: oklch(1 0 0);
@@ -66,7 +34,7 @@ $elevation: (
   --popover: oklch(1 0 0);
   --popover-foreground: var(--foreground);
 
-  // TEAL — L=0.535 so white-on-teal clears WCAG AA (4.94:1)
+  // L=0.535 keeps white-on-teal at WCAG AA (4.94:1)
   --primary: oklch(0.535 0.088 185.5);
   --primary-foreground: oklch(1 0 0);
   --primary-hover: oklch(0.465 0.079 186.5);
@@ -86,14 +54,12 @@ $elevation: (
 
   @include elevation(1);
 
-  // SIGNAL — amber: you must act
   --attention: oklch(0.968 0.037 88);
   --attention-rule: oklch(0.885 0.088 84);
   --attention-ink: oklch(0.46 0.105 68);
   --attention-muted: oklch(0.565 0.115 72);
   --attention-solid: oklch(0.7 0.145 76);
 
-  // SIGNAL — red: a risk was surfaced
   --risk: oklch(0.966 0.017 20);
   --risk-rule: oklch(0.875 0.06 22);
   --risk-ink: oklch(0.435 0.16 25);
@@ -102,7 +68,6 @@ $elevation: (
   --destructive: var(--risk-solid);
   --destructive-foreground: oklch(1 0 0);
 
-  // SIGNAL — green: a line was added
   --added: oklch(0.963 0.035 142);
   --added-ink: oklch(0.42 0.105 145);
   --added-gutter: oklch(0.53 0.135 145);
@@ -111,7 +76,6 @@ $elevation: (
   --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
-// ---- dark -------------------------------------------------------------------
 .dark {
   --background: oklch(0.185 0.018 258);
   --foreground: oklch(0.955 0.005 250);
@@ -156,7 +120,6 @@ $elevation: (
   --added-gutter: oklch(0.715 0.12 145);
 }
 
-// ---- base element styles ----------------------------------------------------
 body {
   background: var(--background);
   color: var(--foreground);
@@ -232,20 +195,6 @@ h1, h2, h3, h4, h5 {
   --color-added-gutter: var(--added-gutter);
 }
 
-// =============================================================================
-// Component styles
-//
-// These were CSS Modules; they are global classes now. Two consequences the
-// module hashing used to handle for us:
-//
-//   1. Class names must be NAMESPACED. `.label` / `.value` / `.sm` were safe
-//      when hashed; as globals they would collide with anything. Hence BEM.
-//   2. They sit in `@layer components`, which Tailwind declares BEFORE
-//      `utilities` — so a Tailwind class on the element still wins. Unlayered
-//      CSS would have beaten the utilities, which is the wrong default.
-// =============================================================================
-
-// pipeline status → its tinted surface
 $statuses: (
   "applied":   (bg: var(--secondary),    fg: var(--muted-foreground)),
   "viewed":    (bg: var(--primary-tint), fg: var(--accent-foreground)),
@@ -254,7 +203,6 @@ $statuses: (
   "rejected":  (bg: var(--risk),         fg: var(--risk-ink)),
 );
 
-// match ring: one source for box / stroke / label per size, so they cannot drift
 $ring-sizes: (
   "sm": (box: 38px, label: 11px),
   "md": (box: 48px, label: 13px),
@@ -262,14 +210,12 @@ $ring-sizes: (
 );
 
 @layer components {
-  // ---- the template's card: white, 4px, ambient shadow, no border -----------
   .panel {
     background: var(--card);
     border-radius: var(--radius);
     box-shadow: var(--elev-card);
   }
 
-  // section heading inside a panel — "widget-title" in the reference
   .widget-title {
     font-size: 17px;
     font-weight: 500;
@@ -277,7 +223,6 @@ $ring-sizes: (
     color: var(--foreground);
   }
 
-  // ---- StatusChip -----------------------------------------------------------
   .status-chip {
     display: inline-flex;
     align-items: center;
@@ -299,7 +244,6 @@ $ring-sizes: (
     }
   }
 
-  // ---- MatchScore -----------------------------------------------------------
   .match-score {
     position: relative;
     flex-shrink: 0;
@@ -335,7 +279,6 @@ $ring-sizes: (
       font-weight: 500;
     }
 
-    // a strong match reads as an affirmation, so it takes the brand hue
     &--strong {
       .match-score__value { stroke: var(--primary); }
       .match-score__label { color: var(--primary); }
@@ -349,6 +292,26 @@ $ring-sizes: (
         .match-score__label { font-size: map.get($cfg, label); }
         .match-score__pct { font-size: map.get($cfg, label) * 0.62; }
       }
+    }
+  }
+
+  // ::backdrop is unreachable from a utility class, hence the styles here.
+  .dialog {
+    // preflight zeroes the UA `margin: auto` that centres a modal <dialog>
+    margin: auto;
+    width: calc(100vw - 32px);
+    max-width: 560px;
+    max-height: calc(100vh - 64px);
+    overflow: auto;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius);
+    background: var(--card);
+    color: var(--foreground);
+    box-shadow: var(--elev-raise);
+
+    &::backdrop {
+      background: oklch(0 0 0 / 45%);
     }
   }
 }

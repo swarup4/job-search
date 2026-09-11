@@ -1,4 +1,5 @@
 import "@/style/globals.scss";
+import { StoreProvider } from "@/store/StoreProvider";
 
 export const metadata = {
     title: "JobPilot",
@@ -16,7 +17,9 @@ export default function RootLayout({ children }) {
                     rel="stylesheet"
                 />
             </head>
-            <body>{children}</body>
+            <body>
+                <StoreProvider>{children}</StoreProvider>
+            </body>
         </html>
     );
 }
