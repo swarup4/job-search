@@ -24,5 +24,12 @@ class Invalid(DomainError):
     status = 422
 
 
-async def handle_domain_error(_: Request, exc: DomainError) -> JSONResponse:
-    return JSONResponse(status_code=exc.status, content={"detail": str(exc)})
+async def handle_domain_error(request: Request, exc: DomainError) -> JSONResponse:
+    # `detail` stays a plain string — the dashboard's axios interceptor reads it directly.
+    return JSONResponse(
+        status_code=exc.status,
+        content={
+            "detail": str(exc),
+            "request_id": getattr(request.state, "request_id", None),
+        },
+    )

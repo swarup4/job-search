@@ -1,6 +1,6 @@
 [project]
 name = "jobpilot-server"
-version = "0.1.0"
+version = "1.0.0"
 description = "JobPilot REST API — owns the local MongoDB structural store"
 requires-python = ">=3.12"
 dependencies = [
@@ -28,4 +28,4 @@ ignore = ["B008", "RUF012"]
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["config*", "modules*"]
+include = ["config*", "middleware*", "modules*"]
