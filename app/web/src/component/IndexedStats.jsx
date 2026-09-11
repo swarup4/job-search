@@ -2,11 +2,16 @@
 
 import { useSelector } from "react-redux";
 
-import { selectCertifications, selectExperience } from "@/store/profile/profileSlice";
+import {
+    selectCertifications,
+    selectExperience,
+    selectSkillCount,
+} from "@/store/profile/profileSlice";
 
-export function IndexedStats({ chunks, skills }) {
+export function IndexedStats({ chunks }) {
     const roles = useSelector(selectExperience).length;
     const certs = useSelector(selectCertifications).length;
+    const skills = useSelector(selectSkillCount);
 
     return (
         <div className="grid grid-cols-2 gap-3">

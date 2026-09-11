@@ -40,19 +40,7 @@ export const profileCreateInitialValues = { name: "", email: "" };
 /** The server requires both of these, so the form does too. */
 export const profileCreateSchema = Yup.object({ name, email });
 
-// edit the profile (PATCH /api/profile)
-
-export function profileIdentityInitialValues(profile) {
-    return {
-        name: profile.personal?.name ?? "",
-        email: profile.email ?? "",
-        headline: profile.personal?.headline ?? "",
-        phone: profile.personal?.phone ?? "",
-        location: profile.personal?.location ?? "",
-        summary: profile.summary ?? "",
-        links: profile.personal?.links ?? [],
-    };
-}
+// the identity fields of the profile, validated on save
 
 export const profileIdentitySchema = Yup.object({
     name,
@@ -174,3 +162,17 @@ export const certificationSchema = Yup.object({
         .trim()
         .matches(/^\d{4}$/, { message: "Use a four-digit year.", excludeEmptyString: true }),
 });
+
+// one skill group
+
+export const skillGroupInitialValues = { name: "" };
+
+/** Group names are the identity in the store, so a new one may not collide. */
+export function skillGroupSchema(taken) {
+    return Yup.object({
+        name: Yup.string()
+            .trim()
+            .required("Enter a group name.")
+            .notOneOf(taken, "That group already exists."),
+    });
+}

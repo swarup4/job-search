@@ -1,36 +1,50 @@
 "use client";
 
-import { useFormik, getIn } from "formik";
-import { AlertTriangle, Check, Loader2, Pencil, Plus, Save } from "lucide-react";
-// MOCK: saving is stubbed while demoing the UI without a backend.
-// import { ApiError, updateProfile } from "@/services";
+import { useState } from "react";
+import { useDispatch, useSelector, useStore } from "react-redux";
+import { useFormik } from "formik";
+import { Pencil, Plus, X } from "lucide-react";
+// MOCK: saving is stubbed while the endpoint is being built.
+// import { updateProfile } from "@/services";
 import { ApiError } from "@/services";
 import { Panel, PanelBody, PanelHeader, PanelTitle } from "@/component/ui/panel";
 import { Field, Input, Textarea } from "@/component/ui/field";
 import { Button } from "@/component/ui/button";
-import { profileIdentityInitialValues, profileIdentitySchema } from "@/util/schema";
+import { ProfileSaveBar } from "@/component/ProfileSaveBar";
+import {
+    identityChanged,
+    linkAdded,
+    linkChanged,
+    linkRemoved,
+    profileSaved,
+    selectIdentity,
+    selectProfilePayload,
+} from "@/store/profile/profileSlice";
+import { useDebounce } from "@/hooks/useDebounce";
+import { profileIdentitySchema } from "@/util/schema";
 
-export function ProfileIdentity({ profile }) {
+export function ProfileIdentity() {
+    const identity = useSelector(selectIdentity);
+    const store = useStore();
+    const dispatch = useDispatch();
+    const { schedule, flush } = useDebounce();
+
     const formik = useFormik({
-        initialValues: profileIdentityInitialValues(profile),
+        initialValues: identity,
         validationSchema: profileIdentitySchema,
-        onSubmit: async (values, { setStatus, resetForm }) => {
+        onSubmit: async (values, { setStatus }) => {
+            debugger;
             setStatus(null);
+            // Anything still waiting on the debounce belongs in this save.
+            flush();
+            // The payload is the whole profile, not just this form — every section
+            // has been writing to the store as it was edited.
+            const payload = selectProfilePayload(store.getState());
             try {
-                // await updateProfile({
-                //     email: values.email,
-                //     personal: {
-                //         name: values.name,
-                //         headline: values.headline || null,
-                //         phone: values.phone || null,
-                //         location: values.location || null,
-                //         links: values.links,
-                //     },
-                //     summary: values.summary || null,
-                // });
+                // await updateProfile(payload);
                 await new Promise((resolve) => setTimeout(resolve, 400));
+                dispatch(profileSaved());
                 setStatus({ ok: true, message: "Saved (mock — not persisted)." });
-                resetForm({ values });
             } catch (error) {
                 setStatus({
                     ok: false,
@@ -40,147 +54,191 @@ export function ProfileIdentity({ profile }) {
         },
     });
 
-    const { values, touched, errors, status, dirty, isSubmitting } = formik;
-    const nameError = touched.name && errors.name;
-    const emailError = touched.email && errors.email;
+    const { values, touched, errors, status, isSubmitting } = formik;
+
+    const bind = (field) => ({
+        ...formik.getFieldProps(field),
+        onChange: (e) => {
+            formik.handleChange(e);
+            const { value } = e.target;
+            schedule(field, () => dispatch(identityChanged({ field, value })));
+        },
+    });
+    const error = (key) => touched[key] && errors[key];
+
+    // Structural link edits reach the store at once; only the typed value waits.
+    function addLink(label) {
+        flush();
+        dispatch(linkAdded(label));
+        formik.setFieldValue("links", [...values.links, { label, value: "" }]);
+    }
+
+    function removeLink(index) {
+        flush();
+        dispatch(linkRemoved(index));
+        formik.setFieldValue(
+            "links",
+            values.links.filter((_, i) => i !== index)
+        );
+    }
 
     return (
-        <form onSubmit={formik.handleSubmit} noValidate>
-            <div className="mb-5 flex flex-wrap items-center gap-3">
-                <span className="grow" />
-                {status && (!status.ok || !dirty) ? <Notice status={status} /> : null}
-                <Button type="submit" size="sm" disabled={isSubmitting}>
-                    {isSubmitting ? <Loader2 className="animate-spin" /> : <Save />}
-                    {isSubmitting ? "Saving" : "Save changes"}
-                </Button>
-            </div>
+        <form onSubmit={formik.handleSubmit} noValidate className="flex flex-col gap-5">
+            <ProfileSaveBar status={status} isSubmitting={isSubmitting} />
 
-            <div className="flex flex-col gap-5">
-                <Panel>
-                    <PanelHeader>
-                        <PanelTitle>Personal details</PanelTitle>
-                    </PanelHeader>
-                    <PanelBody className="flex flex-col gap-5 py-5">
-                        <div className="flex flex-wrap items-center gap-4">
-                            <span className="grid size-16 shrink-0 place-items-center rounded-full bg-primary-tint text-[20px] font-semibold text-primary">
-                                {initials(values.name)}
-                            </span>
-                            <div className="min-w-0">
-                                <p className="text-[18px] font-semibold">
-                                    {values.name || "Unnamed"}
-                                </p>
-                                <p className="mt-0.5 text-[13.5px] text-muted-foreground">
-                                    {values.headline || "No headline"}
-                                </p>
-                            </div>
-                            <span className="grow" />
-                            <Button type="button" variant="outline" size="sm">
-                                <Pencil />
-                                Replace photo
-                            </Button>
+            <Panel>
+                <PanelHeader>
+                    <PanelTitle>Personal details</PanelTitle>
+                </PanelHeader>
+                <PanelBody className="flex flex-col gap-5 py-5">
+                    <div className="flex flex-wrap items-center gap-4">
+                        <span className="grid size-16 shrink-0 place-items-center rounded-full bg-primary-tint text-[20px] font-semibold text-primary">
+                            {initials(values.name)}
+                        </span>
+                        <div className="min-w-0">
+                            <p className="text-[18px] font-semibold">
+                                {values.name || "Unnamed"}
+                            </p>
+                            <p className="mt-0.5 text-[13.5px] text-muted-foreground">
+                                {values.headline || "No headline"}
+                            </p>
                         </div>
+                        <span className="grow" />
+                        <Button type="button" variant="outline" size="sm">
+                            <Pencil />
+                            Replace photo
+                        </Button>
+                    </div>
 
-                        <div className="grid gap-5 sm:grid-cols-2">
-                            <Field label="Full name" error={nameError}>
-                                <Input
-                                    invalid={Boolean(nameError)}
-                                    {...formik.getFieldProps("name")}
-                                />
-                            </Field>
+                    <div className="grid gap-5 sm:grid-cols-2">
+                        <Field label="Full name" error={error("name")}>
+                            <Input invalid={Boolean(error("name"))} {...bind("name")} />
+                        </Field>
 
-                            <Field
-                                label="Headline"
-                                hint="Context for scoring. Never written into the resume."
-                            >
-                                <Input {...formik.getFieldProps("headline")} />
-                            </Field>
+                        <Field
+                            label="Headline"
+                            hint="Context for scoring. Never written into the resume."
+                        >
+                            <Input {...bind("headline")} />
+                        </Field>
 
-                            <Field
-                                label="Email"
-                                hint="Required — this is your profile's key."
-                                error={emailError}
-                            >
-                                <Input
-                                    type="email"
-                                    invalid={Boolean(emailError)}
-                                    {...formik.getFieldProps("email")}
-                                />
-                            </Field>
+                        <Field
+                            label="Email"
+                            hint="Required — this is your profile's key."
+                            error={error("email")}
+                        >
+                            <Input
+                                type="email"
+                                invalid={Boolean(error("email"))}
+                                {...bind("email")}
+                            />
+                        </Field>
 
-                            <Field label="Phone">
-                                <Input {...formik.getFieldProps("phone")} />
-                            </Field>
+                        <Field label="Phone">
+                            <Input {...bind("phone")} />
+                        </Field>
 
-                            <Field label="Location" className="sm:col-span-2">
-                                <Input {...formik.getFieldProps("location")} />
-                            </Field>
-                        </div>
+                        <Field label="Location" className="sm:col-span-2">
+                            <Input {...bind("location")} />
+                        </Field>
+                    </div>
 
-                        <div>
-                            <p className="mb-2.5 text-[13px] font-medium">Links</p>
-                            <div className="flex flex-col gap-3">
-                                {values.links.map((link, i) => (
-                                    <div
-                                        key={link.label}
-                                        className="flex flex-wrap items-center gap-3"
-                                    >
-                                        <span className="w-20 shrink-0 text-[13px] text-muted-foreground">
-                                            {link.label}
-                                        </span>
-                                        <Field
-                                            className="min-w-[240px] grow"
-                                            error={getIn(errors, `links.${i}.value`)}
-                                        >
-                                            <Input
-                                                {...formik.getFieldProps(`links.${i}.value`)}
-                                            />
-                                        </Field>
-                                    </div>
-                                ))}
-                                <button
-                                    type="button"
-                                    className="inline-flex w-fit items-center gap-1.5 text-[13px] font-medium text-primary hover:underline"
+                    <div>
+                        <p className="mb-2.5 text-[13px] font-medium">Links</p>
+                        <div className="flex flex-col gap-3">
+                            {values.links.map((link, i) => (
+                                <div
+                                    key={link.label}
+                                    className="flex flex-wrap items-center gap-3"
                                 >
-                                    <Plus className="size-[14px]" />
-                                    Add link
-                                </button>
-                            </div>
+                                    <span className="w-20 shrink-0 text-[13px] text-muted-foreground">
+                                        {link.label}
+                                    </span>
+                                    <Field className="min-w-[240px] grow">
+                                        <Input
+                                            {...formik.getFieldProps(`links.${i}.value`)}
+                                            onChange={(e) => {
+                                                formik.handleChange(e);
+                                                const { value } = e.target;
+                                                schedule(`links.${i}`, () =>
+                                                    dispatch(
+                                                        linkChanged({ index: i, value })
+                                                    )
+                                                );
+                                            }}
+                                        />
+                                    </Field>
+                                    <button
+                                        type="button"
+                                        aria-label={`Remove ${link.label}`}
+                                        onClick={() => removeLink(i)}
+                                        className="grid size-9 shrink-0 place-items-center rounded-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                                    >
+                                        <X className="size-[14px]" />
+                                    </button>
+                                </div>
+                            ))}
+                            <AddLink
+                                taken={values.links.map((l) => l.label)}
+                                onAdd={addLink}
+                            />
                         </div>
-                    </PanelBody>
-                </Panel>
+                    </div>
+                </PanelBody>
+            </Panel>
 
-                <Panel>
-                    <PanelHeader>
-                        <PanelTitle>Professional summary</PanelTitle>
-                    </PanelHeader>
-                    <PanelBody className="py-5">
-                        <Textarea
-                            className="min-h-[124px]"
-                            {...formik.getFieldProps("summary")}
-                        />
-                    </PanelBody>
-                </Panel>
-            </div>
+            <Panel>
+                <PanelHeader>
+                    <PanelTitle>Professional summary</PanelTitle>
+                </PanelHeader>
+                <PanelBody className="py-5">
+                    <Textarea className="min-h-[124px]" {...bind("summary")} />
+                </PanelBody>
+            </Panel>
         </form>
     );
 }
 
-function Notice({ status }) {
+/** Labels are the key the rows render by, so a new one may not collide. */
+function AddLink({ taken, onAdd }) {
+    const [label, setLabel] = useState(null);
+
+    function commit() {
+        const next = (label ?? "").trim();
+        if (next && !taken.includes(next)) onAdd(next);
+        setLabel(null);
+    }
+
+    if (label === null) {
+        return (
+            <button
+                type="button"
+                onClick={() => setLabel("")}
+                className="inline-flex w-fit items-center gap-1.5 text-[13px] font-medium text-primary hover:underline"
+            >
+                <Plus className="size-[14px]" />
+                Add link
+            </button>
+        );
+    }
+
     return (
-        <p
-            className={
-                status.ok
-                    ? "flex items-center gap-2 rounded-sm bg-primary-tint px-3 py-2 text-[12.5px] text-accent-foreground"
-                    : "flex items-start gap-2 rounded-sm bg-risk px-3 py-2 text-[12.5px] text-risk-ink"
-            }
-        >
-            {status.ok ? (
-                <Check className="size-[13px] shrink-0" />
-            ) : (
-                <AlertTriangle className="mt-0.5 size-[13px] shrink-0" />
-            )}
-            {status.message}
-        </p>
+        <Input
+            autoFocus
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            onBlur={commit}
+            onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    commit();
+                } else if (e.key === "Escape") {
+                    setLabel(null);
+                }
+            }}
+            placeholder="Link label — LinkedIn, GitHub, Portfolio…"
+            className="w-fit min-w-[280px]"
+        />
     );
 }
 
