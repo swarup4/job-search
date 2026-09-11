@@ -9,15 +9,11 @@ import { JobList } from "@/component/JobList";
 import { ViewToggle } from "@/component/ViewToggle";
 import { Panel, PanelBody } from "@/component/ui/panel";
 import { buttonVariants } from "@/component/ui/button";
-import { Field, Input } from "@/component/ui/field";
+import { Input } from "@/component/ui/field";
 import { ROUTES } from "@/routes";
 import search from "@/data/search.json";
 import board from "@/data/board.json";
 
-/**
- * The jobs you saved — the same list shape as Search, filtered to `shortlisted`.
- * Both pages render JobList, so a row looks identical wherever you meet it.
- */
 export default function Page() {
   const [view, setView] = useState("list");
   const [filter, setFilter] = useState("");

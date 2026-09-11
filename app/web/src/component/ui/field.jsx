@@ -1,9 +1,5 @@
 import { cn } from "@/util/cn";
 
-// `label` and `hint` are optional: an unlabelled field (a summary textarea, a links
-// row) would otherwise reserve a blank label line and inherit the gap above it.
-// `error` replaces the hint rather than stacking under it, so the field does not
-// grow a line and shove the form down the moment validation fires.
 function Field({ label, hint, error, children, className }) {
     return (
         <label className={cn("flex flex-col gap-2", className)}>
@@ -44,6 +40,19 @@ function Textarea({ className, invalid, ...props }) {
     );
 }
 
+function Select({ className, invalid, ...props }) {
+    return (
+        <select
+            className={cn(
+                "h-11 w-full rounded-sm border border-input bg-card px-3 text-[14px] outline-none transition-colors focus:border-primary",
+                invalid && "border-risk-rule focus:border-risk-solid",
+                className
+            )}
+            {...props}
+        />
+    );
+}
+
 /** Removable token — the reference's tag input, used for roles and locations. */
 function TokenList({ items, tone = "soft" }) {
     return (
@@ -71,4 +80,4 @@ function TokenList({ items, tone = "soft" }) {
     );
 }
 
-export { Field, Input, Textarea, TokenList };
+export { Field, Input, Select, Textarea, TokenList };
