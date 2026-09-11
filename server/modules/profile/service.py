@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from errors import Conflict, NotFound
+from config.errors import Conflict, NotFound
 from modules.profile.models import (
     ChunkWrite,
     Profile,

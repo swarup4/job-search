@@ -4,7 +4,7 @@ Imports no hashing library and no JWT library — only the two protocols. Swappi
 argon2 for bcrypt, or JWT for sessions, does not touch this file (OCP).
 """
 
-from errors import Conflict, DomainError
+from config.errors import Conflict, DomainError
 from modules.account.models import Account, AccountRead, Login, LoginResult, SignUp
 from modules.account.security import PasswordHasher, TokenIssuer
 

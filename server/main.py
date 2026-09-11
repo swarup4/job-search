@@ -7,7 +7,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from config.database import connect, disconnect
-from errors import DomainError, handle_domain_error
+from config.errors import DomainError, handle_domain_error
+from config.logging import configure_logging
+from middleware import REQUEST_ID_HEADER, AccessLogMiddleware, ErrorHandlingMiddleware
 from modules import account, application, event, job, match, profile, resume, user
 
 MODULES = (job, match, resume, application, event, profile, user, account)
@@ -21,7 +23,15 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 
 def create_app() -> FastAPI:
+    configure_logging()
     app = FastAPI(title="JobPilot API", version="1.0.0", lifespan=lifespan)
+
+    # The last middleware added is the OUTERMOST, so this list reads inside-out.
+    # Error handling sits inside the access log, so the log sees the 500 it produces;
+    # both sit inside CORS, because a response built outside CORSMiddleware comes back
+    # without CORS headers and the browser reports a network error instead of a status.
+    app.add_middleware(ErrorHandlingMiddleware)
+    app.add_middleware(AccessLogMiddleware)
 
     app.add_middleware(
         CORSMiddleware,
@@ -31,6 +41,7 @@ def create_app() -> FastAPI:
         allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=[REQUEST_ID_HEADER],
     )
 
     # Every service error reaches HTTP here — see errors.py.

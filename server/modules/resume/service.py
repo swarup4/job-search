@@ -1,6 +1,6 @@
 from beanie import PydanticObjectId
 
-from errors import Conflict, Invalid, NotFound
+from config.errors import Conflict, Invalid, NotFound
 from modules.application import ApplicationStage, stage_application
 from modules.job import JobStatus, JobUpdate, update_job
 from modules.match import ReviewState, get_match
