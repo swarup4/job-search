@@ -1,0 +1,9 @@
+{
+  "name": "Bold Header Band",
+  "contact": "plain",
+  "skills": "pills",
+  "per_row": 6,
+  "row_sep": "\\\\[4pt]\n",
+  "experience": "jobtitle",
+  "location": "full"
+}

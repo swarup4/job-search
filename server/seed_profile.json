@@ -1,0 +1,275 @@
+{
+  "email": "swarup.saha004@hotmail.com",
+  "personal": {
+    "name": "Swarup Saha",
+    "headline": "Technical Lead & Full Stack / GenAI Engineer",
+    "phone": "+91-90358-45781",
+    "location": "Bengaluru, India",
+    "links": [
+      {
+        "label": "LinkedIn",
+        "value": "linkedin.com/in/swarup-saha-d7"
+      },
+      {
+        "label": "GitHub",
+        "value": "github.com/swarup4"
+      }
+    ]
+  },
+  "summary": "Technical Lead and Full Stack / GenAI Engineer with 12.4 years of experience building scalable web applications and AI-powered systems. Deep expertise in MERN/MEAN stack, LangChain, LangGraph, Azure OpenAI, and Agentic AI/RAG pipelines. Proven track record delivering multi-tenant SaaS platforms, ML models, and LLM-based products at enterprise scale. Skilled at leading cross-functional agile teams and owning full SDLC from design to deployment.",
+  "skill_groups": [
+    {
+      "name": "Frontend",
+      "items": [
+        "JavaScript",
+        "TypeScript",
+        "React.js",
+        "Redux",
+        "Next.js",
+        "Angular",
+        "Angular.js",
+        "Tailwind CSS",
+        "Material UI"
+      ]
+    },
+    {
+      "name": "Backend & Data",
+      "items": [
+        "Node.js",
+        "Express.js",
+        "Python",
+        "FastAPI",
+        "Flask",
+        "HTML5",
+        "CSS3/SCSS",
+        "MongoDB",
+        "PostgreSQL",
+        "MySQL"
+      ]
+    },
+    {
+      "name": "AI & GenAI",
+      "items": [
+        "Agentic AI",
+        "Multi-Agent",
+        "RASA",
+        "Redis",
+        "MongoDB Atlas",
+        "PGVector",
+        "LangChain",
+        "LangGraph",
+        "LangSmith",
+        "Azure OpenAI",
+        "MCP",
+        "A2A",
+        "CrewAI",
+        "N8N",
+        "Tableau"
+      ]
+    },
+    {
+      "name": "Cloud & DevOps",
+      "items": [
+        "AWS",
+        "Azure",
+        "Azure Service Bus",
+        "RabbitMQ",
+        "Docker",
+        "Nginx",
+        "Git",
+        "CI/CD",
+        "Jenkins",
+        "Azure DevOps"
+      ]
+    },
+    {
+      "name": "Testing & Practices",
+      "items": [
+        "Jest",
+        "Sinon",
+        "Supertest",
+        "Mocha",
+        "XSS/CSRF",
+        "SQL Injection",
+        "RBAC/ABAC",
+        "Agile/Scrum",
+        "Microservices",
+        "Event-Driven"
+      ]
+    }
+  ],
+  "experience": [
+    {
+      "key": "trigent",
+      "title": "Technical Lead",
+      "company": "Trigent Software Pvt. Ltd.",
+      "location": "Bengaluru, India",
+      "start": "Jul 2023",
+      "end": null,
+      "current": true,
+      "bullets": [],
+      "projects": [
+        {
+          "label": "Zeltri (Multi-Tenant Elder Care Management Platform)",
+          "bullets": [
+            "Architected a multi-tenant, cloud-native SaaS platform for care homes and assisted-living providers using MERN stack, FastAPI, MongoDB Atlas, Redis, and Azure; enforced strict tenant isolation, RBAC/ABAC security, and scalable REST APIs across 10+ facilities.",
+            "Integrated Agentic AI, Multi-Agent Orchestration & RAG pipelines using LangChain, LangGraph, MCP, LangSmith, and Azure OpenAI with MongoDB Atlas as vector stores to enable semantic document search, email intelligence, conversational assistance, and automated task workflows."
+          ]
+        },
+        {
+          "label": "CV (AI-Powered Social Media Reels Generation)",
+          "bullets": [
+            "Developed an end-to-end AI-powered content pipeline for automated Reels creation across YouTube, Instagram, and Facebook; integrated Azure OpenAI (script generation), multilingual translation, Whisper (TTS), Midjourney (image gen), and RunwayML (video render), reducing production cycles by 60%."
+          ]
+        },
+        {
+          "label": "PlanITRoI (Refurbished Laptop Price Prediction & Specification Extraction)",
+          "bullets": [
+            "Designed microservices-based data pipelines using Node.js, Python, and PostgreSQL with event-driven processing for large-scale web scraping and data normalization.",
+            "Developed ML models for spec extraction and price prediction using KNN with fuzzy logic, Random Forest, and LLM-assisted enrichment, improving pricing accuracy and catalog quality."
+          ]
+        },
+        {
+          "label": "Sizeright (Shoe Measurement & Sizing Solution)",
+          "bullets": [
+            "Built a cloud-native Flask web widget on AWS for real-time shoe sizing; developed scalable RESTful APIs with predictive ML models (Random Forest, KNN) for accurate measurement recommendations."
+          ]
+        }
+      ]
+    },
+    {
+      "key": "encora",
+      "title": "Technical Lead",
+      "company": "Encora Inc.",
+      "location": "Bengaluru, India",
+      "start": "Aug 2022",
+      "end": "Jun 2023",
+      "current": false,
+      "projects": [],
+      "bullets": [
+        "Developed an ML model (Random Forest + XGBoost) for Brightside to predict loan eligibility and detect fraud by analyzing credit scores, employment, and financial history.",
+        "Built a serverless, cloud-native backend on AWS Lambda, Node.js, and MySQL for scalable loan evaluation services; implemented CI/CD pipelines using Azure DevOps and enforced security best practices including SQL injection prevention, XSS protection, and rate limiting.",
+        "Authored unit tests and integration tests using Jest, Chai, and Mocha to ensure code coverage and vulnerability remediation across critical loan processing modules.",
+        "Designed and implemented ETL pipelines using Python and AWS Glue for automated data extraction and transformation, streamlining ML model training workflows."
+      ]
+    },
+    {
+      "key": "lti",
+      "title": "Senior Software Engineer",
+      "company": "Larsen & Toubro Infotech (LTI)",
+      "location": "Bengaluru, India",
+      "start": "May 2019",
+      "end": "Jul 2022",
+      "current": false,
+      "projects": [],
+      "bullets": [
+        "Built an AI-powered Virtual Assistant chatbot for Travelers (insurance domain) using RASA, Python, and MongoDB, significantly improving automated query resolution; used Azure Service Bus & RabbitMQ for event-driven message processing and Tableau for reporting and visualization.",
+        "Developed full-stack features with React, Redux, Node.js, and integrated AWS Lambda, Amplify, S3, API Gateway, and EC2 for scalable policy data access; managed deployments via Jenkins CI/CD pipelines and wrote unit tests using Sinon, Supertest, and Mocha."
+      ]
+    },
+    {
+      "key": "mphasis",
+      "title": "Senior Software Engineer",
+      "company": "Mphasis Ltd.",
+      "location": "Bengaluru, India",
+      "start": "Jun 2017",
+      "end": "May 2019",
+      "current": false,
+      "projects": [],
+      "bullets": [
+        "Collaborated with Schneider Electric to build EcoReach, an IoT commissioning tool for Automatic Circuit Breakers using Angular.js, Node.js, and Socket.IO for real-time device data retrieval and cloud-based analysis."
+      ]
+    },
+    {
+      "key": "harman",
+      "title": "UI Developer",
+      "company": "Harman Connected Services",
+      "location": "Bengaluru, India",
+      "start": "Aug 2015",
+      "end": "Jun 2017",
+      "current": false,
+      "projects": [],
+      "bullets": [
+        "Engineered the I2E retail store management and supply chain optimization tool for EYC using Angular Material, Angular.js, Node.js, and MySQL."
+      ]
+    },
+    {
+      "key": "smacera",
+      "title": "UI Developer",
+      "company": "SMACera Technologies (Mindtree Ltd.)",
+      "location": "Bengaluru, India",
+      "start": "Dec 2014",
+      "end": "Aug 2015",
+      "current": false,
+      "projects": [],
+      "bullets": [
+        "Contributed to E-commerce CMS development for client P&G using Angular.js and HTML & CSS, working on various product websites."
+      ]
+    },
+    {
+      "key": "gowyn",
+      "title": "Web Developer",
+      "company": "Gowyn Technologies Pvt. Ltd.",
+      "location": "Delhi, India",
+      "start": "Apr 2014",
+      "end": "Nov 2014",
+      "current": false,
+      "projects": [],
+      "bullets": [
+        "Built and maintained LIMOUSINE GROUP, a PHP-based car booking site for Canada, using HTML, CSS, & Bootstrap to deliver premium car services."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "key": "mca",
+      "degree": "MCA \u2014 Machine Learning & Artificial Intelligence",
+      "institution": "Amity University",
+      "location": "Delhi",
+      "start": "Jul 2022",
+      "end": "Aug 2024"
+    },
+    {
+      "key": "bsc",
+      "degree": "BSc. IT \u2014 Information Technology",
+      "institution": "Kuvempu University",
+      "location": "Delhi",
+      "start": "Jun 2010",
+      "end": "May 2013"
+    },
+    {
+      "key": "gniit",
+      "degree": "GNIIT \u2014 Diploma in Information Technology",
+      "institution": "NIIT University",
+      "location": "Delhi",
+      "start": "Jun 2009",
+      "end": "May 2012"
+    }
+  ],
+  "certifications": [
+    {
+      "key": "az-ai-cloud",
+      "name": "Azure Ai Cloud Developer Associate",
+      "issuer": "Microsoft Azure",
+      "year": "July 2026"
+    },
+    {
+      "key": "az-ai-agents",
+      "name": "Azure AI Apps and Agents Developer Associate",
+      "issuer": "Microsoft Azure",
+      "year": "Jun 2026"
+    },
+    {
+      "key": "aws-dev",
+      "name": "AWS Certified Developer Associate",
+      "issuer": "AWS",
+      "year": "Jun 2026"
+    },
+    {
+      "key": "mdb-agents",
+      "name": "Building AI Agents with MongoDB",
+      "issuer": "MongoDB",
+      "year": "May 2026"
+    }
+  ]
+}

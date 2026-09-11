@@ -7,5 +7,5 @@ export function getResume(jobId) {
 
 /** GET /api/resume/{job_id}/versions — newest first. */
 export function listResumeVersions(jobId) {
-    return axiosInstance.get(`/resume/${jobId}/versions`);
+    return axiosInstance.get(`/resume/versions/${jobId}`);
 }

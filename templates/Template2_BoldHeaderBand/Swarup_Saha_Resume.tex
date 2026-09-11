@@ -1,0 +1,93 @@
+%% ============================================================
+%%  SWARUP SAHA — Resume Template 3: Bold Header Band
+%%  Design: solid accent-blue header band, plain body, rounded skill pills
+%% ============================================================
+%% !TEX program = pdflatex
+
+\documentclass[10pt, letterpaper]{article}
+
+\usepackage[top=0.0in, bottom=0.45in, left=0.0in, right=0.0in]{geometry}
+\usepackage[table]{xcolor}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{microtype}
+\usepackage{parskip}
+\usepackage{fontawesome5}
+\usepackage{ragged2e}
+\usepackage{tikz}
+\usepackage[T1]{fontenc}
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+
+\definecolor{accent}{HTML}{1F5C99}
+\definecolor{textmain}{HTML}{1A1A1A}
+\definecolor{textmuted}{HTML}{757B80}
+\definecolor{tagbg}{HTML}{EBF2FA}
+\definecolor{tagtext}{HTML}{1F5C99}
+\colorlet{ACCENT}{accent}
+
+\hypersetup{colorlinks=true, urlcolor=accent, linkcolor=accent,
+  pdfauthor={Swarup Saha}, pdftitle={Swarup Saha --- Resume}}
+\pagestyle{empty}
+
+\newenvironment{bodycontent}{\begin{minipage}{\dimexpr\paperwidth-1.2in\relax}\hspace*{0.6in}\begin{minipage}{\dimexpr\paperwidth-1.2in\relax}}{\end{minipage}\end{minipage}}
+
+\titleformat{\section}
+  {\color{accent}\fontsize{10}{12}\bfseries\MakeUppercase}{}{0em}{}
+  [\vspace{-4pt}\textcolor{accent}{\rule{\linewidth}{0.6pt}}\vspace{2pt}]
+\titlespacing{\section}{0pt}{10pt}{2pt}
+
+\setlist[itemize]{leftmargin=14pt, itemsep=0.5pt, parsep=0pt, topsep=0.5pt,
+  label=\textcolor{textmain}{\textbullet}}
+
+\newcommand{\jobtitle}[4]{\vspace{1pt}\noindent{\fontsize{11}{13}\bfseries\color{textmain}#1}{\color{textmuted}\ \ \textbar\ \ }{\color{textmuted}#2}\hfill{\fontsize{9.5}{11}\color{textmuted}#3\ \textperiodcentered\ #4}\vspace{1pt}}
+\newcommand{\projectlabel}[1]{\vspace{1pt}\noindent{\fontsize{9.5}{11}\bfseries\itshape\color{accent}#1}\vspace{1pt}}
+\newcommand{\educrow}[3]{\noindent{\fontsize{10}{12}\bfseries\color{textmain}#1}\hfill{\fontsize{9.5}{11}\color{textmuted}#3}\\{\fontsize{9.5}{11}\color{textmuted}#2}\vspace{4pt}}
+\newcommand{\certrow}[3]{\noindent{\fontsize{9.5}{11}\bfseries\color{textmain}#1}{\color{textmuted}\ \ \textbar\ \ }{\color{textmuted}#2}\hfill{\fontsize{9}{11}\color{textmuted}#3}\\[7pt]}
+\newcommand{\skilltag}[1]{\tikz[baseline=-0.6ex]{\node[fill=tagbg, rounded corners=5pt, inner sep=4pt, text=tagtext, font=\fontsize{8.5}{10}\selectfont]{#1};}}
+
+\begin{document}
+
+\noindent\begin{tikzpicture}[remember picture, overlay]
+  \fill[accent] (current page.north west) rectangle ([yshift=-1.15in]current page.north east);
+\end{tikzpicture}
+\vspace{0.18in}
+\hspace{0.6in}\begin{minipage}{\dimexpr\paperwidth-1.2in\relax}
+{\fontsize{22}{26}\bfseries\color{white} \MakeUppercase{{{FULL_NAME}}}}\\[3pt]
+{\fontsize{10.5}{13}\color{white} {{HEADLINE}}}\\[6pt]
+{\color{white}\fontsize{9}{11}\selectfont
+{{CONTACT}}
+\faLinkedin\ \href{https://linkedin.com/in/swarup-saha-d7}{linkedin.com/in/swarup-saha-d7}\enspace\enspace
+\faGithub\ \href{https://github.com/swarup4}{github.com/swarup4}}
+\end{minipage}
+\vspace{0.55in}
+
+\hspace{0.6in}\begin{minipage}{\dimexpr\paperwidth-1.2in\relax}
+
+\section{\faUser\ Professional Summary}
+{\fontsize{9}{13}\color{textmain}
+{{SUMMARY}}}
+
+\section{\faCogs\ Technical Skills}
+\vspace{2pt}
+{{SKILLS}}
+\vspace{4pt}
+
+\section{\faBriefcase\ Work Experience}
+
+{{EXPERIENCE}}
+
+\vspace{3pt}
+\section{\faGraduationCap\ Education}
+{{EDUCATION}}
+
+\vspace{3pt}
+\section{\faCertificate\ Certifications}
+{{CERTIFICATIONS}}
+
+\end{minipage}
+
+\end{document}

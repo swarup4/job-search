@@ -1,56 +1,153 @@
-from fastapi import APIRouter, Query, status
+from beanie import PydanticObjectId
+from fastapi import APIRouter, status
 
 from modules.profile import service
 from modules.profile.models import (
-    ChunkWrite,
-    Preferences,
+    Certification,
+    CertificationFields,
+    CertificationRead,
+    Education,
+    EducationFields,
+    EducationRead,
+    Experience,
+    ExperienceFields,
+    ExperienceRead,
     Profile,
-    ProfileCreate,
+    ProfileFields,
     ProfileRead,
-    ProfileUpdate,
-    ResumeChunkText,
+    Skill,
+    SkillFields,
+    SkillRead,
 )
 
 router = APIRouter(tags=["profile"])
 
 
-@router.get("", response_model=ProfileRead)
-async def get_profile() -> Profile:
-    return await service.get_profile()
+# --- personal details --------------------------------------------------------
 
 
-@router.post("", response_model=ProfileRead, status_code=status.HTTP_201_CREATED)
-async def create_profile(payload: ProfileCreate) -> Profile:
-    return await service.create_profile(payload)
+@router.post(
+    "/createProfile/{user_id}", response_model=ProfileRead, status_code=status.HTTP_201_CREATED
+)
+async def create_profile(user_id: PydanticObjectId, payload: ProfileFields) -> Profile:
+    return await service.create_profile(user_id, payload)
 
 
-@router.patch("", response_model=ProfileRead)
-async def update_profile(payload: ProfileUpdate) -> Profile:
-    return await service.update_profile(payload)
+@router.get("/getProfile/{user_id}", response_model=ProfileRead)
+async def get_profile(user_id: PydanticObjectId) -> Profile:
+    return await service.get_profile(user_id)
 
 
-@router.get("/preferences", response_model=Preferences)
-async def get_preferences() -> Preferences:
-    return (await service.get_profile()).preferences
+@router.put("/updateProfile/{user_id}", response_model=ProfileRead)
+async def replace_profile(user_id: PydanticObjectId, payload: ProfileFields) -> Profile:
+    return await service.replace_profile(user_id, payload)
 
 
-@router.put("/preferences", response_model=Preferences)
-async def set_preferences(payload: Preferences) -> Preferences:
-    profile = await service.update_profile(ProfileUpdate(preferences=payload))
-    return profile.preferences
+# --- work experience ---------------------------------------------------------
 
 
-@router.get("/chunks", response_model=list[ResumeChunkText])
-async def get_chunks(chunk_id: list[str] = Query(default_factory=list)) -> list[ResumeChunkText]:
-    """The RAG second hop. `ai/rag/retrieval.py` calls this between the two stages."""
-    return await service.get_chunks(chunk_id)
+@router.get("/getExperience/{user_id}", response_model=list[ExperienceRead])
+async def list_experience(user_id: PydanticObjectId) -> list[Experience]:
+    return await service.list_experience(user_id)
 
 
-@router.put("/chunks", response_model=int)
-async def replace_chunks(chunks: list[ChunkWrite]) -> int:
-    return await service.replace_chunks(chunks)
+@router.post(
+    "/addExperience/{user_id}", response_model=ExperienceRead, status_code=status.HTTP_201_CREATED
+)
+async def add_experience(user_id: PydanticObjectId, payload: ExperienceFields) -> Experience:
+    return await service.add_experience(user_id, payload)
 
 
-@router.get("/chunks/{chunk_id}", response_model=ResumeChunkText)
-async def get_chunk(chunk_id: str) -> ResumeChunkText:
-    return await service.get_chunk(chunk_id)
+@router.put("/updateExperience/{user_id}/{entry_id}", response_model=ExperienceRead)
+async def replace_experience(
+    user_id: PydanticObjectId, entry_id: PydanticObjectId, payload: ExperienceFields
+) -> Experience:
+    return await service.replace_experience(user_id, entry_id, payload)
+
+
+@router.delete("/deleteExperience/{user_id}/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_experience(user_id: PydanticObjectId, entry_id: PydanticObjectId) -> None:
+    await service.remove_experience(user_id, entry_id)
+
+
+# --- education ---------------------------------------------------------------
+
+
+@router.get("/getEducation/{user_id}", response_model=list[EducationRead])
+async def list_education(user_id: PydanticObjectId) -> list[Education]:
+    return await service.list_education(user_id)
+
+
+@router.post(
+    "/addEducation/{user_id}", response_model=EducationRead, status_code=status.HTTP_201_CREATED
+)
+async def add_education(user_id: PydanticObjectId, payload: EducationFields) -> Education:
+    return await service.add_education(user_id, payload)
+
+
+@router.put("/updateEducation/{user_id}/{entry_id}", response_model=EducationRead)
+async def replace_education(
+    user_id: PydanticObjectId, entry_id: PydanticObjectId, payload: EducationFields
+) -> Education:
+    return await service.replace_education(user_id, entry_id, payload)
+
+
+@router.delete("/deleteEducation/{user_id}/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_education(user_id: PydanticObjectId, entry_id: PydanticObjectId) -> None:
+    await service.remove_education(user_id, entry_id)
+
+
+# --- skills ------------------------------------------------------------------
+
+
+@router.get("/getSkills/{user_id}", response_model=list[SkillRead])
+async def list_skills(user_id: PydanticObjectId) -> list[Skill]:
+    return await service.list_skills(user_id)
+
+
+@router.post("/addSkill/{user_id}", response_model=SkillRead, status_code=status.HTTP_201_CREATED)
+async def add_skill(user_id: PydanticObjectId, payload: SkillFields) -> Skill:
+    return await service.add_skill(user_id, payload)
+
+
+@router.put("/updateSkill/{user_id}/{entry_id}", response_model=SkillRead)
+async def replace_skill(
+    user_id: PydanticObjectId, entry_id: PydanticObjectId, payload: SkillFields
+) -> Skill:
+    return await service.replace_skill(user_id, entry_id, payload)
+
+
+@router.delete("/deleteSkill/{user_id}/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_skill(user_id: PydanticObjectId, entry_id: PydanticObjectId) -> None:
+    await service.remove_skill(user_id, entry_id)
+
+
+# --- certifications ----------------------------------------------------------
+
+
+@router.get("/getCertifications/{user_id}", response_model=list[CertificationRead])
+async def list_certifications(user_id: PydanticObjectId) -> list[Certification]:
+    return await service.list_certifications(user_id)
+
+
+@router.post(
+    "/addCertification/{user_id}",
+    response_model=CertificationRead,
+    status_code=status.HTTP_201_CREATED,
+)
+async def add_certification(
+    user_id: PydanticObjectId, payload: CertificationFields
+) -> Certification:
+    return await service.add_certification(user_id, payload)
+
+
+@router.put("/updateCertification/{user_id}/{entry_id}", response_model=CertificationRead)
+async def replace_certification(
+    user_id: PydanticObjectId, entry_id: PydanticObjectId, payload: CertificationFields
+) -> Certification:
+    return await service.replace_certification(user_id, entry_id, payload)
+
+
+@router.delete("/deleteCertification/{user_id}/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_certification(user_id: PydanticObjectId, entry_id: PydanticObjectId) -> None:
+    await service.remove_certification(user_id, entry_id)

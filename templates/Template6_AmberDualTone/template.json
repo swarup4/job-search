@@ -1,0 +1,9 @@
+{
+  "name": "Amber Dual Tone",
+  "contact": "contactitem",
+  "skills": "pills",
+  "per_row": 9,
+  "row_sep": "\\\\[2pt]\n",
+  "experience": "jobtitle",
+  "location": "full"
+}

@@ -1,0 +1,83 @@
+%% ============================================================
+%%  SWARUP SAHA — Resume Template 2: Modern Minimalist
+%%  Design: pure black/gray, letter-spaced small-caps headings, no rules/color
+%% ============================================================
+%% !TEX program = pdflatex
+
+\documentclass[10pt, letterpaper]{article}
+
+\usepackage[top=0.45in, bottom=0.45in, left=0.65in, right=0.65in]{geometry}
+\usepackage[table]{xcolor}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{microtype}
+\usepackage{parskip}
+\usepackage{fontawesome5}
+\usepackage{ragged2e}
+\usepackage[T1]{fontenc}
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+
+\definecolor{textmain}{HTML}{1A1A1A}
+\definecolor{textmuted}{HTML}{6B6B6B}
+\definecolor{hairline}{HTML}{CFCFCF}
+
+\hypersetup{colorlinks=true, urlcolor=textmain, linkcolor=textmain,
+  pdfauthor={Swarup Saha}, pdftitle={Swarup Saha --- Resume}}
+\pagestyle{empty}
+
+\titleformat{\section}
+  {\color{textmain}\fontsize{9}{11}\bfseries\MakeUppercase}
+  {}{0em}{}
+  []
+\titlespacing{\section}{0pt}{11pt}{4pt}
+\newcommand{\seclabel}[1]{\noindent{\fontsize{9}{11}\bfseries\color{textmain}\MakeUppercase{#1}\hspace{6pt}}\textcolor{hairline}{\rule[2pt]{0.68\linewidth}{0.5pt}}\par\vspace{4pt}}
+
+\setlist[itemize]{leftmargin=13pt, itemsep=0.5pt, parsep=0pt, topsep=1pt,
+  label=\textcolor{textmuted}{\textendash}}
+
+\newcommand{\jobtitle}[4]{%
+  \vspace{1pt}\noindent
+  {\fontsize{10.5}{12}\bfseries\color{textmain}#1}\ {\color{textmuted}--- #2}
+  \hfill{\fontsize{9}{11}\color{textmuted}#3\ \textperiodcentered\ #4}\vspace{1pt}}
+\newcommand{\projectlabel}[1]{\vspace{1pt}\noindent{\fontsize{9}{11}\bfseries\itshape\color{textmain}#1}\vspace{1pt}}
+\newcommand{\educrow}[3]{\noindent{\fontsize{9.5}{11}\bfseries\color{textmain}#1}\hfill{\fontsize{9}{11}\color{textmuted}#3}\\{\fontsize{9}{11}\color{textmuted}#2}\vspace{4pt}}
+\newcommand{\contactitem}[2]{{\color{textmain}#1}\ {\color{textmuted}\fontsize{8.5}{11}\selectfont #2}}
+\newcommand{\certrow}[3]{\noindent{\fontsize{9}{11}\bfseries\color{textmain}#1}\ {\color{textmuted}--- #2}\hfill{\fontsize{8.5}{11}\color{textmuted}#3}\\[6pt]}
+
+\begin{document}
+
+\begin{center}
+  {\fontsize{21}{24}\bfseries\color{textmain}\MakeUppercase{{{FULL_NAME}}}}\\[3pt]
+  {\fontsize{10}{12}\color{textmuted} {{HEADLINE}}}\\[5pt]
+{{CONTACT}}
+\end{center}
+\vspace{4pt}
+
+\seclabel{Professional Summary}
+{\fontsize{9}{13}\color{textmain}
+{{SUMMARY}}}
+
+\seclabel{Technical Skills}
+{\small\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\linewidth}{XXXX}
+{{SKILLS}}
+\end{tabularx}}
+\vspace{2pt}
+
+\seclabel{Work Experience}
+
+{{EXPERIENCE}}
+
+\vspace{2pt}
+\seclabel{Education}
+{{EDUCATION}}
+
+\vspace{2pt}
+\seclabel{Certifications}
+{{CERTIFICATIONS}}
+
+\end{document}

@@ -1,0 +1,85 @@
+%% ============================================================
+%%  SWARUP SAHA — Resume Template 8: Amber Dual-Tone (Compact)
+%%  Design: dense layout, warm amber accent labels, small role tag by name
+%% ============================================================
+%% !TEX program = pdflatex
+
+\documentclass[10pt, letterpaper]{article}
+
+\usepackage[top=0.35in, bottom=0.35in, left=0.55in, right=0.55in]{geometry}
+\usepackage[table]{xcolor}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{microtype}
+\usepackage{parskip}
+\usepackage{fontawesome5}
+\usepackage{ragged2e}
+\usepackage{tikz}
+\usepackage[T1]{fontenc}
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+
+\definecolor{accent}{HTML}{BA7517}
+\definecolor{accentdark}{HTML}{854F0B}
+\definecolor{textmain}{HTML}{1A1A1A}
+\definecolor{textmuted}{HTML}{757B80}
+\definecolor{tagbg}{HTML}{FAEEDA}
+\definecolor{tagtext}{HTML}{633806}
+\colorlet{ACCENT}{accent}
+
+\hypersetup{colorlinks=true, urlcolor=accentdark, linkcolor=accentdark,
+  pdfauthor={Swarup Saha}, pdftitle={Swarup Saha --- Resume}}
+\pagestyle{empty}
+
+\titleformat{\section}
+  {\color{accentdark}\fontsize{8.5}{10}\bfseries\MakeUppercase}{}{0em}{}[]
+\titlespacing{\section}{0pt}{6pt}{2pt}
+\newcommand{\seclabel}[1]{\section{#1}\textcolor{accent}{\rule[3pt]{\linewidth}{0.5pt}}\vspace{2pt}}
+
+\setlist[itemize]{leftmargin=11pt, itemsep=0pt, parsep=0pt, topsep=0.5pt,
+  label=\textcolor{textmuted}{\textendash}}
+
+\newcommand{\contactitem}[2]{{\color{accentdark}#1}\ {\color{textmuted}\fontsize{8}{10}\selectfont #2}}
+\newcommand{\educrow}[3]{\noindent{\fontsize{9}{11}\bfseries\color{textmain}#1}\hfill{\fontsize{8}{10}\color{accentdark}#3}\\{\fontsize{8}{10}\color{textmuted}#2}\vspace{2pt}}
+\newcommand{\certrow}[3]{\noindent{\fontsize{8.5}{10.5}\bfseries\color{textmain}#1}{\color{textmuted}\ \textbar\ }{\color{textmuted}#2}\hfill{\fontsize{7.5}{9.5}\color{accentdark}#3}\\[3pt]}
+\newcommand{\skilltag}[1]{\tikz[baseline=-0.6ex]{\node[fill=tagbg, rounded corners=1.5pt, inner sep=3pt, text=tagtext, font=\fontsize{7.5}{9}\selectfont]{#1};}}
+
+\newcommand{\jobtitle}[4]{%
+  \noindent{\fontsize{9.5}{11.5}\bfseries\color{textmain}#1}, {\color{textmuted}\fontsize{9}{11}#2}
+  \hfill{\fontsize{8}{10}\color{accentdark}#3\ \textperiodcentered\ #4}\par\vspace{1pt}}
+\newcommand{\projectlabel}[1]{\noindent{\fontsize{8.3}{10}\bfseries\itshape\color{accentdark}#1}\par\vspace{0.5pt}}
+
+\begin{document}
+
+\noindent{\fontsize{16}{19}\bfseries\color{textmain} {{FULL_NAME}}}
+\hfill
+\tikz[baseline=-0.5ex]{\node[fill=accent, rounded corners=2pt, inner sep=4pt, text=white, font=\fontsize{8}{10}\bfseries\selectfont]{{{HEADLINE}}};}\\[3pt]
+{\fontsize{8}{10}\color{textmuted}
+{{CONTACT}}}
+\vspace{2pt}
+\textcolor{accent}{\rule{\linewidth}{1pt}}
+
+\seclabel{Summary}
+{\fontsize{8.3}{10.5}\color{textmain}
+{{SUMMARY}}}
+
+\seclabel{Technical Skills}
+{{SKILLS}}
+\vspace{2pt}
+
+\seclabel{Work Experience}
+
+{{EXPERIENCE}}
+
+\vspace{2pt}
+\seclabel{Education}
+{{EDUCATION}}
+
+\vspace{2pt}
+\seclabel{Certifications}
+{{CERTIFICATIONS}}
+
+\end{document}

@@ -7,6 +7,11 @@ from modules.resume.models import ResumeRead, ResumeStore, TailoredResume
 router = APIRouter(tags=["resume"])
 
 
+@router.get("/versions/{job_id}", response_model=list[ResumeRead])
+async def list_versions(job_id: PydanticObjectId) -> list[TailoredResume]:
+    return await service.list_versions(job_id)
+
+
 @router.post("", response_model=ResumeRead, status_code=status.HTTP_201_CREATED)
 async def store_resume(payload: ResumeStore) -> TailoredResume:
     return await service.store_resume(payload)
@@ -15,8 +20,3 @@ async def store_resume(payload: ResumeStore) -> TailoredResume:
 @router.get("/{job_id}", response_model=ResumeRead)
 async def get_resume(job_id: PydanticObjectId) -> TailoredResume:
     return await service.get_resume(job_id)
-
-
-@router.get("/{job_id}/versions", response_model=list[ResumeRead])
-async def list_versions(job_id: PydanticObjectId) -> list[TailoredResume]:
-    return await service.list_versions(job_id)

@@ -9,8 +9,9 @@ from modules.application import AnswerBank, Application
 from modules.event import Event
 from modules.job import Job
 from modules.match import Match
-from modules.profile import Profile, ResumeChunkText
+from modules.profile import Certification, Education, Experience, Profile, Skill
 from modules.resume import TailoredResume
+from modules.template import Template
 from modules.user import User
 
 _client: AsyncMongoClient | None = None
@@ -26,9 +27,13 @@ def document_models() -> list[type]:
         AnswerBank,
         Event,
         Profile,
-        ResumeChunkText,
+        Experience,
+        Education,
+        Skill,
+        Certification,
         User,
         Account,
+        Template,
     ]
 
 

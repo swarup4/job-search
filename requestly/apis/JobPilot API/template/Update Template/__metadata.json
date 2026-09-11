@@ -1,0 +1,10 @@
+{
+  "$schema": "https://assets.requestly.com/local/v1.15.0/metadata.json",
+  "type": "api",
+  "entryType": "http",
+  "id": "7b92c10b-4d41-4a5a-9b40-676fb872dd78",
+  "rank": "a5",
+  "url": "{{base_url}}/api/template/updateTemplate/{{template_id}}",
+  "method": "PATCH",
+  "contentType": "json"
+}

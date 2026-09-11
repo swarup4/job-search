@@ -22,7 +22,7 @@ class UserResponse(BaseModel):
     name: str
     email: str
     profilePicture: str
-    
+
 
 class User(Document):
     name: str = Field(None, description="Name")
