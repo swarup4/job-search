@@ -4,7 +4,7 @@ from beanie import PydanticObjectId
 from fastapi import APIRouter, File, Form, Query, UploadFile, status
 from fastapi.responses import FileResponse
 
-from modules.profile import get_profile
+from modules.profile import get_resume
 from modules.template import service
 from modules.template.models import (
     RenderedResume,
@@ -30,15 +30,16 @@ def _read(template: Template) -> TemplateRead:
     )
 
 
-@router.get("/render/{template_id}", response_model=RenderedResume)
-async def render_template(template_id: PydanticObjectId) -> RenderedResume:
+@router.get("/render/{template_id}/{user_id}", response_model=RenderedResume)
+async def render_template(
+    template_id: PydanticObjectId, user_id: PydanticObjectId
+) -> RenderedResume:
     template = await service.get_template(template_id)
-    profile = await get_profile()
     return RenderedResume(
         id=template.id,
         name=template.name,
         filename=service.tex_filename(template.name),
-        tex=service.render(template, profile),
+        tex=service.render(template, await get_resume(user_id)),
     )
 
 

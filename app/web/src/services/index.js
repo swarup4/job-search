@@ -16,10 +16,24 @@ export {
 } from "./application";
 export { listEvents } from "./event";
 export {
+    addCertification,
+    addEducation,
+    addExperience,
+    addSkill,
     createProfile,
-    getPreferences,
+    deleteCertification,
+    deleteEducation,
+    deleteExperience,
+    deleteSkill,
+    getCertifications,
+    getEducation,
+    getExperience,
     getProfile,
-    setPreferences,
+    getSkills,
+    updateCertification,
+    updateEducation,
+    updateExperience,
     updateProfile,
+    updateSkill,
 } from "./profile";
 export { getShellCounts } from "./shell";

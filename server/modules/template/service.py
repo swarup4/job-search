@@ -12,7 +12,7 @@ from beanie import PydanticObjectId
 from pydantic import ValidationError
 
 from config.errors import Conflict, Invalid, NotFound
-from modules.profile import Profile
+from modules.profile import Resume
 from modules.template.latex import (
     certifications_block,
     contact_block,
@@ -208,23 +208,24 @@ async def update_template(template_id: PydanticObjectId, payload: TemplateUpdate
     return template
 
 
-def _skills(profile: Profile, style: TemplateStyle) -> str:
+def _skills(resume: Resume, style: TemplateStyle) -> str:
     if style.skills is SkillsStyle.GRID:
-        return skills_grid(profile.skill_groups, style.columns)
-    return skills_pills(profile.skill_groups)
+        return skills_grid(resume.skills, style.columns)
+    return skills_pills(resume.skills)
 
 
-def render(template: Template, profile: Profile) -> str:
+def render(template: Template, resume: Resume) -> str:
     style = template.style
+    personal = resume.profile
     blocks = {
-        "{{FULL_NAME}}": escape(profile.personal.name),
-        "{{HEADLINE}}": escape(profile.personal.headline or ""),
-        "{{CONTACT}}": contact_block(profile.personal, profile.email, style.contact),
-        "{{SUMMARY}}": escape(profile.summary or ""),
-        "{{SKILLS}}": _skills(profile, style),
-        "{{EXPERIENCE}}": experience_block(profile.experience, style.experience, style.location),
-        "{{EDUCATION}}": education_block(profile.education),
-        "{{CERTIFICATIONS}}": certifications_block(profile.certifications),
+        "{{FULL_NAME}}": escape(personal.name),
+        "{{HEADLINE}}": escape(personal.headline or ""),
+        "{{CONTACT}}": contact_block(personal, style.contact),
+        "{{SUMMARY}}": escape(personal.summary or ""),
+        "{{SKILLS}}": _skills(resume, style),
+        "{{EXPERIENCE}}": experience_block(resume.experience, style.experience, style.location),
+        "{{EDUCATION}}": education_block(resume.education),
+        "{{CERTIFICATIONS}}": certifications_block(resume.certifications),
     }
 
     source = template.tex

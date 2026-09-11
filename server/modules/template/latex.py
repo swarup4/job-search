@@ -8,13 +8,13 @@ style from the template's own `template.json` rather than branching on its name.
 import re
 from collections.abc import Iterable, Sequence
 
-from modules.profile import (
-    Certification,
-    Education,
-    Experience,
-    Personal,
-    ProfileLink,
-    SkillGroup,
+from modules.profile.models import (
+    CertificationFields,
+    EducationFields,
+    ExperienceFields,
+    Link,
+    ProfileFields,
+    SkillFields,
 )
 
 _SPECIALS = {
@@ -61,7 +61,7 @@ def _href(url: str, shown: str) -> str:
     return rf"\href{{{target}}}{{{tex(shown)}}}"
 
 
-def _icon_for(link: ProfileLink) -> str:
+def _icon_for(link: Link) -> str:
     return _LINK_ICONS.get(link.label.strip().lower(), r"\faLink")
 
 
@@ -93,13 +93,13 @@ def _chunk(items: Sequence[str], buckets: int) -> list[list[str]]:
     return out
 
 
-def contact_block(personal: Personal, email: str, style: str) -> str:
+def contact_block(personal: ProfileFields, style: str) -> str:
     """The contact line. `contactitem` uses the template's own command; `plain`
     emits bare icons for templates that colour the whole line themselves."""
     entries: list[tuple[str, str]] = []
     if personal.phone:
         entries.append((r"\faPhone", tex(personal.phone)))
-    entries.append((r"\faEnvelope", _href(f"mailto:{email}", email)))
+    entries.append((r"\faEnvelope", _href(f"mailto:{personal.email}", personal.email)))
     if personal.location:
         entries.append((r"\faMapMarker*", tex(personal.location)))
     entries.extend((_icon_for(link), _href(link.value, link.value)) for link in personal.links)
@@ -112,7 +112,7 @@ def contact_block(personal: Personal, email: str, style: str) -> str:
     return joiner.join(rf"\contactitem{{{icon}}}{{{value}}}" for icon, value in entries)
 
 
-def skills_grid(groups: Iterable[SkillGroup], columns: int) -> str:
+def skills_grid(groups: Iterable[SkillFields], columns: int) -> str:
     """One tabularx row per group, the group's items spread across the columns."""
     rows: list[str] = []
     for group in groups:
@@ -121,7 +121,7 @@ def skills_grid(groups: Iterable[SkillGroup], columns: int) -> str:
     return "\n".join(rows)
 
 
-def skills_pills(groups: Iterable[SkillGroup]) -> str:
+def skills_pills(groups: Iterable[SkillFields]) -> str:
     """Every skill as a \\skilltag in one flow. No manual row breaks: LaTeX wraps the
     paragraph itself, so the layout survives a change in how many skills there are."""
     pills = [rf"\skilltag{{{tex(item)}}}" for group in groups for item in group.items]
@@ -132,7 +132,7 @@ def _items(bullets: Iterable[str]) -> str:
     return "\n".join(rf"  \item {tex(bullet)}" for bullet in bullets)
 
 
-def _jobtitle_role(role: Experience, location_style: str) -> str:
+def _jobtitle_role(role: ExperienceFields, location_style: str) -> str:
     header = (
         rf"\jobtitle{{{tex(role.title)}}}{{{tex(role.company)}}}"
         rf"{{{_date_range(role.start, role.end, role.current)}}}"
@@ -147,7 +147,7 @@ def _jobtitle_role(role: Experience, location_style: str) -> str:
     return "\n".join(parts)
 
 
-def _timeline_role(role: Experience, location_style: str) -> str:
+def _timeline_role(role: ExperienceFields, location_style: str) -> str:
     """One tcolorbox per role. Date and location share the third argument, and the
     fourth is a bare \\item list — the command supplies the itemize itself."""
     meta = _date_range(role.start, role.end, role.current)
@@ -167,12 +167,12 @@ def _timeline_role(role: Experience, location_style: str) -> str:
     )
 
 
-def experience_block(roles: Iterable[Experience], style: str, location_style: str) -> str:
+def experience_block(roles: Iterable[ExperienceFields], style: str, location_style: str) -> str:
     build = _timeline_role if style == "timelinerole" else _jobtitle_role
     return "\n\n".join(build(role, location_style) for role in roles)
 
 
-def education_block(entries: Iterable[Education]) -> str:
+def education_block(entries: Iterable[EducationFields]) -> str:
     rows: list[str] = []
     for entry in entries:
         where = ", ".join(part for part in (entry.institution, entry.location) if part)
@@ -183,7 +183,7 @@ def education_block(entries: Iterable[Education]) -> str:
     return "\n".join(rows)
 
 
-def certifications_block(entries: Iterable[Certification]) -> str:
+def certifications_block(entries: Iterable[CertificationFields]) -> str:
     return "\n".join(
         rf"\certrow{{{tex(entry.name)}}}{{{tex(entry.issuer)}}}{{{tex(entry.year or '')}}}"
         for entry in entries
