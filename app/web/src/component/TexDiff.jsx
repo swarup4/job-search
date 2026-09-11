@@ -1,7 +1,7 @@
 "use client";
 
 import { Wand2 } from "lucide-react";
-import { cn } from "@/util/cn";
+import { cn } from "@/util/helper";
 
 const GUTTER = "w-12 shrink-0 select-none pr-3 text-right text-[11px]";
 const MARKER = "w-4 shrink-0 select-none text-center";

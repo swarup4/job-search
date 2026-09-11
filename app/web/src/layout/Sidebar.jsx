@@ -1,9 +1,10 @@
 import Link from "next/link";
 import {
-    Columns3, ListFilter, Search, Send, Settings2, Sparkles, UserRound, Database, Cpu,
+    Columns3, ListFilter, Search, Send, Settings2, UserRound, Database, Cpu,
 } from "lucide-react";
+import { SidebarIdentity } from "@/component/SidebarIdentity";
 import { NAV } from "@/routes";
-import { cn } from "@/util/cn";
+import { cn } from "@/util/helper";
 
 const ICON = {
     board: Columns3,
@@ -18,15 +19,7 @@ export function Sidebar({ active, counts = {} }) {
     return (
         <aside className="hidden w-[248px] shrink-0 flex-col gap-5 lg:flex">
             <div className="panel overflow-hidden">
-                <div className="flex items-center gap-3 border-b border-border px-5 py-4">
-                    <span className="grid size-10 shrink-0 place-items-center rounded-md bg-primary-tint text-primary">
-                        <Sparkles className="size-[18px]" />
-                    </span>
-                    <div className="min-w-0">
-                        <p className="truncate text-[15px] font-semibold leading-tight">Swarup Saha</p>
-                        <p className="truncate text-[12px] text-muted-foreground">Technical Lead · GenAI</p>
-                    </div>
-                </div>
+                <SidebarIdentity />
 
                 <nav className="p-2">
                     {NAV.map((item) => {

@@ -10,7 +10,7 @@ import { ROUTES } from "@/routes";
 import applications from "@/data/applications.json";
 import board from "@/data/board.json";
 import search from "@/data/search.json";
-import { cn } from "@/util/cn";
+import { cn } from "@/util/helper";
 
 export default function Page() {
     const { staged, submitted } = applications;

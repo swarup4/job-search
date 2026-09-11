@@ -9,7 +9,7 @@ import { ResumeDocument } from "@/component/ResumeDocument";
 import { TexDiff } from "@/component/TexDiff";
 import { deriveHunks } from "@/util/resumeDoc";
 import { texToBlocks } from "@/util/texToBlocks";
-import { cn } from "@/util/cn";
+import { cn } from "@/util/helper";
 
 const TABS = [
     { key: "preview", label: "Preview", icon: Eye },

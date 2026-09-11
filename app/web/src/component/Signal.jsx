@@ -1,5 +1,5 @@
 import { AlertTriangle, Clock } from "lucide-react";
-import { cn } from "@/util/cn";
+import { cn } from "@/util/helper";
 
 /** kind: "attention" (you must act) | "risk" (a concern was surfaced) */
 export function Signal({ kind, children, className }) {

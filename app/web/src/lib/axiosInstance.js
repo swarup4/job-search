@@ -1,5 +1,7 @@
 import axios from "axios";
 
+import { clearSession, readToken } from "@/lib/session";
+
 /**
  * The one axios instance. Infrastructure, not domain — it knows how to reach the
  * API and what a failure looks like, and nothing about jobs, matches or resumes.
@@ -58,16 +60,38 @@ function messageFrom(error) {
     return `Cannot reach the API at ${API_URL}. Is the server running?`;
 }
 
+axiosInstance.interceptors.request.use((config) => {
+    const token = readToken();
+    if (token) config.headers.Authorization = `Bearer ${token}`;
+    return config;
+});
+
+/**
+ * A 401 means the token is gone or expired, whatever the call was. Dropping the
+ * session and sending the browser to the login page here means no caller has to
+ * handle being signed out.
+ */
+function handleExpiry(status) {
+    if (status !== 401 || typeof window === "undefined") return;
+    if (window.location.pathname === "/login") return;
+
+    clearSession();
+    const next = encodeURIComponent(window.location.pathname + window.location.search);
+    window.location.assign(`/login?next=${next}`);
+}
+
 axiosInstance.interceptors.response.use(
     (response) => response.data,
-    (error) =>
-        Promise.reject(
+    (error) => {
+        handleExpiry(error.response?.status);
+        return Promise.reject(
             new ApiError(messageFrom(error), {
                 status: error.response?.status ?? null,
                 url: error.config?.url ?? null,
                 cause: error,
             })
-        )
+        );
+    }
 );
 
 /**

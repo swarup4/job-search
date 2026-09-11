@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Bell, RefreshCw, Search } from "lucide-react";
 import { Button } from "@/component/ui/button";
+import { SignOutButton } from "@/component/SignOutButton";
 import { ROUTES } from "@/routes";
 
 export function Topbar({ pending = 0 }) {
@@ -41,6 +42,8 @@ export function Topbar({ pending = 0 }) {
                     <RefreshCw />
                     Refresh
                 </Button>
+
+                <SignOutButton />
             </div>
         </header>
     );

@@ -1,4 +1,4 @@
-import { cn } from "@/util/cn";
+import { cn } from "@/util/helper";
 
 /** Box sizes mirror the $ring-sizes map in style/globals.scss. */
 const GEO = {

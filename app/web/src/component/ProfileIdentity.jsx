@@ -22,6 +22,7 @@ import {
 } from "@/store/profile/profileSlice";
 import { useDebounce } from "@/hooks/useDebounce";
 import { profileIdentitySchema } from "@/util/schema";
+import { initials } from "@/util/helper";
 
 export function ProfileIdentity() {
     const identity = useSelector(selectIdentity);
@@ -240,8 +241,4 @@ function AddLink({ taken, onAdd }) {
             className="w-fit min-w-[280px]"
         />
     );
-}
-
-function initials(name) {
-    return name.split(" ").filter(Boolean).map((p) => p[0]).join("") || "?";
 }

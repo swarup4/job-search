@@ -1,5 +1,7 @@
 import * as Yup from "yup";
 
+import { splitMonthYear } from "@/util/helper";
+
 export const MIN_PASSWORD = 8;
 
 const email = Yup.string()
@@ -80,31 +82,6 @@ export const educationSchema = Yup.object({
 });
 
 // one work-experience role
-
-export const MONTHS = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-];
-
-/** Marks a role still in progress; stored in `end` rather than as a null. */
-export const PRESENT = "Present";
-
-export function splitMonthYear(value) {
-    const parts = (value ?? "").trim().split(/\s+/);
-    if (parts.length === 2 && MONTHS.includes(parts[0])) {
-        return { month: parts[0], year: parts[1] };
-    }
-    if (parts.length === 1 && /^\d{4}$/.test(parts[0])) {
-        return { month: "", year: parts[0] };
-    }
-    return { month: "", year: "" };
-}
-
-export function joinMonthYear(month, year) {
-    const y = (year ?? "").trim();
-    if (!y) return "";
-    return month ? `${month} ${y}` : y;
-}
 
 export function experienceInitialValues(entry) {
     const start = splitMonthYear(entry?.start);

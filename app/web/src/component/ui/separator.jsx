@@ -1,4 +1,4 @@
-import { cn } from "@/util/cn";
+import { cn } from "@/util/helper";
 
 function Separator({ className, orientation = "horizontal", ...props }) {
     return (

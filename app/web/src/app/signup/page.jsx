@@ -2,23 +2,35 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useFormik } from "formik";
-import { AlertTriangle, Eye, EyeOff, UserPlus } from "lucide-react";
+import { AlertTriangle, Eye, EyeOff, Loader2, UserPlus } from "lucide-react";
 import { AuthShell } from "@/component/AuthShell";
 import { Field, Input } from "@/component/ui/field";
 import { Button } from "@/component/ui/button";
 import { MIN_PASSWORD, signupInitialValues, signupSchema } from "@/util/schema";
+import { signup } from "@/services/auth";
+import { ApiError } from "@/services";
 import { ROUTES } from "@/routes";
 
 export default function Page() {
     const [revealed, setRevealed] = useState(false);
+    const router = useRouter();
 
     const formik = useFormik({
         initialValues: signupInitialValues,
         validationSchema: signupSchema,
-        onSubmit: (_values, { setStatus }) => {
-            // PRD §4 — no accounts exist to create. See the notice in AuthShell.
-            setStatus("No auth service is connected, so no account can be created yet.");
+        onSubmit: async ({ name, email, password }, { setStatus }) => {
+            setStatus(null);
+            try {
+                // Signing up signs you in, so there is no second form to fill.
+                await signup({ name, email, password });
+                router.replace(ROUTES.board);
+            } catch (error) {
+                setStatus(
+                    error instanceof ApiError ? error.message : "Could not create the account."
+                );
+            }
         },
     });
 
@@ -103,17 +115,10 @@ export default function Page() {
                     </p>
                 ) : null}
 
-                <Button type="submit" className="mt-1 w-full">
-                    <UserPlus />
-                    Create account
+                <Button type="submit" disabled={formik.isSubmitting} className="mt-1 w-full">
+                    {formik.isSubmitting ? <Loader2 className="animate-spin" /> : <UserPlus />}
+                    {formik.isSubmitting ? "Creating account" : "Create account"}
                 </Button>
-
-                <Link
-                    href={ROUTES.board}
-                    className="text-center text-[13px] text-muted-foreground hover:text-primary"
-                >
-                    Skip — go straight to the dashboard
-                </Link>
             </form>
         </AuthShell>
     );
