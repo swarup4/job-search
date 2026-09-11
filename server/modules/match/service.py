@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 
 from beanie import PydanticObjectId
 
-from errors import Invalid, NotFound
+from config.errors import Invalid, NotFound
 from modules.job import JobStatus, JobUpdate, get_job, update_job
 from modules.match.models import (
     KeywordReview,

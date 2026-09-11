@@ -2,7 +2,7 @@ from datetime import UTC, datetime, timedelta
 
 from beanie import PydanticObjectId
 
-from errors import Conflict, NotFound
+from config.errors import Conflict, NotFound
 from modules.application.models import (
     AnswerBank,
     Application,
