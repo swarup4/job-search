@@ -25,8 +25,8 @@ class Fabrication(Invalid):
         )
 
 
-async def store_resume(payload: ResumeStore) -> TailoredResume:
-    match = await get_match(payload.job_id)
+async def store_resume(user_id: PydanticObjectId, payload: ResumeStore) -> TailoredResume:
+    match = await get_match(user_id, payload.job_id)
 
     if match.review.state is not ReviewState.SELECTED:
         raise SelectionGateNotPassed(
@@ -41,40 +41,44 @@ async def store_resume(payload: ResumeStore) -> TailoredResume:
     if invented:
         raise Fabrication(invented)
 
-    latest = await _latest(payload.job_id)
+    latest = await _latest(user_id, payload.job_id)
     resume = TailoredResume(
         **payload.model_dump(),
+        userId=user_id,
         match_id=match.id,
         selected_keys=list(match.review.selected_keys),
         version=1 if latest is None else latest.version + 1,
     )
     await resume.insert()
 
-    await update_job(payload.job_id, JobUpdate(status=JobStatus.TAILORED))
+    await update_job(user_id, payload.job_id, JobUpdate(status=JobStatus.TAILORED))
     await stage_application(
-        ApplicationStage(job_id=payload.job_id, resume_id=resume.id, tex_path=resume.file_path)
+        user_id,
+        ApplicationStage(job_id=payload.job_id, resume_id=resume.id, tex_path=resume.file_path),
     )
     return resume
 
 
-async def get_resume(job_id: PydanticObjectId) -> TailoredResume:
-    resume = await _latest(job_id)
+async def get_resume(user_id: PydanticObjectId, job_id: PydanticObjectId) -> TailoredResume:
+    resume = await _latest(user_id, job_id)
     if resume is None:
         raise ResumeNotFound(job_id)
     return resume
 
 
-async def list_versions(job_id: PydanticObjectId) -> list[TailoredResume]:
+async def list_versions(
+    user_id: PydanticObjectId, job_id: PydanticObjectId
+) -> list[TailoredResume]:
     return (
-        await TailoredResume.find(TailoredResume.job_id == job_id)
+        await TailoredResume.find(TailoredResume.userId == user_id, TailoredResume.job_id == job_id)
         .sort(-TailoredResume.version)
         .to_list()
     )
 
 
-async def _latest(job_id: PydanticObjectId) -> TailoredResume | None:
+async def _latest(user_id: PydanticObjectId, job_id: PydanticObjectId) -> TailoredResume | None:
     return (
-        await TailoredResume.find(TailoredResume.job_id == job_id)
+        await TailoredResume.find(TailoredResume.userId == user_id, TailoredResume.job_id == job_id)
         .sort(-TailoredResume.version)
         .first_or_none()
     )

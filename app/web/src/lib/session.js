@@ -2,6 +2,10 @@
  * The signed-in identity, in sessionStorage: it lasts for the tab and is gone when
  * the tab closes. Nothing reads it on the server, so every page behind AppShell
  * checks it on the client and the token rides on the Authorization header.
+ *
+ * Two tokens are stored. `token` is the short-lived one sent on every request;
+ * `refreshToken` is sent only to /account/refresh, to replace `token` once it
+ * expires, so a 60-minute TTL does not mean signing in every hour.
  */
 const KEY = "jobpilot_session";
 
@@ -25,4 +29,15 @@ export function clearSession() {
 
 export function readToken() {
     return readSession()?.token ?? null;
+}
+
+export function readRefreshToken() {
+    return readSession()?.refreshToken ?? null;
+}
+
+/** After a refresh: the same user, a new pair of tokens. */
+export function writeTokens({ token, refreshToken }) {
+    const session = readSession();
+    if (!session) return;
+    writeSession({ ...session, token, refreshToken });
 }

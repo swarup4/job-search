@@ -43,8 +43,9 @@ JobPilot discovers relevant job openings, analyzes how well they match your resu
 | `app/web` → `server` wiring | **started** — one axios instance in `src/lib/`, one service per API module in `src/services/`, `ApiError` as the single failure shape |
 | Form validation | **built** — Formik (`useFormik`) with a Yup schema per form in `src/util/schema.js`; the server's own validation still decides |
 | `templates/base_resume.tex` | **written**; Jinja2 render verified — but never compiled by a TeX engine, so its LaTeX validity is unconfirmed |
-| `server/` — REST API, local MongoDB | **built** — ten modules, fourteen collections, 54 endpoints over 50 paths, Beanie over local MongoDB. **No tests** (removed on request), so no story is Done per Roadmap §10 |
-| Authentication | **built** — argon2 hashes, JWT on signup and login, route guard, bearer token on every call. **Not yet enforced server-side**: endpoints still take `userId` from the URL |
+| `server/` — REST API, local MongoDB | **built** — eight modules, thirteen collections, 51 endpoints over 47 paths, Beanie over local MongoDB. **No tests** (removed on request), so no story is Done per Roadmap §10 |
+| Authentication | **built and enforced server-side** — argon2 hashes, JWT on signup and login, route guard, bearer token on every call. Every endpoint but signup, login and refresh needs a token, and no URL carries a user id: `verify_token` reads it from the token, so there is no way to ask for another user's data |
+| Per-user data | **every collection is keyed by `userId`** — jobs, matches, resumes, applications, the answer bank and events, as well as the five profile collections. Queries filter on the owner, and dedup keys are unique per user rather than globally |
 | `ai/` — agents, RAG, MCP, eval | not started (empty directory) |
 | `app/extension/` — Chrome MV3 | not started |
 
@@ -408,17 +409,21 @@ Each phase is split by **API** and **UI**, because they rarely land together her
 built before the backend and are still waiting to be wired to endpoints that already exist. A checked
 UI box means the screen is built, **not** that it talks to the API — that wiring is its own task.
 
-#### Phase 1 — Authentication & Profile 🚧 nearly done
+#### Phase 1 — Authentication & Profile 🚧 API done, one UI wiring task left
 
 - **API**
   - ✅ `accounts` with argon2 hashes; signup and login both issue a JWT
-  - ✅ `account` module — signup, login, read, partial update
+  - ✅ `account` module — signup (name, email, password and nothing else), login,
+    refresh, read, partial update
   - ✅ Profile as five collections keyed by `userId`
-  - ⬜ Server-side token enforcement
-  - ⬜ Retire the duplicate `user` module
+  - ✅ Server-side token enforcement; `userId` comes from the token, never the URL
+  - ✅ Access token refreshed by a longer-lived refresh token, so the 60-minute TTL
+    does not mean signing in every hour
+  - ✅ Retired the duplicate `user` module, which held plaintext passwords
 - **UI**
   - ✅ Login, signup and sign-out, wired to `/api/account`
   - ✅ Route guard, session in `sessionStorage` mirrored into Redux
+  - ✅ A 401 refreshes once and replays the call before dropping the session
   - ✅ My Details screen, with Formik/Yup validation
   - ⬜ Wire My Details to the profile API, only `role` persists today
 
@@ -426,7 +431,7 @@ UI box means the screen is built, **not** that it talks to the API — that wiri
 
 - **API**
   - ✅ `templates` collection, upload with token validation, style inference
-  - ✅ Render a profile into a template
+  - ✅ Render the signed-in user's profile into a template
   - ⬜ `.tex` download
   - ⬜ PDF compilation
 - **UI**

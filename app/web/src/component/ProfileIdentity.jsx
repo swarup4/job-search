@@ -59,7 +59,7 @@ export function ProfileIdentity() {
             try {
                 // `role` is a column on the account, so it is saved through the account
                 // endpoint rather than with the rest of these fields.
-                const account = await updateAccount(user.id, { role: values.role });
+                const account = await updateAccount({ role: values.role });
                 // Keep the signed-in copy in step, or the sidebar goes stale.
                 dispatch(userChanged({ role: account.role }));
 

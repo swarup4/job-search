@@ -28,6 +28,7 @@ class TailoredOutput(BaseModel):
 class TailoredResume(Document, TailoredOutput):
     """FR-4.4 — a .tex path and the selection set that produced it. No PDF in v1."""
 
+    userId: PydanticObjectId
     match_id: PydanticObjectId
     version: int = Field(default=1, ge=1)
 
