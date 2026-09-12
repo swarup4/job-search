@@ -1,9 +1,10 @@
 from typing import Annotated
 
 from beanie import PydanticObjectId
-from fastapi import APIRouter, File, Form, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
 from fastapi.responses import FileResponse
 
+from modules.account import CurrentUser, verify_token
 from modules.profile import get_resume
 from modules.template import service
 from modules.template.models import (
@@ -15,6 +16,11 @@ from modules.template.models import (
 )
 
 router = APIRouter(tags=["template"])
+
+# `Depends(verify_token)` on a route is this codebase's `authenticate` middleware: it
+# runs before the handler and rejects the request with a 401 if the token is missing,
+# expired or not ours. Routes that also need to know *who* is calling take
+# `user_id: CurrentUser` instead — same check, and it hands the id to the handler.
 
 
 def _read(template: Template) -> TemplateRead:
@@ -30,10 +36,9 @@ def _read(template: Template) -> TemplateRead:
     )
 
 
-@router.get("/render/{template_id}/{user_id}", response_model=RenderedResume)
-async def render_template(
-    template_id: PydanticObjectId, user_id: PydanticObjectId
-) -> RenderedResume:
+# Renders the caller's own profile into the template — hence no user id in the URL.
+@router.get("/render/{template_id}", response_model=RenderedResume)
+async def render_template(template_id: PydanticObjectId, user_id: CurrentUser) -> RenderedResume:
     template = await service.get_template(template_id)
     return RenderedResume(
         id=template.id,
@@ -43,7 +48,7 @@ async def render_template(
     )
 
 
-@router.get("/preview/{template_id}")
+@router.get("/preview/{template_id}", dependencies=[Depends(verify_token)])
 async def template_preview(template_id: PydanticObjectId) -> FileResponse:
     template = await service.get_template(template_id)
     if template.preview_path is None:
@@ -51,7 +56,7 @@ async def template_preview(template_id: PydanticObjectId) -> FileResponse:
     return FileResponse(template.preview_path, media_type="image/png")
 
 
-@router.get("", response_model=list[TemplateRead])
+@router.get("", response_model=list[TemplateRead], dependencies=[Depends(verify_token)])
 async def list_templates(
     # Omitted returns every template; ?status=true is the picker's call.
     template_status: Annotated[bool | None, Query(alias="status")] = None,
@@ -59,7 +64,12 @@ async def list_templates(
     return [_read(template) for template in await service.list_templates(template_status)]
 
 
-@router.post("/upload", response_model=TemplateRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/upload",
+    response_model=TemplateRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(verify_token)],
+)
 async def upload_template(
     tex: Annotated[UploadFile, File(description=".tex source carrying {{TOKEN}} placeholders")],
     name: Annotated[str | None, Form(max_length=60)] = None,
@@ -81,12 +91,20 @@ async def upload_template(
     return _read(template)
 
 
-@router.get("/getTemplate/{template_id}", response_model=TemplateSource)
+@router.get(
+    "/getTemplate/{template_id}",
+    response_model=TemplateSource,
+    dependencies=[Depends(verify_token)],
+)
 async def get_template(template_id: PydanticObjectId) -> TemplateSource:
     template = await service.get_template(template_id)
     return TemplateSource(**_read(template).model_dump(), tex=template.tex)
 
 
-@router.patch("/updateTemplate/{template_id}", response_model=TemplateRead)
+@router.patch(
+    "/updateTemplate/{template_id}",
+    response_model=TemplateRead,
+    dependencies=[Depends(verify_token)],
+)
 async def update_template(template_id: PydanticObjectId, payload: TemplateUpdate) -> TemplateRead:
     return _read(await service.update_template(template_id, payload))

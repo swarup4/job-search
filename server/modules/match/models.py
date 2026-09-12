@@ -64,6 +64,7 @@ class MatchFindings(BaseModel):
 
 
 class Match(Document, MatchFindings):
+    userId: PydanticObjectId
     review: KeywordReview = Field(default_factory=KeywordReview)
     scored_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
@@ -71,8 +72,10 @@ class Match(Document, MatchFindings):
         name = "matches"
         indexes = [
             pymongo.IndexModel([("job_id", pymongo.ASCENDING)], unique=True),
-            pymongo.IndexModel([("review.state", pymongo.ASCENDING)]),
-            pymongo.IndexModel([("score", pymongo.DESCENDING)]),
+            pymongo.IndexModel(
+                [("userId", pymongo.ASCENDING), ("review.state", pymongo.ASCENDING)]
+            ),
+            pymongo.IndexModel([("userId", pymongo.ASCENDING), ("score", pymongo.DESCENDING)]),
         ]
 
 

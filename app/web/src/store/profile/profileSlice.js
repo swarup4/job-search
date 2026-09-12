@@ -141,7 +141,7 @@ export const selectDirty = (state) => state.profile.dirty;
 export const selectRole = (state) => state.profile.identity.role;
 
 /**
- * The personal-details body for PUT /profile/updateProfile/{userId}. Experience,
+ * The personal-details body for PUT /profile/updateProfile. Experience,
  * education, skills and certifications are their own endpoints, so they are not
  * bundled here. Builds a fresh object, so read it with store.getState() when saving
  * rather than through useSelector.

@@ -72,6 +72,10 @@ class JobContent(BaseModel):
 
 
 class Job(Document, JobContent):
+    # The account this job belongs to. Every query filters on it, so one user's
+    # board never shows another's postings.
+    userId: PydanticObjectId
+
     jd_text: str
 
     # FR-1.4 — discovery hashes the normalized posting and refuses a repeat.
@@ -85,12 +89,22 @@ class Job(Document, JobContent):
     class Settings:
         name = "jobs"
         indexes = [
-            pymongo.IndexModel([("dedup_hash", pymongo.ASCENDING)], unique=True),
+            # Unique per user, not globally: the same posting found by two people is
+            # two rows, and one user's discovery must not silently dedup another's.
             pymongo.IndexModel(
-                [("status", pymongo.ASCENDING), ("discovered_at", pymongo.DESCENDING)]
+                [("userId", pymongo.ASCENDING), ("dedup_hash", pymongo.ASCENDING)], unique=True
             ),
-            pymongo.IndexModel([("shortlisted", pymongo.ASCENDING)]),
-            pymongo.IndexModel([("company.name", pymongo.ASCENDING)]),
+            pymongo.IndexModel(
+                [
+                    ("userId", pymongo.ASCENDING),
+                    ("status", pymongo.ASCENDING),
+                    ("discovered_at", pymongo.DESCENDING),
+                ]
+            ),
+            pymongo.IndexModel([("userId", pymongo.ASCENDING), ("shortlisted", pymongo.ASCENDING)]),
+            pymongo.IndexModel(
+                [("userId", pymongo.ASCENDING), ("company.name", pymongo.ASCENDING)]
+            ),
             pymongo.IndexModel([("title", pymongo.TEXT), ("jd_text", pymongo.TEXT)]),
         ]
 

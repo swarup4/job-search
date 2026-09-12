@@ -1,6 +1,6 @@
 import axios from "axios";
 
-import { clearSession, readToken } from "@/lib/session";
+import { clearSession, readRefreshToken, readToken, writeTokens } from "@/lib/session";
 
 /**
  * The one axios instance. Infrastructure, not domain — it knows how to reach the
@@ -67,9 +67,9 @@ axiosInstance.interceptors.request.use((config) => {
 });
 
 /**
- * A 401 means the token is gone or expired, whatever the call was. Dropping the
- * session and sending the browser to the login page here means no caller has to
- * handle being signed out.
+ * A 401 the refresh could not rescue: the session is genuinely over. Dropping it
+ * and sending the browser to the login page here means no caller has to handle
+ * being signed out.
  */
 function handleExpiry(status) {
     if (status !== 401 || typeof window === "undefined") return;
@@ -80,9 +80,65 @@ function handleExpiry(status) {
     window.location.assign(`/login?next=${next}`);
 }
 
+const REFRESH_PATH = "/account/refresh";
+
+/**
+ * One refresh at a time, shared by everything waiting on it. Three calls failing
+ * together on an expired token is the normal case — a screen usually loads several
+ * at once — and without this they would each spend the refresh token, and the last
+ * two would present one the server has already replaced.
+ *
+ * Resolves to the new access token, or null when the session cannot be saved.
+ */
+let refreshing = null;
+
+function refreshAccessToken() {
+    if (refreshing) return refreshing;
+
+    refreshing = (async () => {
+        const refreshToken = readRefreshToken();
+        if (!refreshToken) return null;
+
+        try {
+            // Bare axios, not the instance: this call must not re-enter the
+            // interceptor that is waiting on it.
+            const { data } = await axios.post(`${API_URL}${REFRESH_PATH}`, {
+                refresh_token: refreshToken,
+            });
+            writeTokens({ token: data.access_token, refreshToken: data.refresh_token });
+            return data.access_token;
+        } catch {
+            // The refresh token is expired or rejected — sign in again.
+            return null;
+        }
+    })().finally(() => {
+        refreshing = null;
+    });
+
+    // Awaiters hold the promise itself, so clearing the variable above only means
+    // the next expiry starts a fresh refresh.
+    return refreshing;
+}
+
 axiosInstance.interceptors.response.use(
     (response) => response.data,
-    (error) => {
+    async (error) => {
+        const request = error.config;
+        const canRetry =
+            error.response?.status === 401 &&
+            request &&
+            !request._retried &&
+            !request.url?.endsWith(REFRESH_PATH);
+
+        if (canRetry) {
+            request._retried = true;
+            const token = await refreshAccessToken();
+            if (token) {
+                request.headers.Authorization = `Bearer ${token}`;
+                return axiosInstance(request);
+            }
+        }
+
         handleExpiry(error.response?.status);
         return Promise.reject(
             new ApiError(messageFrom(error), {

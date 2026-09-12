@@ -12,6 +12,11 @@
         ],
         "summary": "List Jobs",
         "operationId": "list_jobs_api_job_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "status",
@@ -90,6 +95,11 @@
         ],
         "summary": "Create Job",
         "operationId": "create_job_api_job_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -109,6 +119,11 @@
         ],
         "summary": "Get Job",
         "operationId": "get_job_api_job__job_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "job_id",
@@ -126,6 +141,11 @@
         ],
         "summary": "Update Job",
         "operationId": "update_job_api_job__job_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "job_id",
@@ -154,7 +174,12 @@
           "match"
         ],
         "summary": "Pending",
-        "operationId": "pending_api_match_pending_get"
+        "operationId": "pending_api_match_pending_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/api/match/selection/{job_id}": {
@@ -165,6 +190,11 @@
         "summary": "Record Selection",
         "description": "Resolves the FR-7.3 keyword interrupt. There is no bulk variant on purpose.",
         "operationId": "record_selection_api_match_selection__job_id__post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "job_id",
@@ -203,7 +233,12 @@
             }
           },
           "required": true
-        }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/api/match/{job_id}": {
@@ -213,6 +248,11 @@
         ],
         "summary": "Get Match",
         "operationId": "get_match_api_match__job_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "job_id",
@@ -232,6 +272,11 @@
         ],
         "summary": "List Versions",
         "operationId": "list_versions_api_resume_versions__job_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "job_id",
@@ -260,7 +305,12 @@
             }
           },
           "required": true
-        }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/api/resume/{job_id}": {
@@ -270,6 +320,11 @@
         ],
         "summary": "Get Resume",
         "operationId": "get_resume_api_resume__job_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "job_id",
@@ -289,6 +344,11 @@
         ],
         "summary": "Render Template",
         "operationId": "render_template_api_template_render__template_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "template_id",
@@ -308,6 +368,11 @@
         ],
         "summary": "Template Preview",
         "operationId": "template_preview_api_template_preview__template_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "template_id",
@@ -327,6 +392,11 @@
         ],
         "summary": "List Templates",
         "operationId": "list_templates_api_template_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "status",
@@ -364,7 +434,12 @@
             }
           },
           "required": true
-        }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/api/template/getTemplate/{template_id}": {
@@ -374,6 +449,11 @@
         ],
         "summary": "Get Template",
         "operationId": "get_template_api_template_getTemplate__template_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "template_id",
@@ -393,6 +473,11 @@
         ],
         "summary": "Update Template",
         "operationId": "update_template_api_template_updateTemplate__template_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "template_id",
@@ -422,7 +507,12 @@
         ],
         "summary": "Answer Bank",
         "description": "Read by the extension's background worker for screening questions.",
-        "operationId": "answer_bank_api_application_answer_bank_get"
+        "operationId": "answer_bank_api_application_answer_bank_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/api/application/for-job/{job_id}": {
@@ -432,6 +522,11 @@
         ],
         "summary": "Get For Job",
         "operationId": "get_for_job_api_application_for_job__job_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "job_id",
@@ -451,6 +546,11 @@
         ],
         "summary": "Record Fill",
         "operationId": "record_fill_api_application_fill__application_id__post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "application_id",
@@ -480,6 +580,11 @@
         ],
         "summary": "Set Status",
         "operationId": "set_status_api_application_status__application_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "application_id",
@@ -509,6 +614,11 @@
         ],
         "summary": "List Applications",
         "operationId": "list_applications_api_application_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "status",
@@ -534,6 +644,11 @@
         ],
         "summary": "Stage Application",
         "operationId": "stage_application_api_application_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -553,6 +668,11 @@
         ],
         "summary": "Get Application",
         "operationId": "get_application_api_application__application_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "application_id",
@@ -572,6 +692,11 @@
         ],
         "summary": "List Events",
         "operationId": "list_events_api_event_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "job_id",
@@ -624,6 +749,11 @@
         ],
         "summary": "Append Event",
         "operationId": "append_event_api_event_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -636,185 +766,450 @@
         }
       }
     },
-    "/api/profile": {
-      "get": {
-        "tags": [
-          "profile"
-        ],
-        "summary": "Get Profile",
-        "operationId": "get_profile_api_profile_get"
-      },
+    "/api/profile/createProfile": {
       "post": {
         "tags": [
           "profile"
         ],
         "summary": "Create Profile",
-        "operationId": "create_profile_api_profile_post",
+        "operationId": "create_profile_api_profile_createProfile_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ProfileCreate"
+                "$ref": "#/components/schemas/ProfileFields"
               }
             }
           },
           "required": true
-        }
-      },
-      "patch": {
-        "tags": [
-          "profile"
-        ],
-        "summary": "Update Profile",
-        "operationId": "update_profile_api_profile_patch",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ProfileUpdate"
-              }
-            }
-          },
-          "required": true
-        }
-      }
-    },
-    "/api/profile/preferences": {
-      "get": {
-        "tags": [
-          "profile"
-        ],
-        "summary": "Get Preferences",
-        "operationId": "get_preferences_api_profile_preferences_get"
-      },
-      "put": {
-        "tags": [
-          "profile"
-        ],
-        "summary": "Set Preferences",
-        "operationId": "set_preferences_api_profile_preferences_put",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Preferences"
-              }
-            }
-          },
-          "required": true
-        }
-      }
-    },
-    "/api/profile/chunks": {
-      "get": {
-        "tags": [
-          "profile"
-        ],
-        "summary": "Get Chunks",
-        "description": "The RAG second hop. `ai/rag/retrieval.py` calls this between the two stages.",
-        "operationId": "get_chunks_api_profile_chunks_get",
-        "parameters": [
+        },
+        "security": [
           {
-            "name": "chunk_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "title": "Chunk Id"
-            }
+            "HTTPBearer": []
           }
         ]
-      },
+      }
+    },
+    "/api/profile/getProfile": {
+      "get": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Get Profile",
+        "operationId": "get_profile_api_profile_getProfile_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/profile/updateProfile": {
       "put": {
         "tags": [
           "profile"
         ],
-        "summary": "Replace Chunks",
-        "operationId": "replace_chunks_api_profile_chunks_put",
+        "summary": "Replace Profile",
+        "operationId": "replace_profile_api_profile_updateProfile_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileFields"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/profile/getExperience": {
+      "get": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "List Experience",
+        "operationId": "list_experience_api_profile_getExperience_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/profile/addExperience": {
+      "post": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Add Experience",
+        "operationId": "add_experience_api_profile_addExperience_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExperienceFields"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/profile/updateExperience/{entry_id}": {
+      "put": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Replace Experience",
+        "operationId": "replace_experience_api_profile_updateExperience__entry_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "entry_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "array",
-                "items": {
-                  "$ref": "#/components/schemas/ChunkWrite"
-                },
-                "title": "Chunks"
+                "$ref": "#/components/schemas/ExperienceFields"
               }
             }
           }
         }
       }
     },
-    "/api/profile/chunks/{chunk_id}": {
-      "get": {
+    "/api/profile/deleteExperience/{entry_id}": {
+      "delete": {
         "tags": [
           "profile"
         ],
-        "summary": "Get Chunk",
-        "operationId": "get_chunk_api_profile_chunks__chunk_id__get",
+        "summary": "Remove Experience",
+        "operationId": "remove_experience_api_profile_deleteExperience__entry_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
-            "name": "chunk_id",
+            "name": "entry_id",
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "title": "Chunk Id"
+              "$ref": "#/components/schemas/PydanticObjectId"
             }
           }
         ]
       }
     },
-    "/api/user/login": {
-      "post": {
-        "tags": [
-          "user"
-        ],
-        "summary": "Login",
-        "operationId": "login_api_user_login_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/modules__user__models__Login"
-              }
-            }
-          },
-          "required": true
-        }
-      }
-    },
-    "/api/user/signup": {
-      "post": {
-        "tags": [
-          "user"
-        ],
-        "summary": "Signup",
-        "operationId": "signup_api_user_signup_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/modules__user__models__SignUp"
-              }
-            }
-          },
-          "required": true
-        }
-      }
-    },
-    "/api/user/": {
+    "/api/profile/getEducation": {
       "get": {
         "tags": [
-          "user"
+          "profile"
         ],
-        "summary": "Get All User",
-        "operationId": "get_all_user_api_user__get"
+        "summary": "List Education",
+        "operationId": "list_education_api_profile_getEducation_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/profile/addEducation": {
+      "post": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Add Education",
+        "operationId": "add_education_api_profile_addEducation_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EducationFields"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/profile/updateEducation/{entry_id}": {
+      "put": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Replace Education",
+        "operationId": "replace_education_api_profile_updateEducation__entry_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "entry_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EducationFields"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/profile/deleteEducation/{entry_id}": {
+      "delete": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Remove Education",
+        "operationId": "remove_education_api_profile_deleteEducation__entry_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "entry_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          }
+        ]
+      }
+    },
+    "/api/profile/getSkills": {
+      "get": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "List Skills",
+        "operationId": "list_skills_api_profile_getSkills_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/profile/addSkill": {
+      "post": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Add Skill",
+        "operationId": "add_skill_api_profile_addSkill_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SkillFields"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/profile/updateSkill/{entry_id}": {
+      "put": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Replace Skill",
+        "operationId": "replace_skill_api_profile_updateSkill__entry_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "entry_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SkillFields"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/profile/deleteSkill/{entry_id}": {
+      "delete": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Remove Skill",
+        "operationId": "remove_skill_api_profile_deleteSkill__entry_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "entry_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          }
+        ]
+      }
+    },
+    "/api/profile/getCertifications": {
+      "get": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "List Certifications",
+        "operationId": "list_certifications_api_profile_getCertifications_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/profile/addCertification": {
+      "post": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Add Certification",
+        "operationId": "add_certification_api_profile_addCertification_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CertificationFields"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/profile/updateCertification/{entry_id}": {
+      "put": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Replace Certification",
+        "operationId": "replace_certification_api_profile_updateCertification__entry_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "entry_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CertificationFields"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/profile/deleteCertification/{entry_id}": {
+      "delete": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Remove Certification",
+        "operationId": "remove_certification_api_profile_deleteCertification__entry_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "entry_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          }
+        ]
       }
     },
     "/api/account/signup": {
@@ -828,7 +1223,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/modules__account__models__SignUp"
+                "$ref": "#/components/schemas/SignUp"
               }
             }
           },
@@ -847,7 +1242,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/modules__account__models__Login"
+                "$ref": "#/components/schemas/Login"
               }
             }
           },
@@ -855,24 +1250,59 @@
         }
       }
     },
-    "/api/account": {
+    "/api/account/refresh": {
+      "post": {
+        "tags": [
+          "account"
+        ],
+        "summary": "Refresh",
+        "operationId": "refresh_api_account_refresh_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Refresh"
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "/api/account/getAccount": {
       "get": {
         "tags": [
           "account"
         ],
-        "summary": "List Accounts",
-        "operationId": "list_accounts_api_account_get",
-        "parameters": [
+        "summary": "Get Account",
+        "operationId": "get_account_api_account_getAccount_get",
+        "security": [
           {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "maximum": 200,
-              "default": 50,
-              "title": "Limit"
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/account/updateAccount": {
+      "patch": {
+        "tags": [
+          "account"
+        ],
+        "summary": "Update Account",
+        "operationId": "update_account_api_account_updateAccount_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountUpdate"
+              }
             }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "HTTPBearer": []
           }
         ]
       }
@@ -886,19 +1316,9 @@
   },
   "components": {
     "schemas": {
-      "AIPreferences": {
+      "AccountUpdate": {
         "properties": {
-          "llm": {
-            "type": "string",
-            "title": "Llm",
-            "default": "qwen2.5:32b"
-          },
-          "llm_host": {
-            "type": "string",
-            "title": "Llm Host",
-            "default": "http://localhost:11434"
-          },
-          "embed_model": {
+          "name": {
             "anyOf": [
               {
                 "type": "string"
@@ -907,22 +1327,34 @@
                 "type": "null"
               }
             ],
-            "title": "Embed Model"
+            "title": "Name"
           },
-          "rerank": {
-            "type": "boolean",
-            "title": "Rerank",
-            "default": true
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
           },
-          "judge": {
-            "type": "string",
-            "title": "Judge",
-            "default": "local (Ollama)"
+          "profile_picture": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Picture"
           }
         },
         "type": "object",
-        "title": "AIPreferences",
-        "description": "Names only. Endpoints and keys live in each tier's own settings, never here."
+        "title": "AccountUpdate",
+        "description": "What the profile page may change. Email and password are deliberately absent:\none is the login key and the other needs hashing, so both need their own flow."
       },
       "Actor": {
         "type": "string",
@@ -955,40 +1387,6 @@
         "type": "object",
         "title": "ApplicationFill",
         "description": "The extension reporting what it filled. Reporting only \u2014 it submits nothing."
-      },
-      "ApplicationPreferences": {
-        "properties": {
-          "follow_up_days": {
-            "type": "integer",
-            "minimum": 1.0,
-            "title": "Follow Up Days",
-            "default": 5
-          },
-          "sheet_sync": {
-            "type": "boolean",
-            "title": "Sheet Sync",
-            "default": false
-          },
-          "sheet_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Sheet Name"
-          },
-          "auto_submit": {
-            "type": "boolean",
-            "const": false,
-            "title": "Auto Submit",
-            "default": false
-          }
-        },
-        "type": "object",
-        "title": "ApplicationPreferences"
       },
       "ApplicationStage": {
         "properties": {
@@ -1095,12 +1493,8 @@
         ],
         "title": "Body_upload_template_api_template_upload_post"
       },
-      "Certification": {
+      "CertificationFields": {
         "properties": {
-          "key": {
-            "type": "string",
-            "title": "Key"
-          },
           "name": {
             "type": "string",
             "title": "Name"
@@ -1123,45 +1517,10 @@
         },
         "type": "object",
         "required": [
-          "key",
           "name",
           "issuer"
         ],
-        "title": "Certification"
-      },
-      "ChunkWrite": {
-        "properties": {
-          "chunk_id": {
-            "type": "string",
-            "title": "Chunk Id"
-          },
-          "section": {
-            "type": "string",
-            "title": "Section"
-          },
-          "text": {
-            "type": "string",
-            "title": "Text"
-          },
-          "source_ref": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Source Ref"
-          }
-        },
-        "type": "object",
-        "required": [
-          "chunk_id",
-          "section",
-          "text"
-        ],
-        "title": "ChunkWrite"
+        "title": "CertificationFields"
       },
       "Company": {
         "properties": {
@@ -1232,63 +1591,6 @@
         "title": "Company",
         "description": "Denormalized onto the job \u2014 the company rail on the job page reads only this."
       },
-      "CompanyPreferences": {
-        "properties": {
-          "preferred": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Preferred"
-          },
-          "excluded": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Excluded"
-          },
-          "sizes": {
-            "items": {
-              "$ref": "#/components/schemas/CompanySize"
-            },
-            "type": "array",
-            "title": "Sizes"
-          },
-          "industries": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Industries"
-          },
-          "avoid_staffing": {
-            "type": "boolean",
-            "title": "Avoid Staffing",
-            "default": false
-          }
-        },
-        "type": "object",
-        "title": "CompanyPreferences"
-      },
-      "CompanySize": {
-        "properties": {
-          "label": {
-            "type": "string",
-            "title": "Label"
-          },
-          "on": {
-            "type": "boolean",
-            "title": "On",
-            "default": false
-          }
-        },
-        "type": "object",
-        "required": [
-          "label"
-        ],
-        "title": "CompanySize"
-      },
       "ContactStyle": {
         "type": "string",
         "enum": [
@@ -1297,71 +1599,8 @@
         ],
         "title": "ContactStyle"
       },
-      "DiscoveryPreferences": {
+      "EducationFields": {
         "properties": {
-          "schedule_cron": {
-            "type": "string",
-            "title": "Schedule Cron",
-            "default": "0 6 * * *"
-          },
-          "min_match": {
-            "type": "integer",
-            "maximum": 100.0,
-            "minimum": 0.0,
-            "title": "Min Match",
-            "default": 70
-          },
-          "dedupe": {
-            "type": "boolean",
-            "title": "Dedupe",
-            "default": true
-          },
-          "respect_robots": {
-            "type": "boolean",
-            "const": true,
-            "title": "Respect Robots",
-            "default": true
-          },
-          "sources": {
-            "items": {
-              "$ref": "#/components/schemas/DiscoverySource"
-            },
-            "type": "array",
-            "title": "Sources"
-          }
-        },
-        "type": "object",
-        "title": "DiscoveryPreferences"
-      },
-      "DiscoverySource": {
-        "properties": {
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "on": {
-            "type": "boolean",
-            "title": "On",
-            "default": true
-          },
-          "found": {
-            "type": "integer",
-            "title": "Found",
-            "default": 0
-          }
-        },
-        "type": "object",
-        "required": [
-          "name"
-        ],
-        "title": "DiscoverySource"
-      },
-      "Education": {
-        "properties": {
-          "key": {
-            "type": "string",
-            "title": "Key"
-          },
           "degree": {
             "type": "string",
             "title": "Degree"
@@ -1417,11 +1656,10 @@
         },
         "type": "object",
         "required": [
-          "key",
           "degree",
           "institution"
         ],
-        "title": "Education"
+        "title": "EducationFields"
       },
       "EventAppend": {
         "properties": {
@@ -1494,12 +1732,8 @@
         ],
         "title": "EventType"
       },
-      "Experience": {
+      "ExperienceFields": {
         "properties": {
-          "key": {
-            "type": "string",
-            "title": "Key"
-          },
           "title": {
             "type": "string",
             "title": "Title"
@@ -1548,7 +1782,7 @@
           },
           "projects": {
             "items": {
-              "$ref": "#/components/schemas/ExperienceProject"
+              "$ref": "#/components/schemas/Project"
             },
             "type": "array",
             "title": "Projects"
@@ -1556,33 +1790,11 @@
         },
         "type": "object",
         "required": [
-          "key",
           "title",
           "company",
           "start"
         ],
-        "title": "Experience"
-      },
-      "ExperienceProject": {
-        "properties": {
-          "label": {
-            "type": "string",
-            "title": "Label"
-          },
-          "bullets": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Bullets"
-          }
-        },
-        "type": "object",
-        "required": [
-          "label"
-        ],
-        "title": "ExperienceProject",
-        "description": "A named piece of work inside one role \u2014 renders as a \\projectlabel."
+        "title": "ExperienceFields"
       },
       "ExperienceStyle": {
         "type": "string",
@@ -1933,6 +2145,24 @@
         "title": "LineChange",
         "description": "One tailored line of the .tex, kept with what it replaced so the diff\nscreen and the source screen can never disagree."
       },
+      "Link": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "value"
+        ],
+        "title": "Link"
+      },
       "LocationStyle": {
         "type": "string",
         "enum": [
@@ -1940,6 +2170,25 @@
           "city"
         ],
         "title": "LocationStyle"
+      },
+      "Login": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "Login"
       },
       "MatchWrite": {
         "properties": {
@@ -2021,11 +2270,41 @@
         ],
         "title": "MissingKeyword"
       },
-      "Personal": {
+      "PresentKeyword": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "chunk_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chunk Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label"
+        ],
+        "title": "PresentKeyword",
+        "description": "Already in the resume. Read-only on the selection screen."
+      },
+      "ProfileFields": {
         "properties": {
           "name": {
             "type": "string",
             "title": "Name"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
           },
           "headline": {
             "anyOf": [
@@ -2060,9 +2339,20 @@
             ],
             "title": "Location"
           },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
           "links": {
             "items": {
-              "$ref": "#/components/schemas/ProfileLink"
+              "$ref": "#/components/schemas/Link"
             },
             "type": "array",
             "title": "Links"
@@ -2070,256 +2360,30 @@
         },
         "type": "object",
         "required": [
+          "name",
+          "email"
+        ],
+        "title": "ProfileFields"
+      },
+      "Project": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "bullets": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Bullets"
+          }
+        },
+        "type": "object",
+        "required": [
           "name"
         ],
-        "title": "Personal"
-      },
-      "Preferences": {
-        "properties": {
-          "targets": {
-            "$ref": "#/components/schemas/TargetPreferences"
-          },
-          "company": {
-            "$ref": "#/components/schemas/CompanyPreferences"
-          },
-          "discovery": {
-            "$ref": "#/components/schemas/DiscoveryPreferences"
-          },
-          "applications": {
-            "$ref": "#/components/schemas/ApplicationPreferences"
-          },
-          "ai": {
-            "$ref": "#/components/schemas/AIPreferences"
-          }
-        },
-        "type": "object",
-        "title": "Preferences"
-      },
-      "PresentKeyword": {
-        "properties": {
-          "label": {
-            "type": "string",
-            "title": "Label"
-          },
-          "chunk_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Chunk Id"
-          }
-        },
-        "type": "object",
-        "required": [
-          "label"
-        ],
-        "title": "PresentKeyword",
-        "description": "Already in the resume. Read-only on the selection screen."
-      },
-      "ProfileCreate": {
-        "properties": {
-          "email": {
-            "type": "string",
-            "format": "email",
-            "title": "Email"
-          },
-          "personal": {
-            "$ref": "#/components/schemas/Personal"
-          },
-          "summary": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Summary"
-          },
-          "experience": {
-            "items": {
-              "$ref": "#/components/schemas/Experience"
-            },
-            "type": "array",
-            "title": "Experience"
-          },
-          "education": {
-            "items": {
-              "$ref": "#/components/schemas/Education"
-            },
-            "type": "array",
-            "title": "Education"
-          },
-          "skill_groups": {
-            "items": {
-              "$ref": "#/components/schemas/SkillGroup"
-            },
-            "type": "array",
-            "title": "Skill Groups"
-          },
-          "certifications": {
-            "items": {
-              "$ref": "#/components/schemas/Certification"
-            },
-            "type": "array",
-            "title": "Certifications"
-          },
-          "preferences": {
-            "$ref": "#/components/schemas/Preferences"
-          },
-          "resume_template_path": {
-            "type": "string",
-            "title": "Resume Template Path",
-            "default": "templates/base_resume.tex"
-          }
-        },
-        "type": "object",
-        "required": [
-          "email",
-          "personal"
-        ],
-        "title": "ProfileCreate",
-        "description": "Creating a profile requires an email \u2014 there is no blank starting state."
-      },
-      "ProfileLink": {
-        "properties": {
-          "label": {
-            "type": "string",
-            "title": "Label"
-          },
-          "value": {
-            "type": "string",
-            "title": "Value"
-          }
-        },
-        "type": "object",
-        "required": [
-          "label",
-          "value"
-        ],
-        "title": "ProfileLink"
-      },
-      "ProfileUpdate": {
-        "properties": {
-          "email": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "email"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Email"
-          },
-          "personal": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Personal"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "summary": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Summary"
-          },
-          "experience": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/Experience"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Experience"
-          },
-          "education": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/Education"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Education"
-          },
-          "skill_groups": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/SkillGroup"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Skill Groups"
-          },
-          "certifications": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/Certification"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Certifications"
-          },
-          "preferences": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Preferences"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "resume_template_path": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Resume Template Path"
-          }
-        },
-        "type": "object",
-        "title": "ProfileUpdate",
-        "description": "Every field optional: a PATCH sends only what changed."
+        "title": "Project"
       },
       "PydanticObjectId": {
         "type": "string",
@@ -2327,6 +2391,19 @@
         "minLength": 24,
         "pattern": "^[0-9a-f]{24}$",
         "example": "5eb7cf5a86d9755df3a6c593"
+      },
+      "Refresh": {
+        "properties": {
+          "refresh_token": {
+            "type": "string",
+            "title": "Refresh Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "refresh_token"
+        ],
+        "title": "Refresh"
       },
       "ResumeStore": {
         "properties": {
@@ -2425,7 +2502,33 @@
         ],
         "title": "ScreeningAnswer"
       },
-      "SkillGroup": {
+      "SignUp": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "email",
+          "password"
+        ],
+        "title": "SignUp",
+        "description": "Three fields and no more. Role and picture are set later from My Details,\nthrough `AccountUpdate` \u2014 asking for them at signup only adds a field nobody\nfills in."
+      },
+      "SkillFields": {
         "properties": {
           "name": {
             "type": "string",
@@ -2443,8 +2546,8 @@
         "required": [
           "name"
         ],
-        "title": "SkillGroup",
-        "description": "Maps one-to-one onto a \\skillrow in the template."
+        "title": "SkillFields",
+        "description": "One group and its items \u2014 `Languages: Python, Go`."
       },
       "SkillsStyle": {
         "type": "string",
@@ -2481,70 +2584,6 @@
           "status"
         ],
         "title": "StatusTransition"
-      },
-      "TargetPreferences": {
-        "properties": {
-          "roles": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Roles"
-          },
-          "locations": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Locations"
-          },
-          "work_mode": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Work Mode"
-          },
-          "min_experience": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Min Experience"
-          },
-          "max_experience": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Max Experience"
-          },
-          "min_salary": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Min Salary"
-          }
-        },
-        "type": "object",
-        "title": "TargetPreferences"
       },
       "TemplateStyle": {
         "properties": {
@@ -2625,112 +2664,12 @@
           "remote"
         ],
         "title": "WorkMode"
-      },
-      "modules__account__models__Login": {
-        "properties": {
-          "email": {
-            "type": "string",
-            "format": "email",
-            "title": "Email"
-          },
-          "password": {
-            "type": "string",
-            "title": "Password"
-          }
-        },
-        "type": "object",
-        "required": [
-          "email",
-          "password"
-        ],
-        "title": "Login"
-      },
-      "modules__account__models__SignUp": {
-        "properties": {
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "email": {
-            "type": "string",
-            "format": "email",
-            "title": "Email"
-          },
-          "password": {
-            "type": "string",
-            "minLength": 8,
-            "title": "Password"
-          },
-          "profile_picture": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Profile Picture"
-          }
-        },
-        "type": "object",
-        "required": [
-          "name",
-          "email",
-          "password"
-        ],
-        "title": "SignUp"
-      },
-      "modules__user__models__Login": {
-        "properties": {
-          "email": {
-            "type": "string",
-            "title": "Email"
-          },
-          "password": {
-            "type": "string",
-            "title": "Password"
-          }
-        },
-        "type": "object",
-        "required": [
-          "email",
-          "password"
-        ],
-        "title": "Login"
-      },
-      "modules__user__models__SignUp": {
-        "properties": {
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "email": {
-            "type": "string",
-            "title": "Email"
-          },
-          "password": {
-            "type": "string",
-            "title": "Password"
-          },
-          "profilePicture": {
-            "type": "string",
-            "title": "Profilepicture"
-          },
-          "refreshToken": {
-            "type": "string",
-            "title": "Refreshtoken"
-          }
-        },
-        "type": "object",
-        "required": [
-          "name",
-          "email",
-          "password",
-          "profilePicture",
-          "refreshToken"
-        ],
-        "title": "SignUp"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "scheme": "bearer"
       }
     }
   },

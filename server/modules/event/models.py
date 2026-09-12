@@ -40,16 +40,23 @@ class EventFacts(BaseModel):
 
 
 class Event(Document, EventFacts):
+    userId: PydanticObjectId
     occurred_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     class Settings:
         name = "events"
         indexes = [
             pymongo.IndexModel(
-                [("job_id", pymongo.ASCENDING), ("occurred_at", pymongo.DESCENDING)]
+                [
+                    ("userId", pymongo.ASCENDING),
+                    ("job_id", pymongo.ASCENDING),
+                    ("occurred_at", pymongo.DESCENDING),
+                ]
             ),
-            pymongo.IndexModel([("event_type", pymongo.ASCENDING)]),
-            pymongo.IndexModel([("occurred_at", pymongo.DESCENDING)]),
+            pymongo.IndexModel([("userId", pymongo.ASCENDING), ("event_type", pymongo.ASCENDING)]),
+            pymongo.IndexModel(
+                [("userId", pymongo.ASCENDING), ("occurred_at", pymongo.DESCENDING)]
+            ),
         ]
 
 
