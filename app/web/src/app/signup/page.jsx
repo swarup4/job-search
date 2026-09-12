@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useDispatch } from "react-redux";
 import { useFormik } from "formik";
 import { AlertTriangle, Eye, EyeOff, Loader2, UserPlus } from "lucide-react";
 import { AuthShell } from "@/component/AuthShell";
@@ -10,12 +11,14 @@ import { Field, Input } from "@/component/ui/field";
 import { Button } from "@/component/ui/button";
 import { MIN_PASSWORD, signupInitialValues, signupSchema } from "@/util/schema";
 import { signup } from "@/services/auth";
+import { signedIn } from "@/store/auth/authSlice";
 import { ApiError } from "@/services";
 import { ROUTES } from "@/routes";
 
 export default function Page() {
     const [revealed, setRevealed] = useState(false);
     const router = useRouter();
+    const dispatch = useDispatch();
 
     const formik = useFormik({
         initialValues: signupInitialValues,
@@ -24,7 +27,7 @@ export default function Page() {
             setStatus(null);
             try {
                 // Signing up signs you in, so there is no second form to fill.
-                await signup({ name, email, password });
+                dispatch(signedIn(await signup({ name, email, password })));
                 router.replace(ROUTES.board);
             } catch (error) {
                 setStatus(

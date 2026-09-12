@@ -1,43 +1,32 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 
 import { Sidebar } from "@/layout/Sidebar";
 import { Topbar } from "@/layout/Topbar";
-import { readToken } from "@/lib/session";
 import { ROUTES } from "@/routes";
-import { countsSet, selectCounts } from "@/store/shell/shellSlice";
+import { selectAuthStatus } from "@/store/auth/authSlice";
 
 export function AppShell({ active, children, counts = {}, aside = true }) {
-    const dispatch = useDispatch();
     const router = useRouter();
-    const seeded = useRef(false);
+    const status = useSelector(selectAuthStatus);
 
-    // Before the selector below, so the first paint already has the real numbers.
-    if (!seeded.current) {
-        seeded.current = true;
-        dispatch(countsSet(counts));
-    }
-
-    const live = useSelector(selectCounts);
-
-    // Every signed-in page renders through here, so this is the whole route guard.
-    // sessionStorage only exists on the client, hence the wait before painting.
-    const [allowed, setAllowed] = useState(false);
     useEffect(() => {
-        if (readToken()) setAllowed(true);
-        else router.replace(ROUTES.login);
-    }, [router]);
+        if (status === "anonymous") router.replace(ROUTES.login);
+    }, [status, router]);
 
-    if (!allowed) return null;
+    // "unknown" lasts only until the store reads sessionStorage back, once per refresh.
+    // Every later navigation already knows the answer, so nothing blanks in between —
+    // which is what used to make each page change flicker.
+    if (status !== "authenticated") return null;
 
     return (
         <div className="min-h-screen bg-background">
-            <Topbar pending={live.pending} />
+            <Topbar pending={counts.pending ?? 0} />
             <div className="mx-auto flex max-w-[1560px] gap-5 px-6 py-6">
-                {aside ? <Sidebar active={active} counts={live} /> : null}
+                {aside ? <Sidebar active={active} counts={counts} /> : null}
                 <main className="min-w-0 grow">{children}</main>
             </div>
         </div>

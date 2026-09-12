@@ -47,10 +47,27 @@ export const profileCreateSchema = Yup.object({ name, email });
 export const profileIdentitySchema = Yup.object({
     name,
     email,
-    headline: Yup.string().trim(),
-    phone: Yup.string().trim(),
-    location: Yup.string().trim(),
-    summary: Yup.string().trim(),
+    role: Yup.string()
+        .trim()
+        .required("Enter your current role.")
+        .max(80, "Keep the role under 80 characters."),
+    headline: Yup.string()
+        .trim()
+        .max(120, "Keep the headline under 120 characters."),
+    phone: Yup.string()
+        .trim()
+        .required("Enter your phone number.")
+        // Counting digits rather than matching a format: nothing here should reject a
+        // valid number written with spaces, dashes, brackets or a country code.
+        .test("digits", "Enter a valid phone number.", (value) => {
+            const digits = (value ?? "").replace(/\D/g, "");
+            return digits.length >= 7 && digits.length <= 15;
+        }),
+    location: Yup.string()
+        .trim()
+        .required("Enter your location.")
+        .max(120, "Keep the location under 120 characters."),
+    summary: Yup.string().trim().max(800, "Keep the summary under 800 characters."),
     links: Yup.array(
         Yup.object({
             label: Yup.string().trim(),

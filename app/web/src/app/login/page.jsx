@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useDispatch } from "react-redux";
 import { useFormik } from "formik";
 import { AlertTriangle, Eye, EyeOff, Loader2, LogIn } from "lucide-react";
 import { AuthShell } from "@/component/AuthShell";
@@ -10,12 +11,14 @@ import { Field, Input } from "@/component/ui/field";
 import { Button } from "@/component/ui/button";
 import { loginInitialValues, loginSchema } from "@/util/schema";
 import { login } from "@/services/auth";
+import { signedIn } from "@/store/auth/authSlice";
 import { ApiError } from "@/services";
 import { ROUTES } from "@/routes";
 
 export default function Page() {
     const [revealed, setRevealed] = useState(false);
     const router = useRouter();
+    const dispatch = useDispatch();
 
     const formik = useFormik({
         initialValues: loginInitialValues,
@@ -23,7 +26,7 @@ export default function Page() {
         onSubmit: async (values, { setStatus }) => {
             setStatus(null);
             try {
-                await login(values);
+                dispatch(signedIn(await login(values)));
                 // Back to whatever the guard interrupted, or the dashboard. Read here
                 // rather than with useSearchParams, which needs a Suspense boundary.
                 const next = new URLSearchParams(window.location.search).get("next");

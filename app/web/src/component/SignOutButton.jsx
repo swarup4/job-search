@@ -1,15 +1,17 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useDispatch } from "react-redux";
 import { LogOut } from "lucide-react";
-import { clearSession } from "@/lib/session";
+import { signedOut } from "@/store/auth/authSlice";
 import { ROUTES } from "@/routes";
 
 export function SignOutButton() {
     const router = useRouter();
+    const dispatch = useDispatch();
 
     function signOut() {
-        clearSession();
+        dispatch(signedOut());
         router.replace(ROUTES.login);
     }
 
