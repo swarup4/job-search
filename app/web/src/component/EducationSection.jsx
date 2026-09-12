@@ -11,7 +11,7 @@ import { Button } from "@/component/ui/button";
 import { Badge } from "@/component/ui/badge";
 import { educationAdded, educationUpdated, selectEducation } from "@/store/profile/profileSlice";
 import { educationInitialValues, educationSchema } from "@/util/schema";
-import { cn } from "@/util/cn";
+import { cn } from "@/util/helper";
 
 export function EducationSection() {
     const entries = useSelector(selectEducation);

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Bookmark } from "lucide-react";
-import { cn } from "@/util/cn";
+import { cn } from "@/util/helper";
 
 /**
  * Toggles a job on and off the shortlist. State is local for now — there is no

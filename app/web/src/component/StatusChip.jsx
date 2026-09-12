@@ -1,4 +1,4 @@
-import { cn } from "@/util/cn";
+import { cn } from "@/util/helper";
 
 /** Variants come from the $statuses map in style/globals.scss. */
 export function StatusChip({ status }) {

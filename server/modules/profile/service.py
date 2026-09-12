@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from beanie import PydanticObjectId
 
 from config.errors import Conflict, NotFound
+from modules.account import Account
 from modules.profile.models import (
     Certification,
     CertificationFields,
@@ -16,7 +17,6 @@ from modules.profile.models import (
     Skill,
     SkillFields,
 )
-from modules.user import User
 
 
 class ProfileNotFound(NotFound):
@@ -29,7 +29,7 @@ class ProfileExists(Conflict):
 
 class UnknownUser(NotFound):
     def __init__(self, user_id: PydanticObjectId) -> None:
-        super().__init__(f"user {user_id} not found")
+        super().__init__(f"account {user_id} not found")
 
 
 class ExperienceNotFound(NotFound):
@@ -63,7 +63,9 @@ async def get_profile(user_id: PydanticObjectId) -> Profile:
 
 
 async def create_profile(user_id: PydanticObjectId, payload: ProfileFields) -> Profile:
-    if await User.get(user_id) is None:
+    # `userId` is `accounts._id` — the account module is what issues the login token,
+    # so a profile hangs off the same identity the browser signed in as.
+    if await Account.get(user_id) is None:
         raise UnknownUser(user_id)
     if await Profile.find_one({"userId": user_id}) is not None:
         raise ProfileExists("this user already has a profile")

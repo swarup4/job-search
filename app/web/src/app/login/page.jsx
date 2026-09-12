@@ -2,24 +2,40 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useDispatch } from "react-redux";
 import { useFormik } from "formik";
-import { AlertTriangle, Eye, EyeOff, LogIn } from "lucide-react";
+import { AlertTriangle, Eye, EyeOff, Loader2, LogIn } from "lucide-react";
 import { AuthShell } from "@/component/AuthShell";
 import { Field, Input } from "@/component/ui/field";
 import { Button } from "@/component/ui/button";
 import { loginInitialValues, loginSchema } from "@/util/schema";
+import { login } from "@/services/auth";
+import { signedIn } from "@/store/auth/authSlice";
+import { ApiError } from "@/services";
 import { ROUTES } from "@/routes";
 
 export default function Page() {
     const [revealed, setRevealed] = useState(false);
+    const router = useRouter();
+    const dispatch = useDispatch();
 
     const formik = useFormik({
         initialValues: loginInitialValues,
         validationSchema: loginSchema,
-        onSubmit: (_values, { setStatus }) => {
-            // PRD §4 — there is no auth service to call. Validating the input is the
-            // whole of what this screen can honestly do.
-            setStatus("No auth service is connected, so there is nothing to sign in to yet.");
+        onSubmit: async (values, { setStatus }) => {
+            setStatus(null);
+            try {
+                dispatch(signedIn(await login(values)));
+                // Back to whatever the guard interrupted, or the dashboard. Read here
+                // rather than with useSearchParams, which needs a Suspense boundary.
+                const next = new URLSearchParams(window.location.search).get("next");
+                router.replace(next || ROUTES.board);
+            } catch (error) {
+                setStatus(
+                    error instanceof ApiError ? error.message : "Could not sign you in."
+                );
+            }
         },
     });
 
@@ -83,17 +99,10 @@ export default function Page() {
                     </p>
                 ) : null}
 
-                <Button type="submit" className="mt-1 w-full">
-                    <LogIn />
-                    Sign in
+                <Button type="submit" disabled={formik.isSubmitting} className="mt-1 w-full">
+                    {formik.isSubmitting ? <Loader2 className="animate-spin" /> : <LogIn />}
+                    {formik.isSubmitting ? "Signing in" : "Sign in"}
                 </Button>
-
-                <Link
-                    href={ROUTES.board}
-                    className="text-center text-[13px] text-muted-foreground hover:text-primary"
-                >
-                    Skip — go straight to the dashboard
-                </Link>
             </form>
         </AuthShell>
     );

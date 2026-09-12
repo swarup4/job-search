@@ -16,14 +16,8 @@ import {
     roleUpdated,
     selectExperience,
 } from "@/store/profile/profileSlice";
-import {
-    MONTHS,
-    PRESENT,
-    experienceInitialValues,
-    experienceSchema,
-    joinMonthYear,
-} from "@/util/schema";
-import { cn } from "@/util/cn";
+import { experienceInitialValues, experienceSchema } from "@/util/schema";
+import { MONTHS, PRESENT, cn, joinMonthYear } from "@/util/helper";
 
 export function ExperienceSection() {
     const roles = useSelector(selectExperience);

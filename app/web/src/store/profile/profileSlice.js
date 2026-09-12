@@ -7,6 +7,7 @@ const initialState = {
         name: profileData.personal?.name ?? "",
         email: profileData.personal?.email ?? "",
         headline: profileData.personal?.headline ?? "",
+        role: profileData.personal?.role ?? "",
         phone: profileData.personal?.phone ?? "",
         location: profileData.personal?.location ?? "",
         summary: profileData.summary ?? "",
@@ -136,26 +137,25 @@ export const selectSkillCount = (state) =>
     state.profile.skillGroups.reduce((n, g) => n + g.items.length, 0);
 export const selectDirty = (state) => state.profile.dirty;
 
+/** `role` is not here: it belongs to the account, and has its own endpoint. */
+export const selectRole = (state) => state.profile.identity.role;
+
 /**
- * The whole profile in the shape the API takes. Builds a fresh object, so read it
- * with store.getState() when saving rather than through useSelector.
+ * The personal-details body for PUT /profile/updateProfile/{userId}. Experience,
+ * education, skills and certifications are their own endpoints, so they are not
+ * bundled here. Builds a fresh object, so read it with store.getState() when saving
+ * rather than through useSelector.
  */
 export function selectProfilePayload(state) {
-    const { identity, experience, education, certifications, skillGroups } = state.profile;
+    const { identity } = state.profile;
     return {
+        name: identity.name,
         email: identity.email,
-        personal: {
-            name: identity.name,
-            headline: identity.headline || null,
-            phone: identity.phone || null,
-            location: identity.location || null,
-            links: identity.links,
-        },
+        headline: identity.headline || null,
+        phone: identity.phone || null,
+        location: identity.location || null,
         summary: identity.summary || null,
-        experience,
-        education,
-        certifications,
-        skillGroups,
+        links: identity.links,
     };
 }
 

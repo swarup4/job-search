@@ -1,4 +1,4 @@
-import { cn } from "@/util/cn";
+import { cn } from "@/util/helper";
 
 /** The reference's dashboard counter: white panel, tinted icon square, big number. */
 export function StatCard({ icon: Icon, value, label, tone = "primary", note }) {

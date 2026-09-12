@@ -14,7 +14,7 @@ import { ROUTES, sectionFor } from "@/routes";
 import matches from "@/data/matches.json";
 import board from "@/data/board.json";
 import search from "@/data/search.json";
-import { cn } from "@/util/cn";
+import { cn } from "@/util/helper";
 
 export default async function Page({ params, searchParams }) {
   const { id: jobId } = await params;

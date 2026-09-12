@@ -1,4 +1,4 @@
-import { cn } from "@/util/cn";
+import { cn } from "@/util/helper";
 
 /** White, 4px, ambient shadow, no border — the reference template's card. */
 function Panel({ className, hover = false, ...props }) {

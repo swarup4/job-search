@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { X } from "lucide-react";
-import { cn } from "@/util/cn";
+import { cn } from "@/util/helper";
 
 function Dialog({ open, onClose, title, description, children, className }) {
     const ref = useRef(null);
