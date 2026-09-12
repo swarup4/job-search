@@ -4,7 +4,7 @@
 |---|---|
 | **Product** | JobPilot — Agentic AI Job Search Platform |
 | **Owner** | Swarup Saha |
-| **Status** | v1.1 — eleven phases, application first then agents. Phase 1 nearly done |
+| **Status** | v1.2 — eleven phases, application first then agents. Phase 1 API done |
 | **Updated** | 2026-09-12 |
 
 ---
@@ -22,7 +22,7 @@ anything starts reasoning.
 
 | Phase | Delivers | State |
 |---|---|---|
-| [1](#2-phase-1--authentication--profile) | Sign in, and the profile everything hangs off | 🚧 nearly done |
+| [1](#2-phase-1--authentication--profile) | Sign in, and the profile everything hangs off | 🚧 API done, one UI wiring task left |
 | [2](#3-phase-2--resume-generation--download) | A resume built from that profile, downloadable | 🚧 backend done, no UI |
 | [3](#4-phase-3--job-scraping-search--shortlist) | Real jobs in the system, searchable and shortlistable | ⬜ API only |
 | [4](#5-phase-4--applications--settings) | Tracking what you applied to, and the preferences driving it | ⬜ API only |
@@ -54,25 +54,43 @@ are retired — nothing outside this document referenced them.
 ---
 
 ## 2. Phase 1 — Authentication & Profile
-🚧 **nearly done.** The account you sign in as, and the resume material hanging off it. Everything
-else in the product is keyed by `userId`, so this comes first.
+🚧 **API done, one UI wiring task left.** The account you sign in as, and the resume material
+hanging off it. Everything else in the product is keyed by `userId`, so this comes first.
 
 **API**
 - ✅ `accounts` collection: argon2 password hashes, unique index on email
-- ✅ Signup and login both issue a JWT; signup signs you straight in, no second call
-- ✅ `account` module: signup, login, read one account, partial update
+- ✅ Signup and login both issue a JWT; signup signs you straight in, no second call.
+  Signup takes name, email and password and nothing else — role and picture are set
+  later from My Details
+- ✅ `account` module: signup, login, refresh, read one account, partial update
 - ✅ Profile split into five collections keyed by `userId` — `profile`,
   `work_experience`, `education`, `skills`, `certifications`
-- ⬜ **Server-side enforcement.** Endpoints take `userId` from the URL and never check
-  it against the token, so any signed-in account can read or write another's profile
-- ⬜ Retire the duplicate `user` module, or fold it into `account`
-- ⬜ Token refresh and expiry handling beyond the 60-minute TTL
+- ✅ **Server-side enforcement.** Every endpoint outside signup/login/refresh requires a
+  bearer token, and **no URL carries a user id any more** — one `verify_token` dependency
+  reads it from the token and hands it to the route. Reading another user's data is not
+  refused, it is unreachable: there is nowhere to name them
+- ✅ **Every collection is keyed by `userId`**, not just the profile ones: `jobs`,
+  `matches`, `resumes`, `applications`, `answer_bank` and `events` each carry the owning
+  account, and every query filters on it. Another user's id reads as 404, never 403 —
+  the caller has no business learning the row exists
+- ✅ Dedup is per user. `jobs.dedup_hash` was globally unique, so the second person to
+  find a posting would have been handed the first person's row; it is now unique per
+  `(userId, dedup_hash)`. Same for `answer_bank.key`
+- ✅ Retired the duplicate `user` module. It was dead weight and a liability — plaintext
+  passwords, its own signup, and a `GET /api/user` that returned every row. The `users`
+  collection is left in Mongo, simply no longer mapped
+- ✅ Dropped `GET /api/account`, which listed every account to any caller. Nothing used it
+- ✅ Token refresh and expiry. Access token keeps its 60-minute TTL and gains `typ`;
+  a 30-day refresh token is spent and replaced on each `POST /account/refresh`, so a
+  session in daily use never signs in again and an idle one still expires
 
 **UI**
 - ✅ Login and Signup screens, wired to `/api/account` for real
 - ✅ Session in `sessionStorage`, mirrored into Redux, restored on refresh
 - ✅ Route guard: every dashboard page redirects to `/login` without a session
 - ✅ Bearer token attached to every API call; a 401 clears the session
+- ✅ A 401 refreshes once and replays the call before giving up on the session —
+  one refresh shared across the several calls a screen fires together
 - ✅ My Details screen built, with Formik/Yup validation on every field
 - ⬜ **Wire My Details to the profile API.** Today only `role` persists (via the
   account endpoint); name, headline, phone, location, summary, links, experience, education,
@@ -88,7 +106,7 @@ it is templating, not intelligence.
 - ✅ `templates` collection: `.tex` source, token list, preview path, archive flag
 - ✅ Upload endpoint with token validation, rejecting templates nothing can fill
 - ✅ Style inference from the `.tex` itself (contact, skills, experience, columns)
-- ✅ Render a profile into a template: `GET /template/render/{templateId}/{userId}`
+- ✅ Render the signed-in user's profile into a template: `GET /template/render/{templateId}`
 - ✅ `template` module: upload, list, read source, update, preview image
 - 🟡 Jinja2 wrapper over `base_resume.tex` (custom `\VAR{}`/`\BLOCK{}`
   delimiters). *Partial — validated by a throwaway script, not by anything in the codebase*
@@ -313,16 +331,17 @@ above is unprovable until this exists.
   Definition of Done in every phase above
 - ⬜ CI/CD via GitHub Actions (lint and test on push)
 
-**The test suite and server-side token enforcement are the two that should not wait.** Neither
-blocks building the next feature, and both should close before this is used against real job
-applications.
+**The test suite is now the one that should not wait.** Server-side token enforcement closed in
+Phase 1; the suite does not block building the next feature, but it should close before this is
+used against real job applications — nothing above is verified by anything that runs on its own.
 
 ---
 
 ## 14. Implementation status
 
-The dashboard UI was built ahead of the backend. `server/` is now built — ten modules, 54 endpoints,
-14 collections — and the auth screens run against it end to end. Every other screen still renders
+The dashboard UI was built ahead of the backend. `server/` is now built — eight modules, 50
+endpoints, 13 collections, every one of them behind a bearer token — and the auth screens run
+against it end to end. Every other screen still renders
 from a JSON fixture in `app/web/src/data/`, so apart from sign-in **no story meets the §10
 Definition of Done** (the §15 test-case requirement is unmet everywhere; `server/` has no tests).
 

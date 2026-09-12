@@ -72,18 +72,29 @@ class ApplicationProgress(BaseModel):
 
 
 class Application(Document, ApplicationTarget, ApplicationProgress):
+    userId: PydanticObjectId
+
     class Settings:
         name = "applications"
         indexes = [
-            pymongo.IndexModel([("job_id", pymongo.ASCENDING)]),
-            pymongo.IndexModel([("status", pymongo.ASCENDING), ("staged_at", pymongo.DESCENDING)]),
-            pymongo.IndexModel([("follow_up_due_at", pymongo.ASCENDING)]),
+            pymongo.IndexModel([("userId", pymongo.ASCENDING), ("job_id", pymongo.ASCENDING)]),
+            pymongo.IndexModel(
+                [
+                    ("userId", pymongo.ASCENDING),
+                    ("status", pymongo.ASCENDING),
+                    ("staged_at", pymongo.DESCENDING),
+                ]
+            ),
+            pymongo.IndexModel(
+                [("userId", pymongo.ASCENDING), ("follow_up_due_at", pymongo.ASCENDING)]
+            ),
         ]
 
 
 class AnswerBank(Document):
     """Reusable screening answers (FR-5.2). One document per question key."""
 
+    userId: PydanticObjectId
     key: str
     question: str
     answer: str
@@ -93,7 +104,12 @@ class AnswerBank(Document):
 
     class Settings:
         name = "answer_bank"
-        indexes = [pymongo.IndexModel([("key", pymongo.ASCENDING)], unique=True)]
+        # Unique per user: two people both have an answer keyed "notice_period".
+        indexes = [
+            pymongo.IndexModel(
+                [("userId", pymongo.ASCENDING), ("key", pymongo.ASCENDING)], unique=True
+            )
+        ]
 
 
 class ApplicationStage(ApplicationTarget):

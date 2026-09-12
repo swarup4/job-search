@@ -9,7 +9,7 @@ class Account(Document):
     name: str
     email: EmailStr
     password_hash: str
-    role: str
+    role: str = ""
     profile_picture: str | None = None
     active: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
@@ -20,11 +20,13 @@ class Account(Document):
 
 
 class SignUp(BaseModel):
+    """Three fields and no more. Role and picture are set later from My Details,
+    through `AccountUpdate` — asking for them at signup only adds a field nobody
+    fills in."""
+
     name: str
     email: EmailStr
     password: str = Field(min_length=8)
-    role: str = ""
-    profile_picture: str | None = None
 
 
 class Login(BaseModel):
@@ -49,6 +51,14 @@ class AccountUpdate(BaseModel):
     profile_picture: str | None = None
 
 
+class Refresh(BaseModel):
+    refresh_token: str
+
+
 class LoginResult(BaseModel):
+    """Every way of becoming signed in — signup, login, refresh — answers with this,
+    so the client stores the result the same way whichever call produced it."""
+
     access_token: str
+    refresh_token: str
     account: AccountRead

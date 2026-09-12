@@ -152,10 +152,14 @@ class CertificationRead(CertificationFields):
 
 
 class Resume(BaseModel):
-    """The five collections for one user, assembled. What a template renders from."""
+    """The five collections for one user, assembled. What a template renders from.
 
-    profile: ProfileRead
-    experience: list[ExperienceRead] = Field(default_factory=list)
-    education: list[EducationRead] = Field(default_factory=list)
-    skills: list[SkillRead] = Field(default_factory=list)
-    certifications: list[CertificationRead] = Field(default_factory=list)
+    Holds the documents, not the `*Read` models: nothing serialises this to a
+    response, and the services hand back documents.
+    """
+
+    profile: Profile
+    experience: list[Experience] = Field(default_factory=list)
+    education: list[Education] = Field(default_factory=list)
+    skills: list[Skill] = Field(default_factory=list)
+    certifications: list[Certification] = Field(default_factory=list)

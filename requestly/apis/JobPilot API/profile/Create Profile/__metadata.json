@@ -4,7 +4,7 @@
   "entryType": "http",
   "id": "5bd2cd1c-ca5b-4995-8b8d-4c5093acf749",
   "rank": "a1",
-  "url": "{{base_url}}/api/profile",
+  "url": "{{base_url}}/api/profile/createProfile",
   "method": "POST",
   "contentType": "json"
 }

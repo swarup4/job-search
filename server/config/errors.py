@@ -12,6 +12,10 @@ class DomainError(Exception):
     status: int = 400
 
 
+class Unauthorized(DomainError):
+    status = 401
+
+
 class NotFound(DomainError):
     status = 404
 

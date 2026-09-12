@@ -4,7 +4,7 @@
   "entryType": "http",
   "id": "53010746-1086-4ef2-bf60-3953b2012563",
   "rank": "a0",
-  "url": "{{base_url}}/api/profile",
+  "url": "{{base_url}}/api/profile/getProfile",
   "method": "GET",
   "contentType": "none"
 }

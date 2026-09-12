@@ -1,0 +1,10 @@
+{
+  "$schema": "https://assets.requestly.com/local/v1.15.0/metadata.json",
+  "type": "api",
+  "entryType": "http",
+  "id": "b690c461-59c0-4c9a-9b20-010f9e9f3355",
+  "rank": "a15",
+  "url": "{{base_url}}/api/profile/getCertifications",
+  "method": "GET",
+  "contentType": "none"
+}

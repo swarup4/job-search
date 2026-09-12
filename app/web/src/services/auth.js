@@ -1,9 +1,10 @@
 import { axiosInstance } from "@/lib/axiosInstance";
 
-/** Both endpoints answer with the same shape, so both land here. */
+/** Signup, login and refresh all answer with the same shape, so all three land here. */
 function toSession(result) {
     return {
         token: result.access_token,
+        refreshToken: result.refresh_token,
         user: {
             id: result.account.id,
             name: result.account.name,
@@ -26,12 +27,12 @@ export async function signup({ name, email, password }) {
     return toSession(await axiosInstance.post("/account/signup", { name, email, password }));
 }
 
-/** GET /api/account/getAccount/{id} — `role` lives on the account, not the profile. */
-export function getAccount(accountId) {
-    return axiosInstance.get(`/account/getAccount/${accountId}`);
+/** GET /api/account/getAccount — `role` lives on the account, not the profile. */
+export function getAccount() {
+    return axiosInstance.get("/account/getAccount");
 }
 
-/** PATCH /api/account/updateAccount/{id} — partial; sends only what changed. */
-export function updateAccount(accountId, changes) {
-    return axiosInstance.patch(`/account/updateAccount/${accountId}`, changes);
+/** PATCH /api/account/updateAccount — partial; sends only what changed. */
+export function updateAccount(changes) {
+    return axiosInstance.patch("/account/updateAccount", changes);
 }

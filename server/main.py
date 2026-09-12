@@ -19,10 +19,9 @@ from modules import (
     profile,
     resume,
     template,
-    user,
 )
 
-MODULES = (job, match, resume, template, application, event, profile, user, account)
+MODULES = (job, match, resume, template, application, event, profile, account)
 
 
 @asynccontextmanager
@@ -57,6 +56,7 @@ def create_app() -> FastAPI:
     # Every service error reaches HTTP here — see errors.py.
     app.add_exception_handler(DomainError, handle_domain_error)
 
+    # Authentication is declared per route, not here — see any router.
     for module in MODULES:
         app.include_router(module.router, prefix=f"/api/{module.NAME}")
 
