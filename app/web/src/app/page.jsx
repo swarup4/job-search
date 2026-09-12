@@ -9,7 +9,7 @@ import { buttonVariants } from "@/component/ui/button";
 import { ROUTES } from "@/routes";
 import board from "@/data/board.json";
 import search from "@/data/search.json";
-import { cn } from "@/util/cn";
+import { cn } from "@/util/helper";
 
 export default function Page() {
     const { pending, columns } = board;

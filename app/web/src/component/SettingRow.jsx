@@ -1,4 +1,4 @@
-import { cn } from "@/util/cn";
+import { cn } from "@/util/helper";
 
 export function SettingRow({ label, hint, children, last = false }) {
     return (

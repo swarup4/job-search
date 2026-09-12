@@ -1,242 +1,389 @@
-# Project Roadmap & Backlog
+# Project Roadmap
 
 | | |
 |---|---|
 | **Product** | JobPilot — Agentic AI Job Search Platform |
 | **Owner** | Swarup Saha |
-| **Status** | v1.1 — dashboard UI implemented, backend not started |
-| **Updated** | 2026-08-24 |
+| **Status** | v1.1 — eleven phases, application first then agents. Phase 1 nearly done |
+| **Updated** | 2026-09-12 |
 
 ---
 
-## 1. Roadmap (10 phases, single-user scope)
+## 1. The approach
 
-Phases 0 and 1 are complete; Phase 2 is partly done — the REST API and data layer are built, the
-infrastructure around them is not. The week estimates on Phases 2–9 count from the start of Phase 2, so
-the original ~8–10 week figure still describes the work that remains.
+**Make the whole application work end to end first, then make it intelligent.** Phases 1–4 build a
+product a person can use by hand. Phase 5 adds the first LLM, called straight from the API. Phases
+6–11 turn that into the agentic system: retrieval, tools, agents, the extension, and the evals that
+prove it behaves.
 
-### Phase 0 — Architecture & Planning ✅ complete
-- Product requirements, functional/non-functional spec, system design
-- Six-screen UI/UX definition and end-to-end user flows
-- Phased roadmap, epics, backlog IDs
-- Delivered as docs [01](01-PRD-Product-Requirements-Document.md)–[05](05-Roadmap-Backlog.md)
+The order is deliberate. An agent writing into a half-built app cannot be judged, and a broken
+pipeline is far harder to debug with an LLM in the middle of it — so the plumbing is finished before
+anything starts reasoning.
 
-### Phase 1 — Dashboard UI ✅ complete
-- All screens built in Next.js + Tailwind, running on JSON fixtures
-- Pipeline board · job search · shortlist · job details · staged applications · my details · settings
-- Keyword Selection screen — starts with nothing checked, per FR-2.5
-- Resume Preview screen — Preview / Diff / Source tabs and a `.tex` download
-- `templates/base_resume.tex` written, Jinja2 render verified (never TeX-compiled)
-- **No backend behind any of it** — see [Implementation status](#implementation-status)
+| Phase | Delivers | State |
+|---|---|---|
+| [1](#2-phase-1--authentication--profile) | Sign in, and the profile everything hangs off | 🚧 nearly done |
+| [2](#3-phase-2--resume-generation--download) | A resume built from that profile, downloadable | 🚧 backend done, no UI |
+| [3](#4-phase-3--job-scraping-search--shortlist) | Real jobs in the system, searchable and shortlistable | ⬜ API only |
+| [4](#5-phase-4--applications--settings) | Tracking what you applied to, and the preferences driving it | ⬜ API only |
+| [5](#6-phase-5--llm-integration--resume-rectification) | A resume rectified against a specific job | ⬜ not started |
+| [6](#7-phase-6--rag--retrieval) | Retrieval over your own resume, with the split vector store | ⬜ not started |
+| [7](#8-phase-7--mcp-tool-servers) | The tool servers agents reach the world through | ⬜ not started |
+| [8](#9-phase-8--agents--orchestration) | LangGraph agents under a supervisor, with approval interrupts | ⬜ not started |
+| [9](#10-phase-9--application-agent--chrome-extension) | Form autofill in your own browser session | ⬜ not started |
+| [10](#11-phase-10--eval-guardrails--observability) | Ragas faithfulness, guardrail tests, tracing | ⬜ not started |
+| [11](#12-phase-11--daily-use--polish) | What only real daily use reveals | ⬜ not started |
 
-### Phase 2 — Foundation (Week 1) 🚧 partial
-- ✅ Define target role/location profile schema — `profile.preferences`, see [doc 06](docs/06-Data-Model-ER.md)
-- ✅ FastAPI app + Beanie ODM over local MongoDB — six modules, eight collections, 28 endpoints over 20 paths
-- ✅ Local MongoDB structural store, with indexes created at startup
-- ⬜ MongoDB Atlas free tier + `$vectorSearch` index on `jd_embedding`
-- ⬜ Redis + Celery
-- ⬜ Set up MongoDB MCP Server *(superseded — structural data goes through `jobpilot_api` over HTTP;
-  see the FR-8.1 note in doc 02)*
-- ⬜ Stand up LangGraph project skeleton with a no-op orchestrator
-- ⬜ Pick and validate local LLM (Ollama for dev) — confirm tool-calling reliability
+**How to read a phase.** Each is split into **API**, **UI** and, where relevant, infrastructure and
+guardrail tasks — so you can see at a glance that a phase's backend is done while its screens are
+not, which is the usual state here.
 
-**Not done and load-bearing:** `server/` has no tests. They were written and removed on request
-(2026-08-24), so the guardrail stories below cannot meet the §4 Definition of Done until they
-return — the enforcement is in the code, but the proof is not.
+| Mark | Meaning |
+|---|---|
+| ✅ | Built and manually exercised |
+| 🟡 | Partial — some artefacts exist, story incomplete |
+| ⬜ | Not started |
+| ⛔ | Superseded — will not be built as written |
 
-### Phase 3 — Job Discovery Agent (Weeks 2–3)
-- Integrate Indeed MCP + SerpAPI/Google CSE
-- Adapt `linkedin-hiring-scraper` skill into an agent tool
-- Dedup + normalize + store pipeline into local MongoDB
-- Scheduled daily run via Celery beat
+A checked **UI** box means the screen is built; it does **not** mean it talks to the API. Where a
+screen exists but still reads a JSON fixture, the wiring is listed as its own unchecked task.
 
-### Phase 4 — JD Match & Resume Tailor Agents (Weeks 3–4)
-- JD keyword extraction + Present/Missing diff against resume
-- Wire the existing Keyword Selection screen to real match data
-- Jinja2-based `.tex` generator driven by `ai/mcp_servers/latex/`
-- "No fabrication" guardrail — only selected keywords incorporated
-- Scope: `.tex` output only, no PDF compile yet
+Each task appears once, under the phase that delivers it. The old epic grouping and its story IDs
+are retired — nothing outside this document referenced them.
 
-### Phase 5 — Application Agent, Chrome Extension (Weeks 5–6)
-- Build extension (Manifest V3): content script, background worker, popup
-- Field-matching heuristics for 2–3 ATS platforms (Workday, Greenhouse, Lever)
-- Local FastAPI backend serving job context/Q&A answers
-- Manual resume-attach flow (file path copy)
+---
 
-### Phase 6 — Tracking & Follow-up (Weeks 6–7)
-- Replace the dashboard's JSON fixtures with `server` API calls
-- Google Sheet sync
-- Follow-up draft generation on interval triggers
+## 2. Phase 1 — Authentication & Profile
+🚧 **nearly done.** The account you sign in as, and the resume material hanging off it. Everything
+else in the product is keyed by `userId`, so this comes first.
 
-### Phase 7 — Multi-agent Orchestration (Weeks 7–8)
-- Wire all agents into LangGraph supervisor with shared state
-- Implement human-approval interrupts (keyword selection, application review)
-- Retry/error handling for failed agent steps
+**API**
+- ✅ `accounts` collection: argon2 password hashes, unique index on email
+- ✅ Signup and login both issue a JWT; signup signs you straight in, no second call
+- ✅ `account` module: signup, login, read one account, partial update
+- ✅ Profile split into five collections keyed by `userId` — `profile`,
+  `work_experience`, `education`, `skills`, `certifications`
+- ⬜ **Server-side enforcement.** Endpoints take `userId` from the URL and never check
+  it against the token, so any signed-in account can read or write another's profile
+- ⬜ Retire the duplicate `user` module, or fold it into `account`
+- ⬜ Token refresh and expiry handling beyond the 60-minute TTL
 
-### Phase 8 — Eval & Guardrails (Weeks 8–9)
-- Eval suite (Langfuse/Phoenix): match-score accuracy, resume-tailor faithfulness, form-fill accuracy
-- Guardrail test cases: no-fabrication, no-auto-submit
+**UI**
+- ✅ Login and Signup screens, wired to `/api/account` for real
+- ✅ Session in `sessionStorage`, mirrored into Redux, restored on refresh
+- ✅ Route guard: every dashboard page redirects to `/login` without a session
+- ✅ Bearer token attached to every API call; a 401 clears the session
+- ✅ My Details screen built, with Formik/Yup validation on every field
+- ⬜ **Wire My Details to the profile API.** Today only `role` persists (via the
+  account endpoint); name, headline, phone, location, summary, links, experience, education,
+  skills and certifications all still come from `profile.json`
 
-### Phase 9 — Polish & Daily Use (Weeks 9–10)
-- Bug fixes from real daily usage
-- Q&A answer bank refinement
-- Optional: PDF compilation step, cover letter generation (stretch goals — see Backlog)
+---
 
-### Implementation status
+## 3. Phase 2 — Resume generation & download
+🚧 **backend done, no UI.** Turn the profile into a document you can send. No LLM in this phase —
+it is templating, not intelligence.
 
-The dashboard UI was built ahead of the backend. Eleven screens exist and render, every one backed
-by a JSON fixture in `app/web/src/data/`. `server/` and `ai/` are still empty directories, so
-nothing runs end-to-end and **no story below meets the §4 Definition of Done.**
+**API**
+- ✅ `templates` collection: `.tex` source, token list, preview path, archive flag
+- ✅ Upload endpoint with token validation, rejecting templates nothing can fill
+- ✅ Style inference from the `.tex` itself (contact, skills, experience, columns)
+- ✅ Render a profile into a template: `GET /template/render/{templateId}/{userId}`
+- ✅ `template` module: upload, list, read source, update, preview image
+- 🟡 Jinja2 wrapper over `base_resume.tex` (custom `\VAR{}`/`\BLOCK{}`
+  delimiters). *Partial — validated by a throwaway script, not by anything in the codebase*
+- ⬜ Download the generated `.tex`
+- ⬜ PDF compilation and download
+
+**UI**
+- ✅ Resume Preview screen built: Preview / Diff / Source tabs
+- ⬜ Point the Resume Preview screen at a real render instead of `resume.json`
+- ⬜ Template picker in the dashboard
+
+**Verification**
+- ⬜ **Prove a rendered `.tex` compiles under a TeX engine.** No output of this
+  pipeline has ever been through one, so its LaTeX validity is unconfirmed
+
+**PDF compilation was promoted** from the v1 stretch list: "generate and download" is hollow if the output
+is a `.tex` the reader cannot open. It needs a TeX engine and an amendment to invariant 5 / FR-4.4.
+
+---
+
+## 4. Phase 3 — Job scraping, search & shortlist
+⬜ **API only.** Get real jobs into the system so the screens that already exist have something to
+work on.
+
+**API**
+- ✅ `job` module: create with dedup-hash check, list by status, shortlist toggle
+- ⬜ Indeed MCP connector
+- ⬜ Google CSE / SerpAPI search
+- ⬜ Dedup logic on content hash
+- ⬜ Adapt the `linkedin-hiring-scraper` skill as a tool
+- ⬜ Naukri and company career-page sources
+- ⬜ Scheduled daily run *(needs Redis + Celery, below)*
+
+**UI**
+- ✅ Job Search screen built (multi-field search + facets)
+- ✅ Shortlist / Match Review screen built
+- ✅ Job Details screen built
+- ⬜ Wire all three screens off `search.json` and onto the job API
+
+**Infrastructure**
+- ⬜ Redis + Celery for scheduling
+
+**Sequence that matters:** one source working end to end beats four half-built connectors. The
+Indeed connector plus content-hash dedup is the smallest thing that makes the three screens real.
+
+---
+
+## 5. Phase 4 — Applications & Settings
+⬜ **API only.** The tracking half of the product, plus the preferences that will later drive
+discovery.
+
+**API**
+- ✅ `application` module: stage, record fill, status transitions, answer bank
+- ⬜ **Rebuild a preferences store for Settings.** `profile.preferences` was removed
+  on 2026-09-11, so target roles, locations, company preference and discovery schedule have
+  nowhere to live
+- ⬜ Follow-up draft generation on an interval
+- ⬜ Google Sheet sync
+
+**UI**
+- ✅ Staged Applications screen built
+- ✅ Pipeline board built
+- ✅ "Pending your review" banner built
+- ✅ Settings screen built
+- ⬜ Wire all three screens onto the application API and real counts
+- ⬜ Wire the Settings screen onto that store, once it exists
+
+**The preferences store is new work, not a wiring job** — that screen has no backend at all today.
+
+---
+
+## 6. Phase 5 — LLM integration & resume rectification
+⬜ **not started.** The first intelligence in the product, called directly from the API. Still no
+agents and no orchestration — deliberately, so a wrong answer stays debuggable.
+
+**API**
+- ✅ `match` module: write score and keywords, record the user's selection
+- ✅ `resume` module: versioned `.tex` + selection set, rejects unselected keywords
+- ⬜ Structured keyword extraction from a JD
+- ⬜ Present / Missing keyword diff against the profile
+- ⬜ Risk-flag detection (seniority mismatch and similar)
+- ⬜ Embed the JD, `$vectorSearch`, compute a match score *(needs Atlas, below)*
+- ⬜ Incorporate **only** the keywords the user ticked
+- ⬜ Version each `.tex` per job id
+
+**UI**
+- ✅ Keyword Selection screen built, starting with nothing checked (FR-2.5)
+- ⬜ Wire it onto real match data instead of `matches.json`
+
+**Infrastructure**
+- ⬜ Pick and validate a local LLM; confirm tool-calling reliability
+- 🟡 Atlas free tier + `$vectorSearch` index. *Partial — local store done, Atlas
+  not started*
+
+**Guardrail**
+- ⬜ No-fabrication test cases
+
+**The guardrail is the point of this phase.** Tailoring from ticked keywords only, and the tests
+proving it, are what make "no fabrication" real rather than aspirational — and neither can be
+claimed while the API has no test suite.
+
+---
+
+## 7. Phase 6 — RAG & retrieval
+⬜ **not started.** Tailoring and scoring should work against what your resume actually says, not
+against the whole document stuffed into a prompt. This is the retrieval layer that makes that true.
+
+**API**
+- ⬜ RAG second hop: `resume_chunk_text` and the local text fetch by `chunk_id`
+  *(this existed and was removed on 2026-09-11; it comes back here)*
+- ⬜ Chunk the profile into retrievable units, section by section
+- ⬜ Re-index on profile edit, so retrieval never serves stale text
+
+**AI tier**
+- ⬜ Embed chunks and store vectors in Atlas — **ids and vectors only, never prose**
+- ⬜ Two-stage retrieval: `$vectorSearch` top ~50 → fetch text from `server` → rerank
+  → top ~5
+
+**Infrastructure**
+- ⬜ Atlas free tier + `$vectorSearch` index, dimension matching the embedding model
+
+**The split store is the point.** Atlas holds vectors and `chunk_id`s; the text stays in local
+MongoDB. That is why retrieval needs two hops, and why the chunk store is a prerequisite rather
+than an optimisation.
+
+---
+
+## 8. Phase 7 — MCP tool servers
+⬜ **not started.** The agents in Phase 8 reach the outside world only through these, so they come
+first.
+
+**AI tier**
+- ⬜ `jobpilot_api` — the one way agents read and write structural data, over HTTP
+- ⬜ `latex` — render a tailored `.tex` from a template and a profile
+- ⬜ `job_search` — Google CSE / SerpAPI behind one tool interface
+- ⬜ `indeed` and `linkedin` source servers
+- ⬜ `browser` — Playwright, for discovery only
+- ⛔ MongoDB MCP Server. *Superseded: agents go through `jobpilot_api` over HTTP
+  instead, so there is one validation boundary and no DB credentials in the agent process*
+
+---
+
+## 9. Phase 8 — Agents & orchestration
+⬜ **not started.** Phases 3 and 5 do discovery and matching as plain endpoints. This phase turns
+them into agents under a supervisor that can pause for a human.
+
+**AI tier**
+- ⬜ Job Discovery agent — scheduled, multi-source, dedup-aware
+- ⬜ JD Match & Score agent — extraction, diff, scoring over RAG
+- ⬜ Resume Tailor agent — selected keywords only, rendering through the `latex` server
+- ⬜ Tracking & Follow-up agent — status transitions and interval drafts
+- ⬜ LangGraph supervisor wiring all agents with shared state
+- ⬜ **Human-approval interrupts** at keyword selection and application review
+- ⬜ Retry and error handling per agent step
+
+**UI**
+- ⬜ Surface an interrupt in the dashboard — the approval gate needs somewhere to happen
+
+**The approval interrupts are not a feature, they are the guardrail.** The supervisor must be unable to run past those
+two interrupts; see the Design Principles in the README.
+
+---
+
+## 10. Phase 9 — Application agent & Chrome extension
+⬜ **not started.** The last manual step: filling the form. Fills, never submits.
+
+**Extension**
+- ⬜ Scaffold (Manifest V3, content script, background worker, popup)
+- ⬜ Field detection by label / ARIA / placeholder heuristics
+- ⬜ LLM fallback for ambiguous fields
+- ⬜ Highlight every filled field for review
+- ⬜ Manual resume-attach flow
+- ⬜ Workday / Greenhouse / Lever field patterns
+- ⬜ LinkedIn Easy Apply
+
+**API**
+- ⬜ Serve job context and the Q&A answer bank to the extension
+- ⬜ Application agent coordinating the fill from the `ai` tier
+
+**Runs in your real browser session**, not an automated one — more reliable against ATS platforms,
+and it keeps you in the loop by construction.
+
+---
+
+## 11. Phase 10 — Eval, guardrails & observability
+⬜ **not started.** The phase that turns "it seems to work" into something measured. Everything
+above is unprovable until this exists.
+
+**Eval**
+- ⬜ Ragas suite: **faithfulness** (the automated no-fabrication check), context
+  precision and recall
+- ⬜ Eval datasets built from real JDs and real profile content
+- ⬜ A **local** judge model, so evaluation does not leak what generation protects
+
+**Guardrails**
+- ⬜ No-fabrication test cases
+- ⬜ No-auto-submit test cases
+- ⬜ The API test suite *(also in §13 — it blocks every phase, not just this one)*
+
+**Observability**
+- ⬜ Langfuse or Phoenix, self-hosted
+
+---
+
+## 12. Phase 11 — Daily use & polish
+⬜ **not started.** The phase that only real usage can write.
+
+- ⬜ Bug fixes from actually running the daily workflow
+- ⬜ Q&A answer-bank refinement from real applications
+- ⬜ Performance and cost tuning on the local models
+- ⬜ Cover letter generation *(stretch)*
+
+---
+
+## 13. Cross-cutting — true of every phase
+
+- ✅ FastAPI app shell: thin `main.py`, localhost bind, CORS for web + extension
+- ✅ Beanie documents for every local collection, `ObjectId` keys
+- ✅ React frontend, built in v1 instead of Streamlit/Gradio *(closed — see
+  deviation 1)*
+- ⬜ **Test suite for the API and its guardrails.** Removed on request; blocks the §15
+  Definition of Done in every phase above
+- ⬜ CI/CD via GitHub Actions (lint and test on push)
+
+**The test suite and server-side token enforcement are the two that should not wait.** Neither
+blocks building the next feature, and both should close before this is used against real job
+applications.
+
+---
+
+## 14. Implementation status
+
+The dashboard UI was built ahead of the backend. `server/` is now built — ten modules, 54 endpoints,
+14 collections — and the auth screens run against it end to end. Every other screen still renders
+from a JSON fixture in `app/web/src/data/`, so apart from sign-in **no story meets the §10
+Definition of Done** (the §15 test-case requirement is unmet everywhere; `server/` has no tests).
+
+`ai/` and the Chrome extension do not exist yet, so nothing agentic runs.
 
 | Built | Backed by |
 |---|---|
-| Pipeline board · Shortlist · Staged Applications · Job Search · Job Details · My Details · Settings | `board.json` `search.json` `applications.json` `profile.json` `settings.json` |
+| Pipeline board · Shortlist · Staged Applications · Job Search · Job Details · Settings | `board.json` `search.json` `applications.json` `settings.json` |
 | Keyword Selection — starts with nothing checked, per FR-2.5 | `matches.json` |
 | Resume Preview — Preview / Diff / Source tabs, `.tex` download | `resume.json` + `templates/base_resume.tex` |
-| Login · Signup | nothing — no auth service exists |
+| **Login · Signup · sign-out · route guard** | **live — `POST /api/account/{signup,login}`, JWT in `sessionStorage`, mirrored into Redux** |
+| My Details — identity, experience, education, skills, certifications | `profile.json`; only **Role** persists, via `PATCH /api/account/updateAccount/{id}` |
 
-**Three deviations from this document, recorded deliberately:**
+**Five deviations from this document, recorded deliberately:**
 
-1. **Next.js, not Streamlit/Gradio.** The dashboard phase and TRACK-1 named Streamlit or Gradio, and TRACK-7
+1. **Next.js, not Streamlit/Gradio.** The original plan named Streamlit or Gradio and
    deferred a React frontend to v2. The dashboard was built directly in Next.js + Tailwind, matching
-   the stack in `CLAUDE.md` and doc 03. TRACK-7 is therefore **closed, not deferred**, and the
+   the stack in `CLAUDE.md` and doc 03. That path is therefore **closed, not deferred**, and the
    Streamlit/Gradio path was never taken.
 2. **`templates/base_resume.tex` exists and renders, but nothing in `ai/` drives it.** The Jinja2
    render (custom `\VAR{}`/`\BLOCK{}` delimiters) was validated with a throwaway script, not by
-   `ai/mcp_servers/latex/`. TAILOR-1 stays Partial, and the template has **never been compiled by a
+   `ai/mcp_servers/latex/`. The Jinja2 wrapper stays partial, and the template has **never been compiled by a
    TeX engine** — its LaTeX validity is unverified.
-3. **Login and Signup screens exist**, which PRD §4, SRS §42 and `.claude/rules/server-api.md` all
-   rule out. They are interface only and authenticate nothing. Either those docs get amended or the
-   screens get removed — tracked as TRACK-12.
+3. **Authentication was built**, which PRD §4, SRS §42 and `.claude/rules/server-api.md` all rule out
+   on single-user grounds. As of 2026-09-11 the screens are no longer interface-only: accounts are
+   stored with argon2 hashes, login and signup both issue a JWT, and every dashboard route redirects
+   to `/login` without one. **Those three documents are now wrong and need amending** — the decision
+   went the other way. Reopened as in scope.
+4. **`profile.preferences` and `resume_chunk_text` were removed** (2026-09-11) to keep the profile
+   module focused on resume material. The Settings screen therefore has no backend, and the RAG
+   second hop no longer exists — it is rebuilt in Phase 6. Doc 06 and doc 03
+   still describe both.
+5. **The profile is five collections, not one embedded document.** `profile`, `work_experience`,
+   `education`, `skills` and `certifications`, each keyed by `userId` = `accounts._id`. Doc 06
+   describes the earlier single-document shape.
 
-**Note:** given single-user scope removes auth/multi-tenant overhead, MVP (Phases 2–4, manual apply) is realistically achievable in **2–3 weeks** if you want to start using it before the full system is built.
-
----
-
-## 2. Product Backlog (Epics → Stories)
-
-**Status legend.** `UI done` — the screen is built and renders against a JSON fixture; there is
-no backend behind it, so it does **not** meet the §4 Definition of Done. `Partial` — some
-artefacts exist, story incomplete. `—` — not started.
-
-### Epic 1: Infrastructure & Data Layer
-| ID | Story | Priority | Status |
-|---|---|---|---|
-| INFRA-1 | Set up local MongoDB + Atlas free tier + `$vectorSearch` index | Must | Partial — local store done, Atlas not started |
-| INFRA-2 | Set up MongoDB MCP Server | Must | Superseded — see FR-8.1 note in doc 02 |
-| INFRA-3 | Set up Redis + Celery for scheduling | Must | — |
-| INFRA-4 | Validate local LLM tool-calling reliability (Ollama, target model) | Must | — |
-| INFRA-5 | Set up Langfuse/Phoenix for eval/observability | Should | — |
-| INFRA-6 | CI/CD via GitHub Actions (lint/test on push) | Could | — |
-| API-1 | FastAPI app shell — thin `main.py`, localhost bind, CORS for web + extension | Must | Done |
-| API-2 | Beanie documents for all eight local collections, `ObjectId` keys | Must | Done |
-| API-3 | `job` module — create with dedup-hash check, list by status, shortlist | Must | Done |
-| API-4 | `match` module — write score/keywords, record the user's selection | Must | Done |
-| API-5 | `resume` module — store versioned `.tex` + selection set, reject unselected keywords | Must | Done |
-| API-6 | `application` module — stage, record fill, status transitions, answer bank | Must | Done |
-| API-7 | `event` + `profile` modules — audit log, profile, RAG chunk-text hop | Must | Done |
-| API-8 | Test suite for the API and its guardrails | Must | Removed on request — see Phase 2 note |
-
-### Epic 2: Job Discovery
-| ID | Story | Priority | Status |
-|---|---|---|---|
-| DISC-1 | Integrate Indeed MCP connector | Must | — |
-| DISC-2 | Integrate Google CSE/SerpAPI search | Must | — |
-| DISC-3 | Adapt `linkedin-hiring-scraper` skill as agent tool | Should | — |
-| DISC-4 | Dedup logic (content hash) | Must | — |
-| DISC-5 | Scheduled daily run (Celery beat) | Must | — |
-| DISC-6 | Naukri / company career page sources | Could | — |
-
-### Epic 3: JD Match & Keyword Selection
-| ID | Story | Priority | Status |
-|---|---|---|---|
-| MATCH-1 | LLM structured keyword extraction from JD | Must | — |
-| MATCH-2 | Embed JD → Atlas `$vectorSearch`, compute match score | Must | — |
-| MATCH-3 | Present/Missing keyword diff logic | Must | — |
-| MATCH-4 | Risk-flag detection (seniority mismatch, etc.) | Should | — |
-| MATCH-5 | Keyword Selection UI (checkbox screen) | Must | UI done |
-
-### Epic 4: Resume Tailoring
-| ID | Story | Priority | Status |
-|---|---|---|---|
-| TAILOR-1 | Jinja2 template wrapper over `base_resume.tex` (custom delimiters) | Must | Partial |
-| TAILOR-2 | Incorporate only user-selected keywords | Must | — |
-| TAILOR-3 | Version `.tex` files per job ID | Must | — |
-| TAILOR-4 | Resume Tailor Preview screen (diff view) | Should | UI done |
-| TAILOR-5 | (Stretch) PDF compilation step | Won't (v1) | — |
-| TAILOR-6 | (Stretch) Cover letter generation | Won't (v1) | — |
-
-### Epic 5: Application Autofill (Chrome Extension)
-| ID | Story | Priority | Status |
-|---|---|---|---|
-| APPLY-1 | Extension scaffold (Manifest V3, content script, popup) | Must | — |
-| APPLY-2 | Field-detection heuristics (label/ARIA/placeholder matching) | Must | — |
-| APPLY-3 | LLM fallback for ambiguous field matching | Should | — |
-| APPLY-4 | Local FastAPI backend (job context + Q&A bank) | Must | — |
-| APPLY-5 | Highlight filled fields for review | Must | — |
-| APPLY-6 | Manual resume-attach flow (copy file path) | Must | — |
-| APPLY-7 | Workday/Greenhouse/Lever field-pattern support | Should | — |
-| APPLY-8 | LinkedIn Easy Apply support | Could | — |
-
-### Epic 6: Tracking & Dashboard
-| ID | Story | Priority | Status |
-|---|---|---|---|
-| TRACK-1 | Pipeline board (Next.js) | Must | UI done |
-| TRACK-2 | Job Shortlist / Match Review screen | Must | UI done |
-| TRACK-3 | Staged Applications screen | Must | UI done |
-| TRACK-4 | "Pending your review" banner (approval-gate surface) | Must | UI done |
-| TRACK-5 | Follow-up draft generation on interval | Should | — |
-| TRACK-6 | Google Sheet sync | Should | — |
-| TRACK-7 | React frontend — built in v1 instead of Streamlit/Gradio | Must | UI done |
-| TRACK-8 | Job Search screen (multi-field search + facets) | Should | UI done |
-| TRACK-9 | Job Details screen | Should | UI done |
-| TRACK-10 | My Details (profile) screen | Should | UI done |
-| TRACK-11 | Settings screen | Should | UI done |
-| TRACK-12 | Login / Signup screens — conflict with PRD §4, no auth service | Out of scope | UI done |
-
-### Epic 7: Orchestration & Guardrails
-| ID | Story | Priority | Status |
-|---|---|---|---|
-| ORCH-1 | LangGraph supervisor wiring all agents | Must | — |
-| ORCH-2 | Human-approval interrupts (keyword selection, application review) | Must | — |
-| ORCH-3 | Retry/error handling per agent step | Must | — |
-| ORCH-4 | No-fabrication guardrail test cases | Must | — |
-| ORCH-5 | No-auto-submit guardrail test cases | Must | — |
+**Note:** MVP (Phases 2–4, manual apply) is realistically achievable in **2–3 weeks** if you want to
+start using it before the full system is built. The original estimate assumed single-user scope
+removed all auth overhead; that assumption no longer holds — see deviation 3.
 
 ---
 
-## 3. Sprint Breakdown (2-week sprints, ~5 sprints)
-
-| Sprint | Focus | Backlog Items |
-|---|---|---|
-| Sprint 1 (Wks 1–2) | Foundation + Discovery start | INFRA-1–4, DISC-1–5 |
-| Sprint 2 (Wks 3–4) | Match + Tailor | MATCH-1–5, TAILOR-1–4 |
-| Sprint 3 (Wks 5–6) | Application Extension | APPLY-1–7 |
-| Sprint 4 (Wks 7–8) | Dashboard + Orchestration | TRACK-1–6, ORCH-1–3 |
-| Sprint 5 (Wks 9–10) | Guardrails + Polish | ORCH-4–5, INFRA-5, real-usage bug fixes |
-
-**Sprint order was not followed.** The Epic 6 screens plus MATCH-5 and TAILOR-4 were built as
-Phase 1, ahead of every sprint below, so the UI is waiting on the backend rather than the
-reverse. Sprint 4's dashboard work is already done; what remains there is wiring those screens
-to `server` (Phase 6).
-
 ---
 
-## 4. Definition of Done (per story, general)
+## 15. Definition of Done (per story, general)
 
-- Functionality works end-to-end against local LLM + real (or realistic test) data
+- Functionality works end-to-end against real (or realistic test) data — and against the local
+  LLM from Phase 5 onward, where one is involved
 - No hard-coded secrets; config via environment variables
 - Guardrail-relevant stories (fabrication, auto-submit) have explicit test cases proving the guardrail holds
 - Manually exercised by the user (Swarup) at least once in the actual daily workflow before marked Done
 
 ---
 
-## 5. Stretch / Backlog (Won't-have in v1, candidates for v2)
+---
 
-- PDF compilation of tailored `.tex` resumes — the Resume Preview screen has the slot for it
-  (a locked tab was replaced by a `.tex` download); needs a TeX engine and an amendment to
-  invariant 5 / FR-4.4
-- Cover letter generation
-- LinkedIn Easy Apply full support
+## 16. Stretch — candidates beyond Phase 11
+
+- ~~PDF compilation of tailored `.tex` resumes~~ — **promoted into Phase 2.** "Generate and
+  download" is hollow without it; still needs a TeX engine and an amendment to invariant 5 / FR-4.4
+- Cover letter generation — carried in Phase 11
+- LinkedIn Easy Apply full support — carried in Phase 9 rather than dropped
 - A2A-based Application Agent as an independently scalable service
 - Multi-device sync (if ever needed — would require revisiting the single-user Atlas-only vector store decision)

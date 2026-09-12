@@ -17,7 +17,10 @@ export default function RootLayout({ children }) {
                     rel="stylesheet"
                 />
             </head>
-            <body>
+            {/* Extensions such as Grammarly add attributes to <body> before React
+                hydrates, which it then reports as a mismatch. This suppresses that one
+                element's own attributes; everything inside still reports normally. */}
+            <body suppressHydrationWarning>
                 <StoreProvider>{children}</StoreProvider>
             </body>
         </html>

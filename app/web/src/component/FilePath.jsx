@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Check, Copy } from "lucide-react";
-import { cn } from "@/util/cn";
+import { cn } from "@/util/helper";
 
 /** Copyable, not attachable: browsers do not let an extension set a file input (FR-5.5). */
 export function FilePath({ path, className }) {

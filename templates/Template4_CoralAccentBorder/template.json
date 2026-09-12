@@ -1,0 +1,9 @@
+{
+  "name": "Coral Accent Border",
+  "contact": "contactitem",
+  "skills": "pills",
+  "per_row": 7,
+  "row_sep": "\\\\[4pt]\n",
+  "experience": "jobtitle",
+  "location": "full"
+}

@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useDispatch, useSelector, useStore } from "react-redux";
 import { useFormik } from "formik";
 import { Pencil, Plus, X } from "lucide-react";
 // MOCK: saving is stubbed while the endpoint is being built.
 // import { updateProfile } from "@/services";
 import { ApiError } from "@/services";
+import { updateAccount } from "@/services/auth";
+import { selectUser, userChanged } from "@/store/auth/authSlice";
 import { Panel, PanelBody, PanelHeader, PanelTitle } from "@/component/ui/panel";
 import { Field, Input, Textarea } from "@/component/ui/field";
 import { Button } from "@/component/ui/button";
@@ -22,29 +24,50 @@ import {
 } from "@/store/profile/profileSlice";
 import { useDebounce } from "@/hooks/useDebounce";
 import { profileIdentitySchema } from "@/util/schema";
+import { initials } from "@/util/helper";
 
 export function ProfileIdentity() {
     const identity = useSelector(selectIdentity);
+    const user = useSelector(selectUser);
     const store = useStore();
     const dispatch = useDispatch();
     const { schedule, flush } = useDebounce();
 
+    // Stored data can already be invalid — the fixture ships "[YOUR EMAIL]". Marking
+    // those fields touched up front flags them on load, rather than waiting for a blur
+    // the user has no reason to perform.
+    const initialTouched = useMemo(() => {
+        try {
+            profileIdentitySchema.validateSync(identity, { abortEarly: false });
+            return {};
+        } catch (error) {
+            return Object.fromEntries((error.inner ?? []).map((e) => [e.path, true]));
+        }
+        // Only the values the form opened with; later edits validate on their own.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     const formik = useFormik({
         initialValues: identity,
+        initialTouched,
         validationSchema: profileIdentitySchema,
+        validateOnMount: true,
         onSubmit: async (values, { setStatus }) => {
-            debugger;
             setStatus(null);
             // Anything still waiting on the debounce belongs in this save.
             flush();
-            // The payload is the whole profile, not just this form — every section
-            // has been writing to the store as it was edited.
-            const payload = selectProfilePayload(store.getState());
             try {
-                // await updateProfile(payload);
-                await new Promise((resolve) => setTimeout(resolve, 400));
+                // `role` is a column on the account, so it is saved through the account
+                // endpoint rather than with the rest of these fields.
+                const account = await updateAccount(user.id, { role: values.role });
+                // Keep the signed-in copy in step, or the sidebar goes stale.
+                dispatch(userChanged({ role: account.role }));
+
+                // TODO: the rest of this form still is not persisted — it needs
+                // selectProfilePayload(store.getState()) sent to the profile endpoint,
+                // creating the profile first when there is none.
                 dispatch(profileSaved());
-                setStatus({ ok: true, message: "Saved (mock — not persisted)." });
+                setStatus({ ok: true, message: "Role saved. Other fields are not yet persisted." });
             } catch (error) {
                 setStatus({
                     ok: false,
@@ -118,8 +141,24 @@ export function ProfileIdentity() {
                         <Field
                             label="Headline"
                             hint="Context for scoring. Never written into the resume."
+                            error={error("headline")}
                         >
-                            <Input {...bind("headline")} />
+                            <Input
+                                invalid={Boolean(error("headline"))}
+                                {...bind("headline")}
+                            />
+                        </Field>
+
+                        <Field
+                            label="Role"
+                            hint="Your current job title."
+                            error={error("role")}
+                        >
+                            <Input
+                                placeholder="Technical Lead"
+                                invalid={Boolean(error("role"))}
+                                {...bind("role")}
+                            />
                         </Field>
 
                         <Field
@@ -134,12 +173,23 @@ export function ProfileIdentity() {
                             />
                         </Field>
 
-                        <Field label="Phone">
-                            <Input {...bind("phone")} />
+                        <Field label="Phone" error={error("phone")}>
+                            <Input
+                                type="tel"
+                                invalid={Boolean(error("phone"))}
+                                {...bind("phone")}
+                            />
                         </Field>
 
-                        <Field label="Location" className="sm:col-span-2">
-                            <Input {...bind("location")} />
+                        <Field
+                            label="Location"
+                            className="sm:col-span-2"
+                            error={error("location")}
+                        >
+                            <Input
+                                invalid={Boolean(error("location"))}
+                                {...bind("location")}
+                            />
                         </Field>
                     </div>
 
@@ -240,8 +290,4 @@ function AddLink({ taken, onAdd }) {
             className="w-fit min-w-[280px]"
         />
     );
-}
-
-function initials(name) {
-    return name.split(" ").filter(Boolean).map((p) => p[0]).join("") || "?";
 }

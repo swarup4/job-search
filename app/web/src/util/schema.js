@@ -1,5 +1,7 @@
 import * as Yup from "yup";
 
+import { splitMonthYear } from "@/util/helper";
+
 export const MIN_PASSWORD = 8;
 
 const email = Yup.string()
@@ -45,10 +47,27 @@ export const profileCreateSchema = Yup.object({ name, email });
 export const profileIdentitySchema = Yup.object({
     name,
     email,
-    headline: Yup.string().trim(),
-    phone: Yup.string().trim(),
-    location: Yup.string().trim(),
-    summary: Yup.string().trim(),
+    role: Yup.string()
+        .trim()
+        .required("Enter your current role.")
+        .max(80, "Keep the role under 80 characters."),
+    headline: Yup.string()
+        .trim()
+        .max(120, "Keep the headline under 120 characters."),
+    phone: Yup.string()
+        .trim()
+        .required("Enter your phone number.")
+        // Counting digits rather than matching a format: nothing here should reject a
+        // valid number written with spaces, dashes, brackets or a country code.
+        .test("digits", "Enter a valid phone number.", (value) => {
+            const digits = (value ?? "").replace(/\D/g, "");
+            return digits.length >= 7 && digits.length <= 15;
+        }),
+    location: Yup.string()
+        .trim()
+        .required("Enter your location.")
+        .max(120, "Keep the location under 120 characters."),
+    summary: Yup.string().trim().max(800, "Keep the summary under 800 characters."),
     links: Yup.array(
         Yup.object({
             label: Yup.string().trim(),
@@ -80,31 +99,6 @@ export const educationSchema = Yup.object({
 });
 
 // one work-experience role
-
-export const MONTHS = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-];
-
-/** Marks a role still in progress; stored in `end` rather than as a null. */
-export const PRESENT = "Present";
-
-export function splitMonthYear(value) {
-    const parts = (value ?? "").trim().split(/\s+/);
-    if (parts.length === 2 && MONTHS.includes(parts[0])) {
-        return { month: parts[0], year: parts[1] };
-    }
-    if (parts.length === 1 && /^\d{4}$/.test(parts[0])) {
-        return { month: "", year: parts[0] };
-    }
-    return { month: "", year: "" };
-}
-
-export function joinMonthYear(month, year) {
-    const y = (year ?? "").trim();
-    if (!y) return "";
-    return month ? `${month} ${y}` : y;
-}
 
 export function experienceInitialValues(entry) {
     const start = splitMonthYear(entry?.start);

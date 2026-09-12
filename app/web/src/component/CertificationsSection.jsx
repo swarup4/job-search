@@ -15,7 +15,7 @@ import {
     selectCertifications,
 } from "@/store/profile/profileSlice";
 import { certificationInitialValues, certificationSchema } from "@/util/schema";
-import { cn } from "@/util/cn";
+import { cn } from "@/util/helper";
 
 export function CertificationsSection() {
     const entries = useSelector(selectCertifications);

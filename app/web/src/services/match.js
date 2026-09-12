@@ -18,10 +18,10 @@ export function getPendingCounts() {
  * looked and chose nothing. There is deliberately no bulk variant.
  */
 export function recordSelection(jobId, selectedKeys) {
-    return axiosInstance.post(`/match/${jobId}/selection`, { selected_keys: selectedKeys, skip: false });
+    return axiosInstance.post(`/match/selection/${jobId}`, { selected_keys: selectedKeys, skip: false });
 }
 
 /** The user passing on a job without selecting anything. */
 export function skipSelection(jobId) {
-    return axiosInstance.post(`/match/${jobId}/selection`, { selected_keys: [], skip: true });
+    return axiosInstance.post(`/match/selection/${jobId}`, { selected_keys: [], skip: true });
 }

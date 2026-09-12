@@ -104,4 +104,4 @@ Single persona: **Swarup Saha** — the sole user of this tool. No multi-tenant,
 | Atlas free tier storage limits exceeded | Vector search stops working | Keep only embedding-relevant data in Atlas; monitor 512MB cap |
 
 ---
-*See companion documents: SRS, Architecture & System Design, UI/UX Wireframes & User Flows, Roadmap & Backlog.*
+*See companion documents: SRS, Architecture & System Design, UI/UX Wireframes & User Flows, Roadmap.*

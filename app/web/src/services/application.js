@@ -22,7 +22,7 @@ export function getApplication(applicationId) {
  * call only records that they did. Nothing here submits anything.
  */
 export function setApplicationStatus(applicationId, status, { note, confirmedByUser = false } = {}) {
-    return axiosInstance.patch(`/application/${applicationId}/status`, {
+    return axiosInstance.patch(`/application/status/${applicationId}`, {
         status,
         note,
         confirmed_by_user: confirmedByUser,

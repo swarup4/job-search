@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { cn } from "@/util/cn";
+import { cn } from "@/util/helper";
 
 function Toggle({ defaultOn = false, disabled = false, onChange }) {
     const [on, setOn] = useState(defaultOn);

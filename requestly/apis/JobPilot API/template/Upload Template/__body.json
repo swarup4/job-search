@@ -1,0 +1,33 @@
+{
+  "$schema": "https://assets.requestly.com/local/v1.15.0/body.json",
+  "contentType": "multipart/form-data",
+  "formData": [
+    {
+      "id": 1,
+      "key": "tex",
+      "value": "",
+      "isEnabled": true,
+      "description": ".tex source carrying {{TOKEN}} placeholders",
+      "type": "file",
+      "contentType": ""
+    },
+    {
+      "id": 2,
+      "key": "name",
+      "value": "",
+      "isEnabled": false,
+      "description": "",
+      "type": "text",
+      "contentType": ""
+    },
+    {
+      "id": 3,
+      "key": "preview",
+      "value": "",
+      "isEnabled": false,
+      "description": "optional PNG",
+      "type": "file",
+      "contentType": ""
+    }
+  ]
+}

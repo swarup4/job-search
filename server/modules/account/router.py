@@ -1,9 +1,17 @@
 import os
 from functools import lru_cache
 
+from beanie import PydanticObjectId
 from fastapi import APIRouter, Depends, Query, status
 
-from modules.account.models import Account, AccountRead, Login, LoginResult, SignUp
+from modules.account.models import (
+    Account,
+    AccountRead,
+    AccountUpdate,
+    Login,
+    LoginResult,
+    SignUp,
+)
 from modules.account.security import Argon2Hasher, JwtIssuer
 from modules.account.service import AccountService
 
@@ -23,14 +31,30 @@ def get_service() -> AccountService:
     )
 
 
-@router.post("/signup", response_model=AccountRead, status_code=status.HTTP_201_CREATED)
-async def sign_up(payload: SignUp, service: AccountService = Depends(get_service)) -> Account:
+@router.post("/signup", response_model=LoginResult, status_code=status.HTTP_201_CREATED)
+async def sign_up(payload: SignUp, service: AccountService = Depends(get_service)) -> LoginResult:
     return await service.sign_up(payload)
 
 
 @router.post("/login", response_model=LoginResult)
 async def login(payload: Login, service: AccountService = Depends(get_service)) -> LoginResult:
     return await service.login(payload)
+
+
+@router.get("/getAccount/{account_id}", response_model=AccountRead)
+async def get_account(
+    account_id: PydanticObjectId, service: AccountService = Depends(get_service)
+) -> Account:
+    return await service.get_account(account_id)
+
+
+@router.patch("/updateAccount/{account_id}", response_model=AccountRead)
+async def update_account(
+    account_id: PydanticObjectId,
+    payload: AccountUpdate,
+    service: AccountService = Depends(get_service),
+) -> Account:
+    return await service.update_account(account_id, payload)
 
 
 @router.get("", response_model=list[AccountRead])

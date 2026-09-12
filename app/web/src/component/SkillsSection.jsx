@@ -17,7 +17,7 @@ import {
     skillRemoved,
 } from "@/store/profile/profileSlice";
 import { skillGroupInitialValues, skillGroupSchema } from "@/util/schema";
-import { cn } from "@/util/cn";
+import { cn } from "@/util/helper";
 
 export function SkillsSection() {
     const groups = useSelector(selectSkillGroups);

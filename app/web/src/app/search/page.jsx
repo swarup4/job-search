@@ -12,7 +12,7 @@ import { Field, Input } from "@/component/ui/field";
 import { ROUTES } from "@/routes";
 import search from "@/data/search.json";
 import board from "@/data/board.json";
-import { cn } from "@/util/cn";
+import { cn } from "@/util/helper";
 
 const EMPTY = {
   keyword: "", company: "", location: "", title: "", skills: "",

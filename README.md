@@ -4,12 +4,14 @@
 
 JobPilot discovers relevant job openings, analyzes how well they match your resume, tailors your resume per job description, and helps you fill out applications — all through a set of coordinated AI agents running entirely on your own machine.
 
-> ⚠️ **Personal project.** Built for single-user use. No auth system, no multi-tenant support, and not intended for public deployment as-is.
+> ⚠️ **Personal project.** Built for single-user use, not intended for public deployment as-is.
+> It does now have real accounts and authentication — see [Phase 1](#phase-1--authentication--profile).
 
 > 🚧 **The dashboard and the API exist; the agents do not.** Eleven Next.js screens run, and
-> `server/` serves 28 REST endpoints over local MongoDB. `ai/` is still an empty directory, so
-> there are no agents, no RAG, and no LLM call anywhere in the system. Everything below describes
-> the intended system — see [Current state](#current-state) for what actually runs today.
+> `server/` serves 54 REST endpoints across ten modules over local MongoDB. Signing in works end to
+> end; every other screen still reads a JSON fixture. `ai/` is still an empty directory, so there
+> are no agents, no RAG, and no LLM call anywhere in the system. Everything below describes the
+> intended system — see [Current state](#current-state) for what actually runs today.
 
 ---
 
@@ -33,15 +35,16 @@ JobPilot discovers relevant job openings, analyzes how well they match your resu
 
 ## Current state
 
-*Updated 2026-08-27.*
+*Updated 2026-09-12.*
 
 | Area | Status |
 |---|---|
-| Dashboard UI — 11 screens | **built**. My Details reads and writes the live API; eight screens still render JSON fixtures from `app/web/src/data/`; login and signup hold no data |
+| Dashboard UI — 11 screens | **built**. Login and signup run against the live API; My Details persists `role` only; the other eight screens render JSON fixtures from `app/web/src/data/` |
 | `app/web` → `server` wiring | **started** — one axios instance in `src/lib/`, one service per API module in `src/services/`, `ApiError` as the single failure shape |
 | Form validation | **built** — Formik (`useFormik`) with a Yup schema per form in `src/util/schema.js`; the server's own validation still decides |
 | `templates/base_resume.tex` | **written**; Jinja2 render verified — but never compiled by a TeX engine, so its LaTeX validity is unconfirmed |
-| `server/` — REST API, local MongoDB | **built** — six modules, eight collections, 28 endpoints over 20 paths, Beanie over local MongoDB. **No tests** (removed on request), so guardrail stories are not Done per Roadmap §4 |
+| `server/` — REST API, local MongoDB | **built** — ten modules, fourteen collections, 54 endpoints over 50 paths, Beanie over local MongoDB. **No tests** (removed on request), so no story is Done per Roadmap §10 |
+| Authentication | **built** — argon2 hashes, JWT on signup and login, route guard, bearer token on every call. **Not yet enforced server-side**: endpoints still take `userId` from the URL |
 | `ai/` — agents, RAG, MCP, eval | not started (empty directory) |
 | `app/extension/` — Chrome MV3 | not started |
 
@@ -56,18 +59,19 @@ cd server && uv venv && uv pip install -e . && .venv/bin/python main.py
 cd app/web && npm install && npm run dev
 ```
 
-Open http://localhost:3000 for the dashboard, http://localhost:8000/docs for the API. Every screen
-navigates and the Resume Preview renders a real tailored `.tex`. **My Details is wired to the API** —
-it creates the one profile document and saves edits for real, and it is the only screen that does;
-the rest still read fixtures. The [Getting Started](#getting-started) commands below target the full
-system and will still fail on the `ai/` and extension steps.
+Open http://localhost:3000 for the dashboard, http://localhost:8000/docs for the API. You will be
+redirected to `/login` — create an account, and signup signs you straight in. Every screen then
+navigates and the Resume Preview renders a real tailored `.tex` from a fixture. The
+[Getting Started](#getting-started) commands below target the full system and will still fail on the
+`ai/` and extension steps.
 
 Screens that exist: pipeline board, job search, shortlist, job details, keyword selection, resume
 preview, staged applications, my details, settings, login, signup.
 
-> **Login and signup are interface only.** They authenticate nothing, and they contradict this
-> project's own single-user design (PRD §4, SRS §42). They exist because they were asked for; either
-> the design docs get amended or the screens get removed. Tracked as TRACK-12 in the roadmap.
+> **Login and signup are real as of 2026-09-11** — argon2-hashed accounts, JWT sessions, and a guard
+> on every dashboard route. This contradicts PRD §4 and SRS §42, which specify no auth on single-user
+> grounds; **those documents now need amending**, the decision having gone the other way. Tracked as
+> reopened as in scope.
 
 ---
 
@@ -138,7 +142,7 @@ The five agents run as LangGraph nodes inside the `ai` worker, under a superviso
 
 | Store | Holds | Owner |
 |---|---|---|
-| Local MongoDB | `jobs`, `matches`, `applications`, `events`, `profile`, `resume_chunk_text` | `server` |
+| Local MongoDB | `accounts`, `profile`, `work_experience`, `education`, `skills`, `certifications`, `jobs`, `matches`, `resumes`, `applications`, `answer_bank`, `events`, `templates` | `server` |
 | MongoDB Atlas | `jd_embedding`, `resume_chunks` — **vectors and ids only** | `ai/rag` |
 
 `server/.env` holds the local URI and no Atlas URI; `ai/.env` holds the Atlas URI and no local URI. Neither service can reach the other's store, even by mistake.
@@ -161,7 +165,7 @@ So resume and JD prose **does** reach Voyage's API in flight. What never leaves 
 
 Two-stage retrieval: Voyage embed → `$vectorSearch` (top ~50) → fetch text from `server` → Voyage rerank → top ~5.
 
-> **Notes on the design docs.** Three decisions supersede the planning documents. (1) The dashboard is Next.js, not Streamlit/Gradio. (2) Agents reach structural data through `server`'s REST API rather than the MongoDB MCP Server (SRS FR-8.1) — one validation boundary, and no DB credentials in the agent process. (3) **SRS NFR-3 forbids sending any data to third-party inference APIs; using Voyage narrows that to "all generation is local."** If the original absolute guarantee matters more than retrieval quality, swap `ai/rag/embeddings.py` and `reranking.py` for a local embedding model — the rest of the pipeline is unchanged. (4) **Login and signup screens exist**, which PRD §4 and SRS §42 rule out; they are UI only and authenticate nothing. Docs 02 and 03 still describe the earlier shape.
+> **Notes on the design docs.** Five decisions supersede the planning documents. (1) The dashboard is Next.js, not Streamlit/Gradio. (2) Agents reach structural data through `server`'s REST API rather than the MongoDB MCP Server (SRS FR-8.1) — one validation boundary, and no DB credentials in the agent process. (3) **SRS NFR-3 forbids sending any data to third-party inference APIs; using Voyage narrows that to "all generation is local."** If the original absolute guarantee matters more than retrieval quality, swap `ai/rag/embeddings.py` and `reranking.py` for a local embedding model — the rest of the pipeline is unchanged. (4) **Authentication was built**, which PRD §4 and SRS §42 rule out; accounts are argon2-hashed and sessions are JWTs, so those two documents are now wrong and need amending. (5) **`profile.preferences` and `resume_chunk_text` were removed** on 2026-09-11, and the profile became five collections keyed by `userId`; docs 02, 03 and 06 still describe the earlier single-document shape with a RAG chunk store.
 
 ## Tech Stack
 
@@ -391,23 +395,136 @@ Server modules are named after the **resource** they expose; agents after the **
 | [02 — Software Requirements Specification](02-SRS-Software-Requirements-Specification.md) | Functional & non-functional requirements |
 | [03 — Architecture & System Design](03-Architecture-System-Design.md) | Component design, data architecture, deployment |
 | [04 — UI/UX Wireframes & User Flows](04-UIUX-Wireframes-User-Flows.md) | Screens and end-to-end flows |
-| [05 — Roadmap & Backlog](05-Roadmap-Backlog.md) | Phased roadmap, epics, sprint breakdown — carries a per-story status column |
+| [05 — Roadmap](05-Roadmap-Backlog.md) | Eleven phases, application first then agents — every task checkboxed and split API vs UI |
 | [06 — Data Model / ER](docs/06-Data-Model-ER.md) | ER diagram, every collection's fields and indexes, and where each guardrail is enforced in the schema |
 
 ## Roadmap
 
-- ✅ **Phase 0 — Architecture & Planning** (docs 01–05)
-- ✅ **Phase 1 — Dashboard UI** — all screens, plus Formik/Yup validation on every form
-- ⬜ Phase 2 — Foundation (DB setup, LLM validation, `$vectorSearch` index)
-- ⬜ Phase 3 — Job Discovery Agent
-- ⬜ Phase 4 — JD Match & Resume Tailor Agents *(the two screens exist; the agents behind them do not)*
-- ⬜ Phase 5 — Application Agent (Chrome extension)
-- 🟡 Phase 6 — Tracking & Follow-up *(fixture → API swap started: My Details is live, the other screens are not; Sheets sync not started)*
-- ⬜ Phase 7 — Multi-agent Orchestration
-- ⬜ Phase 8 — Eval & Guardrails
-- ⬜ Phase 9 — Daily-use polish
+**Make the whole application work end to end first, then make it intelligent.** Phases 1–4 build a
+product usable by hand. Phase 5 adds the first LLM. Phases 6–11 turn that into the agentic system.
+An agent writing into a half-built app cannot be judged — so the plumbing is finished first.
 
-Full detail in [`05-Roadmap-Backlog.md`](05-Roadmap-Backlog.md).
+Each phase is split by **API** and **UI**, because they rarely land together here: most screens were
+built before the backend and are still waiting to be wired to endpoints that already exist. A checked
+UI box means the screen is built, **not** that it talks to the API — that wiring is its own task.
+
+#### Phase 1 — Authentication & Profile 🚧 nearly done
+
+- **API**
+  - ✅ `accounts` with argon2 hashes; signup and login both issue a JWT
+  - ✅ `account` module — signup, login, read, partial update
+  - ✅ Profile as five collections keyed by `userId`
+  - ⬜ Server-side token enforcement
+  - ⬜ Retire the duplicate `user` module
+- **UI**
+  - ✅ Login, signup and sign-out, wired to `/api/account`
+  - ✅ Route guard, session in `sessionStorage` mirrored into Redux
+  - ✅ My Details screen, with Formik/Yup validation
+  - ⬜ Wire My Details to the profile API, only `role` persists today
+
+#### Phase 2 — Resume generation & download 🚧 backend done, no UI
+
+- **API**
+  - ✅ `templates` collection, upload with token validation, style inference
+  - ✅ Render a profile into a template
+  - ⬜ `.tex` download
+  - ⬜ PDF compilation
+- **UI**
+  - ✅ Resume Preview screen — Preview / Diff / Source tabs
+  - ⬜ Wire it to a real render instead of `resume.json`
+  - ⬜ Template picker
+- ⬜ **Prove a rendered `.tex` compiles under a TeX engine** — none ever has
+
+#### Phase 3 — Job scraping, search & shortlist ⬜ API only
+
+- **API**
+  - ✅ `job` module — dedup-hash create, list by status, shortlist
+  - ⬜ Indeed and SerpAPI sources
+  - ⬜ Content-hash dedup
+  - ⬜ Scheduled daily run *(needs Redis + Celery)*
+- **UI**
+  - ✅ Job Search, Shortlist and Job Details screens
+  - ⬜ Wire all three off `search.json` and onto the job API
+
+#### Phase 4 — Applications & Settings ⬜ API only
+
+- **API**
+  - ✅ `application` module — stage, record fill, status transitions, answer bank
+  - ⬜ Rebuild a preferences store for Settings
+  - ⬜ Follow-up drafts and Google Sheet sync
+- **UI**
+  - ✅ Pipeline board, Staged Applications, Settings screens
+  - ⬜ Wire them to the application API and real counts
+
+#### Phase 5 — LLM integration & resume rectification ⬜ not started
+
+- **API**
+  - ✅ `match` and `resume` modules
+  - ⬜ JD keyword extraction and Present/Missing diff
+  - ⬜ Tailor using **only** the keywords you ticked
+  - ⬜ Match scoring by embedding *(needs Atlas)*
+- **UI**
+  - ✅ Keyword Selection screen, starting with nothing checked
+  - ⬜ Wire it to real match data
+- ⬜ Validate a local LLM's tool-calling
+
+#### Phase 6 — RAG & retrieval ⬜ not started
+
+- **API**
+  - ⬜ Rebuild the RAG second hop — `resume_chunk_text` and text fetch by `chunk_id`
+  - ⬜ Chunk the profile into retrievable units
+  - ⬜ Re-index on profile edit
+- **AI tier**
+  - ⬜ Embed chunks into Atlas — ids and vectors only, never prose
+  - ⬜ Two-stage retrieval: `$vectorSearch` → fetch text → rerank
+  - ⬜ Atlas free tier + `$vectorSearch` index
+
+#### Phase 7 — MCP tool servers ⬜ not started
+
+- ⬜ `jobpilot_api` — the one way agents touch structural data
+- ⬜ `latex` — render a tailored `.tex`
+- ⬜ `job_search`, `indeed`, `linkedin`, `browser`
+
+#### Phase 8 — Agents & orchestration ⬜ not started
+
+- **AI tier**
+  - ⬜ Discovery, Match/Score, Tailor and Tracking agents
+  - ⬜ LangGraph supervisor with shared state
+  - ⬜ **Human-approval interrupts** at keyword selection and application review
+  - ⬜ Retry and error handling per step
+- **UI**
+  - ⬜ Surface an interrupt in the dashboard — the approval gate needs somewhere to happen
+
+#### Phase 9 — Application agent & Chrome extension ⬜ not started
+
+- **Extension**
+  - ⬜ MV3 scaffold, field detection, LLM fallback
+  - ⬜ Highlight filled fields, manual resume attach
+  - ⬜ Workday / Greenhouse / Lever, then LinkedIn Easy Apply
+- **API**
+  - ⬜ Serve job context and the Q&A answer bank
+  - ⬜ Application agent coordinating the fill
+
+#### Phase 10 — Eval, guardrails & observability ⬜ not started
+
+- ⬜ Ragas suite — **faithfulness** is the automated no-fabrication check
+- ⬜ Eval datasets from real JDs and profile content, with a **local** judge
+- ⬜ No-fabrication and no-auto-submit test cases
+- ⬜ Langfuse or Phoenix, self-hosted
+
+#### Phase 11 — Daily use & polish ⬜ not started
+
+- ⬜ Bug fixes from actually running the workflow daily
+- ⬜ Q&A answer-bank refinement, local-model cost tuning
+- ⬜ Cover letter generation *(stretch)*
+
+### True of every phase
+
+- ⬜ **No tests**, removed on request, so no story meets the Definition of Done
+- ⬜ **`userId` comes from the URL, not the token**; any signed-in account can reach
+  another's profile
+
+Full detail, every task and its status: [`05-Roadmap-Backlog.md`](05-Roadmap-Backlog.md).
 
 ## Design Principles
 
@@ -417,9 +534,10 @@ Full detail in [`05-Roadmap-Backlog.md`](05-Roadmap-Backlog.md).
 - **Measured, not assumed.** Ragas faithfulness is the automated proof that the no-fabrication rule holds. A guardrail without a test is a hope — and `server/` currently has none, which is why its guardrail stories are not marked Done.
 - **One tier, one database.** `server` owns the structural store, `ai` owns the vector store, and neither holds the other's connection string. The boundary is enforced by configuration, not by discipline.
 - **Real browser session for applying.** The Chrome extension fills forms inside your actual logged-in session rather than a separate automated browser — more reliable, and it avoids anti-bot detection.
-- **Single-user by design.** No auth, no multi-tenancy — kept intentionally simple for personal use.
-  *(Exception on record: `/login` and `/signup` screens exist as UI only and authenticate nothing.
-  They contradict this principle and are unresolved — see [Current state](#current-state).)*
+- **Single-user by design.** No multi-tenancy — kept intentionally simple for personal use.
+  *(Amended 2026-09-11: authentication **was** built. Accounts are argon2-hashed with JWT sessions,
+  and every profile row is keyed by `accounts._id`. The "no auth" half of this principle no longer
+  holds, and PRD §4 / SRS §42 need updating to match.)*
 
 ## License
 

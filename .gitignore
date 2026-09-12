@@ -32,3 +32,5 @@ app/extension/dist/
 
 .DS_Store
 .vscode/settings.json
+
+backup/

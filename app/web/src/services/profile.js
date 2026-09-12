@@ -1,28 +1,86 @@
 import { axiosInstance, orNull } from "@/lib/axiosInstance";
 
-/** GET /api/profile — null until the profile is created. */
-export function getProfile() {
-    return orNull(axiosInstance.get("/profile"));
+/** Personal details. GET is null until the profile is created. */
+export function getProfile(userId) {
+    return orNull(axiosInstance.get(`/profile/getProfile/${userId}`));
 }
 
-/**
- * POST /api/profile — `email` is mandatory and is the profile's key. Returns 409
- * if one already exists; there is one profile by design (PRD §4).
- */
-export function createProfile(profile) {
-    return axiosInstance.post("/profile", profile);
+export function createProfile(userId, profile) {
+    return axiosInstance.post(`/profile/createProfile/${userId}`, profile);
 }
 
-/** PATCH /api/profile — partial. 404 before the profile exists. */
-export function updateProfile(changes) {
-    return axiosInstance.patch("/profile", changes);
+export function updateProfile(userId, profile) {
+    return axiosInstance.put(`/profile/updateProfile/${userId}`, profile);
 }
 
-export function getPreferences() {
-    return orNull(axiosInstance.get("/profile/preferences"));
+// work experience
+
+export function getExperience(userId) {
+    return axiosInstance.get(`/profile/getExperience/${userId}`);
 }
 
-/** PUT /api/profile/preferences — the whole Settings screen, replaced wholesale. */
-export function setPreferences(preferences) {
-    return axiosInstance.put("/profile/preferences", preferences);
+export function addExperience(userId, entry) {
+    return axiosInstance.post(`/profile/addExperience/${userId}`, entry);
+}
+
+export function updateExperience(userId, entryId, entry) {
+    return axiosInstance.put(`/profile/updateExperience/${userId}/${entryId}`, entry);
+}
+
+export function deleteExperience(userId, entryId) {
+    return axiosInstance.delete(`/profile/deleteExperience/${userId}/${entryId}`);
+}
+
+// education
+
+export function getEducation(userId) {
+    return axiosInstance.get(`/profile/getEducation/${userId}`);
+}
+
+export function addEducation(userId, entry) {
+    return axiosInstance.post(`/profile/addEducation/${userId}`, entry);
+}
+
+export function updateEducation(userId, entryId, entry) {
+    return axiosInstance.put(`/profile/updateEducation/${userId}/${entryId}`, entry);
+}
+
+export function deleteEducation(userId, entryId) {
+    return axiosInstance.delete(`/profile/deleteEducation/${userId}/${entryId}`);
+}
+
+// skills — one entry per group
+
+export function getSkills(userId) {
+    return axiosInstance.get(`/profile/getSkills/${userId}`);
+}
+
+export function addSkill(userId, group) {
+    return axiosInstance.post(`/profile/addSkill/${userId}`, group);
+}
+
+export function updateSkill(userId, entryId, group) {
+    return axiosInstance.put(`/profile/updateSkill/${userId}/${entryId}`, group);
+}
+
+export function deleteSkill(userId, entryId) {
+    return axiosInstance.delete(`/profile/deleteSkill/${userId}/${entryId}`);
+}
+
+// certifications
+
+export function getCertifications(userId) {
+    return axiosInstance.get(`/profile/getCertifications/${userId}`);
+}
+
+export function addCertification(userId, entry) {
+    return axiosInstance.post(`/profile/addCertification/${userId}`, entry);
+}
+
+export function updateCertification(userId, entryId, entry) {
+    return axiosInstance.put(`/profile/updateCertification/${userId}/${entryId}`, entry);
+}
+
+export function deleteCertification(userId, entryId) {
+    return axiosInstance.delete(`/profile/deleteCertification/${userId}/${entryId}`);
 }

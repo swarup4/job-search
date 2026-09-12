@@ -129,6 +129,42 @@ def example_for(
     return "string"
 
 
+def _is_file(schema: dict[str, Any]) -> bool:
+    # OpenAPI 3.1 (what FastAPI emits) says contentMediaType; 3.0 said format: binary.
+    if schema.get("contentMediaType") or schema.get("format") == "binary":
+        return True
+    for key in ("anyOf", "oneOf", "allOf"):
+        if any(_is_file(variant) for variant in schema.get(key, [])):
+            return True
+    return False
+
+
+def form_rows_for(schema: dict[str, Any], schemas: dict[str, Any]) -> list[dict[str, Any]]:
+    """One row per multipart field. FastAPI renders UploadFile as a binary string,
+    which is how a file part is told apart from a text one."""
+    if "$ref" in schema:
+        schema = schemas.get(schema["$ref"].rsplit("/", 1)[-1], {})
+
+    required = set(schema.get("required", []))
+    rows: list[dict[str, Any]] = []
+    for index, (name, sub) in enumerate(schema.get("properties", {}).items(), start=1):
+        file_part = _is_file(sub)
+        default = sub.get("default")
+        rows.append(
+            {
+                "id": index,
+                "key": name,
+                # A file has to be picked in the app; a text part can carry its default.
+                "value": "" if file_part or default is None else str(default),
+                "isEnabled": name in required or (not file_part and default is not None),
+                "description": sub.get("description", ""),
+                "type": "file" if file_part else "text",
+                "contentType": "",
+            }
+        )
+    return rows
+
+
 # ------------------------------------------------------------ file writing
 
 
@@ -164,10 +200,11 @@ def write_request(
     url: str,
     query_params: list[dict[str, Any]],
     path_variables: list[dict[str, Any]],
-    body: Any,
+    body: tuple[str, Any] | None,
 ) -> None:
+    """`body` is (kind, payload): ("json", example) or ("multipart/form-data", rows)."""
     path.mkdir(parents=True, exist_ok=True)
-    content_type = "json" if body is not None else "none"
+    kind = body[0] if body else "none"
 
     _write(
         path / "__metadata.json",
@@ -179,15 +216,23 @@ def write_request(
             "rank": rank,
             "url": url,
             "method": method.upper(),
-            "contentType": content_type,
+            "contentType": kind,
         },
     )
 
     if body is None:
+        _write(path / "__body.json", {"$schema": f"{SCHEMA}/body.json", "contentType": "none"})
+        _write(path / "__headers.json", [])
+    elif kind == "multipart/form-data":
         _write(
             path / "__body.json",
-            {"$schema": f"{SCHEMA}/body.json", "contentType": "none"},
+            {
+                "$schema": f"{SCHEMA}/body.json",
+                "contentType": "multipart/form-data",
+                "formData": body[1],
+            },
         )
+        # The boundary is the transport's to set — a hand-written header breaks it.
         _write(path / "__headers.json", [])
     else:
         _write(
@@ -195,20 +240,13 @@ def write_request(
             {
                 "$schema": f"{SCHEMA}/body.json",
                 "contentType": "json",
-                "raw": json.dumps(body, indent=2),
+                "raw": json.dumps(body[1], indent=2),
                 "rawContentType": "application/json",
             },
         )
         _write(
             path / "__headers.json",
-            [
-                {
-                    "id": 0,
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "isEnabled": True,
-                }
-            ],
+            [{"id": 0, "key": "Content-Type", "value": "application/json", "isEnabled": True}],
         )
 
     _write(path / "__query-params.json", query_params)
@@ -303,16 +341,15 @@ def build_project(spec: dict[str, Any], force: bool) -> tuple[int, int]:
                 if parameter["in"] == "path"
             ]
 
-            content = (
-                operation.get("requestBody", {})
-                .get("content", {})
-                .get("application/json")
-            )
-            body = (
-                example_for(content["schema"], schemas, frozenset())
-                if content
-                else None
-            )
+            content = operation.get("requestBody", {}).get("content", {})
+            body: tuple[str, Any] | None = None
+            if "application/json" in content:
+                body = ("json", example_for(content["application/json"]["schema"], schemas, frozenset()))
+            elif "multipart/form-data" in content:
+                body = (
+                    "multipart/form-data",
+                    form_rows_for(content["multipart/form-data"]["schema"], schemas),
+                )
 
             # Requestly resolves path variables with the same {{...}} syntax as any variable.
             url = "{{base_url}}" + path.replace("{", "{{").replace("}", "}}")

@@ -1,4 +1,4 @@
-import { cn } from "@/util/cn";
+import { cn } from "@/util/helper";
 
 /**
  * The resume as a page, not as source.
