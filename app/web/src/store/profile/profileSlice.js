@@ -1,36 +1,42 @@
-import { createSlice, nanoid } from "@reduxjs/toolkit";
+import { createSlice } from "@reduxjs/toolkit";
 
-import profileData from "@/data/profile.json";
-
+/**
+ * Starts empty. Nothing here is seeded from a fixture any more — `getProfile()`
+ * fills it from the API on mount, which can only happen on the client because the
+ * bearer token lives in sessionStorage.
+ */
 const initialState = {
+    // idle | loading | ready | error
+    status: "idle",
+    error: null,
+    // False until the profile row exists on the server; the first save creates it.
+    exists: false,
     identity: {
-        name: profileData.personal?.name ?? "",
-        email: profileData.personal?.email ?? "",
-        headline: profileData.personal?.headline ?? "",
-        role: profileData.personal?.role ?? "",
-        phone: profileData.personal?.phone ?? "",
-        location: profileData.personal?.location ?? "",
-        summary: profileData.summary ?? "",
-        links: profileData.personal?.links ?? [],
+        name: "",
+        email: "",
+        headline: "",
+        role: "",
+        phone: "",
+        location: "",
+        summary: "",
+        links: [],
     },
-    experience: profileData.experience ?? [],
-    education: profileData.education ?? [],
-    certifications: profileData.certifications ?? [],
-    skillGroups: profileData.skillGroups ?? [],
+    experience: [],
+    education: [],
+    certifications: [],
+    skillGroups: [],
     // Unsaved edits are pending until the save bar persists them.
     dirty: false,
 };
 
-// Ids come from `prepare`: a reducer calling nanoid() replays differently under
-// DevTools time-travel.
-function appendTo(list, prefix) {
-    return {
-        reducer(state, action) {
-            state[list].push(action.payload);
-        },
-        prepare(entry) {
-            return { payload: { ...entry, id: `${prefix}-${nanoid(8)}` } };
-        },
+/** The server sends null for an empty optional; the inputs want a string. */
+const text = (value) => value ?? "";
+
+// Entries arrive already saved, so the payload is whatever the server stored — its
+// id included. Nothing here invents one.
+function appendTo(list) {
+    return (state, action) => {
+        state[list].push(action.payload);
     };
 }
 
@@ -42,13 +48,67 @@ function patchIn(list) {
     };
 }
 
-/** Marks save state rather than editing the profile, so it must not set `dirty`. */
-const BOOKKEEPING = ["profile/profileSaved"];
+/**
+ * Only the personal-details form has a Save button, so only its edits can be unsaved.
+ * Every other section writes to the API as you edit it, and its actions record what
+ * the server already stored.
+ */
+const IDENTITY_EDITS = [
+    "profile/identityChanged",
+    "profile/linkChanged",
+    "profile/linkAdded",
+    "profile/linkRemoved",
+];
 
 const profileSlice = createSlice({
     name: "profile",
     initialState,
     reducers: {
+        /** Puts the load back to square one, so the mount effect fetches again. */
+        profileReload(state) {
+            state.status = "idle";
+            state.error = null;
+        },
+
+        profileLoading(state) {
+            state.status = "loading";
+            state.error = null;
+        },
+
+        /**
+         * Replaces everything with the one aggregated response. Name, email and role
+         * sit at the top of it — those three columns live on `accounts`, not
+         * `profile` — and `profile` is null until personal details are saved.
+         */
+        profileLoaded(state, action) {
+            const { name, email, role, profile, work, education, skill, certification } =
+                action.payload;
+
+            state.status = "ready";
+            state.error = null;
+            state.exists = Boolean(profile);
+            state.identity = {
+                name: text(name),
+                email: text(email),
+                role: text(role),
+                headline: text(profile?.headline),
+                phone: text(profile?.phone),
+                location: text(profile?.location),
+                summary: text(profile?.summary),
+                links: profile?.links ?? [],
+            };
+            state.experience = work ?? [];
+            state.education = education ?? [];
+            state.skillGroups = skill ?? [];
+            state.certifications = certification ?? [];
+            state.dirty = false;
+        },
+
+        profileFailed(state, action) {
+            state.status = "error";
+            state.error = action.payload;
+        },
+
         identityChanged(state, action) {
             const { field, value } = action.payload;
             state.identity[field] = value;
@@ -65,44 +125,28 @@ const profileSlice = createSlice({
             state.identity.links.splice(action.payload, 1);
         },
 
-        roleAdded: appendTo("experience", "exp"),
+        roleAdded: appendTo("experience"),
         roleUpdated: patchIn("experience"),
-        roleProjectsSet(state, action) {
-            const { id, projects } = action.payload;
-            const role = state.experience.find((r) => r.id === id);
-            if (role) role.projects = projects;
-        },
 
-        educationAdded: appendTo("education", "edu"),
+        educationAdded: appendTo("education"),
         educationUpdated: patchIn("education"),
 
-        certificationAdded: appendTo("certifications", "cert"),
+        certificationAdded: appendTo("certifications"),
         certificationUpdated: patchIn("certifications"),
 
-        skillGroupAdded(state, action) {
-            state.skillGroups.push({ name: action.payload, items: [] });
-        },
-        skillAdded(state, action) {
-            const { group, item } = action.payload;
-            const g = state.skillGroups.find((s) => s.name === group);
-            if (g && !g.items.includes(item)) g.items.push(item);
-        },
-        skillRemoved(state, action) {
-            const { group, item } = action.payload;
-            const g = state.skillGroups.find((s) => s.name === group);
-            if (g) g.items = g.items.filter((i) => i !== item);
-        },
+        skillGroupAdded: appendTo("skillGroups"),
+        skillGroupUpdated: patchIn("skillGroups"),
 
-        /** The API accepted the payload; what is in the store is now what is in the DB. */
+        /** Personal details are saved; the row now exists whether or not it did. */
         profileSaved(state) {
+            state.exists = true;
             state.dirty = false;
         },
     },
     extraReducers: (builder) => {
-        // One place marks the profile dirty, so a new edit action cannot forget to.
+        // One place marks the form dirty, so a new identity action cannot forget to.
         builder.addMatcher(
-            (action) =>
-                action.type.startsWith("profile/") && !BOOKKEEPING.includes(action.type),
+            (action) => IDENTITY_EDITS.includes(action.type),
             (state) => {
                 state.dirty = true;
             }
@@ -111,23 +155,28 @@ const profileSlice = createSlice({
 });
 
 export const {
+    profileReload,
+    profileLoading,
+    profileLoaded,
+    profileFailed,
     identityChanged,
     linkChanged,
     linkAdded,
     linkRemoved,
     roleAdded,
     roleUpdated,
-    roleProjectsSet,
     educationAdded,
     educationUpdated,
     certificationAdded,
     certificationUpdated,
     skillGroupAdded,
-    skillAdded,
-    skillRemoved,
+    skillGroupUpdated,
     profileSaved,
 } = profileSlice.actions;
 
+export const selectStatus = (state) => state.profile.status;
+export const selectLoadError = (state) => state.profile.error;
+export const selectProfileExists = (state) => state.profile.exists;
 export const selectIdentity = (state) => state.profile.identity;
 export const selectExperience = (state) => state.profile.experience;
 export const selectEducation = (state) => state.profile.education;

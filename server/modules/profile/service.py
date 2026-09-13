@@ -7,15 +7,20 @@ from modules.account import Account
 from modules.profile.models import (
     Certification,
     CertificationFields,
+    CertificationRead,
     Education,
     EducationFields,
+    EducationRead,
     Experience,
     ExperienceFields,
+    ExperienceRead,
     Profile,
     ProfileFields,
-    Resume,
+    ProfileRead,
     Skill,
     SkillFields,
+    SkillRead,
+    UserProfile,
 )
 
 
@@ -62,6 +67,60 @@ async def get_profile(user_id: PydanticObjectId) -> Profile:
     return profile
 
 
+def _join(collection: str, alias: str) -> dict:
+    return {
+        "$lookup": {
+            "from": collection,
+            "localField": "_id",
+            "foreignField": "userId",
+            "as": alias,
+        }
+    }
+
+
+def _with_id(row: dict) -> dict:
+    """Aggregation returns raw documents, which are keyed by `_id`."""
+    return {**row, "id": row["_id"]}
+
+
+async def get_user_profile(user_id: PydanticObjectId) -> UserProfile:
+    """Everything My Details shows, in one round trip.
+
+    Starts at `accounts`, not `profile`: the profile row appears only once personal
+    details are saved, and the four lists can be filled in before that.
+    """
+    pipeline = [
+        {"$match": {"_id": user_id}},
+        _join("profile", "profile"),
+        {"$unwind": {"path": "$profile", "preserveNullAndEmptyArrays": True}},
+        _join("work_experience", "work"),
+        _join("education", "education"),
+        _join("skills", "skill"),
+        _join("certifications", "certification"),
+    ]
+
+    # Two awaits: the async driver's `aggregate` hands back the cursor itself.
+    cursor = await Account.get_pymongo_collection().aggregate(pipeline)
+    rows = await cursor.to_list(1)
+    if not rows:
+        raise UnknownUser(user_id)
+
+    row = rows[0]
+    profile = row.get("profile")
+    return UserProfile(
+        id=row["_id"],
+        name=row["name"],
+        email=row["email"],
+        role=row.get("role", ""),
+        profile_picture=row.get("profile_picture"),
+        profile=ProfileRead(**_with_id(profile)) if profile else None,
+        work=[ExperienceRead(**_with_id(entry)) for entry in row["work"]],
+        education=[EducationRead(**_with_id(entry)) for entry in row["education"]],
+        skill=[SkillRead(**_with_id(entry)) for entry in row["skill"]],
+        certification=[CertificationRead(**_with_id(entry)) for entry in row["certification"]],
+    )
+
+
 async def create_profile(user_id: PydanticObjectId, payload: ProfileFields) -> Profile:
     # `userId` is `accounts._id` — the account module is what issues the login token,
     # so a profile hangs off the same identity the browser signed in as.
@@ -94,7 +153,6 @@ async def list_experience(user_id: PydanticObjectId) -> list[Experience]:
 
 
 async def add_experience(user_id: PydanticObjectId, payload: ExperienceFields) -> Experience:
-    await get_profile(user_id)
     entry = Experience(userId=user_id, **payload.model_dump())
     await entry.insert()
     return entry
@@ -129,7 +187,6 @@ async def list_education(user_id: PydanticObjectId) -> list[Education]:
 
 
 async def add_education(user_id: PydanticObjectId, payload: EducationFields) -> Education:
-    await get_profile(user_id)
     entry = Education(userId=user_id, **payload.model_dump())
     await entry.insert()
     return entry
@@ -164,7 +221,6 @@ async def list_skills(user_id: PydanticObjectId) -> list[Skill]:
 
 
 async def add_skill(user_id: PydanticObjectId, payload: SkillFields) -> Skill:
-    await get_profile(user_id)
     entry = Skill(userId=user_id, **payload.model_dump())
     await entry.insert()
     return entry
@@ -201,7 +257,6 @@ async def list_certifications(user_id: PydanticObjectId) -> list[Certification]:
 async def add_certification(
     user_id: PydanticObjectId, payload: CertificationFields
 ) -> Certification:
-    await get_profile(user_id)
     entry = Certification(userId=user_id, **payload.model_dump())
     await entry.insert()
     return entry
@@ -231,17 +286,10 @@ async def remove_certification(user_id: PydanticObjectId, entry_id: PydanticObje
 # --- everything at once ------------------------------------------------------
 
 
-async def get_resume(user_id: PydanticObjectId) -> Resume:
-    """What a template renders from: the account, plus the five collections."""
-    account = await Account.get(user_id)
-    if account is None:
-        raise UnknownUser(user_id)
-
-    return Resume(
-        account=account,
-        profile=await get_profile(user_id),
-        experience=await list_experience(user_id),
-        education=await list_education(user_id),
-        skills=await list_skills(user_id),
-        certifications=await list_certifications(user_id),
-    )
+async def get_resume(user_id: PydanticObjectId) -> UserProfile:
+    """The same read, for rendering — where personal details are not optional: the
+    contact line and summary come from them."""
+    user = await get_user_profile(user_id)
+    if user.profile is None:
+        raise ProfileNotFound(f"no profile for user {user_id}")
+    return user

@@ -2,9 +2,7 @@ from datetime import UTC, datetime
 
 import pymongo
 from beanie import Document, PydanticObjectId
-from pydantic import BaseModel, Field
-
-from modules.account import Account
+from pydantic import BaseModel, EmailStr, Field
 
 
 class Link(BaseModel):
@@ -102,7 +100,6 @@ class EducationFields(BaseModel):
     location: str | None = None
     start: str | None = None
     end: str | None = None
-    note: str | None = None
 
 
 class Education(Document):
@@ -112,7 +109,6 @@ class Education(Document):
     location: str | None = None
     start: str | None = None
     end: str | None = None
-    note: str | None = None
     updatedAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     class Settings:
@@ -128,7 +124,6 @@ class EducationRead(BaseModel):
     location: str | None = None
     start: str | None = None
     end: str | None = None
-    note: str | None = None
 
 
 # --- skills ------------------------------------------------------------------
@@ -188,13 +183,22 @@ class CertificationRead(BaseModel):
 
 # --- everything at once ------------------------------------------------------
 
-class Resume(BaseModel):
-    """What a template renders from: the account, for the name and email it owns,
-    plus the five profile collections."""
 
-    account: Account
-    profile: Profile
-    experience: list[Experience] = Field(default_factory=list)
-    education: list[Education] = Field(default_factory=list)
-    skills: list[Skill] = Field(default_factory=list)
-    certifications: list[Certification] = Field(default_factory=list)
+class UserProfile(BaseModel):
+    """Everything keyed to one account. Answers `GET /profile/getProfile`, and is what
+    a template renders from.
+
+    `profile` is null until personal details are saved. The four lists do not wait for
+    it — each is keyed by `userId` on its own — so they can be filled in first.
+    """
+
+    id: PydanticObjectId
+    name: str
+    email: EmailStr
+    role: str = ""
+    profile_picture: str | None = None
+    profile: ProfileRead | None = None
+    work: list[ExperienceRead] = Field(default_factory=list)
+    education: list[EducationRead] = Field(default_factory=list)
+    skill: list[SkillRead] = Field(default_factory=list)
+    certification: list[CertificationRead] = Field(default_factory=list)

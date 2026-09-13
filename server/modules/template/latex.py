@@ -9,12 +9,12 @@ import re
 from collections.abc import Iterable, Sequence
 
 from modules.profile.models import (
-    Certification,
-    Education,
-    Experience,
+    CertificationRead,
+    EducationRead,
+    ExperienceRead,
     Link,
-    Profile,
-    Skill,
+    ProfileRead,
+    SkillRead,
 )
 
 _SPECIALS = {
@@ -93,7 +93,7 @@ def _chunk(items: Sequence[str], buckets: int) -> list[list[str]]:
     return out
 
 
-def contact_block(personal: Profile, email: str, style: str) -> str:
+def contact_block(personal: ProfileRead, email: str, style: str) -> str:
     """The contact line. `contactitem` uses the template's own command; `plain`
     emits bare icons for templates that colour the whole line themselves.
 
@@ -114,7 +114,7 @@ def contact_block(personal: Profile, email: str, style: str) -> str:
     return joiner.join(rf"\contactitem{{{icon}}}{{{value}}}" for icon, value in entries)
 
 
-def skills_grid(groups: Iterable[Skill], columns: int) -> str:
+def skills_grid(groups: Iterable[SkillRead], columns: int) -> str:
     """One tabularx row per group, the group's items spread across the columns."""
     rows: list[str] = []
     for group in groups:
@@ -123,7 +123,7 @@ def skills_grid(groups: Iterable[Skill], columns: int) -> str:
     return "\n".join(rows)
 
 
-def skills_pills(groups: Iterable[Skill]) -> str:
+def skills_pills(groups: Iterable[SkillRead]) -> str:
     """Every skill as a \\skilltag in one flow. No manual row breaks: LaTeX wraps the
     paragraph itself, so the layout survives a change in how many skills there are."""
     pills = [rf"\skilltag{{{tex(item)}}}" for group in groups for item in group.items]
@@ -134,7 +134,7 @@ def _items(bullets: Iterable[str]) -> str:
     return "\n".join(rf"  \item {tex(bullet)}" for bullet in bullets)
 
 
-def _jobtitle_role(role: Experience, location_style: str) -> str:
+def _jobtitle_role(role: ExperienceRead, location_style: str) -> str:
     header = (
         rf"\jobtitle{{{tex(role.title)}}}{{{tex(role.company)}}}"
         rf"{{{_date_range(role.start, role.end, role.current)}}}"
@@ -144,12 +144,12 @@ def _jobtitle_role(role: Experience, location_style: str) -> str:
     if role.bullets:
         parts.append("\\begin{itemize}\n" + _items(role.bullets) + "\n\\end{itemize}")
     for project in role.projects:
-        parts.append(rf"\projectlabel{{{tex(project.label)}}}")
+        parts.append(rf"\projectlabel{{{tex(project.name)}}}")
         parts.append("\\begin{itemize}\n" + _items(project.bullets) + "\n\\end{itemize}")
     return "\n".join(parts)
 
 
-def _timeline_role(role: Experience, location_style: str) -> str:
+def _timeline_role(role: ExperienceRead, location_style: str) -> str:
     """One tcolorbox per role. Date and location share the third argument, and the
     fourth is a bare \\item list — the command supplies the itemize itself."""
     meta = _date_range(role.start, role.end, role.current)
@@ -169,12 +169,12 @@ def _timeline_role(role: Experience, location_style: str) -> str:
     )
 
 
-def experience_block(roles: Iterable[Experience], style: str, location_style: str) -> str:
+def experience_block(roles: Iterable[ExperienceRead], style: str, location_style: str) -> str:
     build = _timeline_role if style == "timelinerole" else _jobtitle_role
     return "\n\n".join(build(role, location_style) for role in roles)
 
 
-def education_block(entries: Iterable[Education]) -> str:
+def education_block(entries: Iterable[EducationRead]) -> str:
     rows: list[str] = []
     for entry in entries:
         where = ", ".join(part for part in (entry.institution, entry.location) if part)
@@ -185,7 +185,7 @@ def education_block(entries: Iterable[Education]) -> str:
     return "\n".join(rows)
 
 
-def certifications_block(entries: Iterable[Certification]) -> str:
+def certifications_block(entries: Iterable[CertificationRead]) -> str:
     return "\n".join(
         rf"\certrow{{{tex(entry.name)}}}{{{tex(entry.issuer)}}}{{{tex(entry.year or '')}}}"
         for entry in entries

@@ -3,19 +3,15 @@
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useFormik } from "formik";
-import { Briefcase, Building2, FolderGit2, Pencil, Plus, X } from "lucide-react";
+import { AlertTriangle, Briefcase, Building2, FolderGit2, Pencil, Plus, X } from "lucide-react";
 import { Panel, PanelHeader, PanelTitle } from "@/component/ui/panel";
 import { Dialog, DialogBody, DialogFooter } from "@/component/ui/dialog";
 import { Field, Input, Select } from "@/component/ui/field";
 import { Checkbox } from "@/component/ui/checkbox";
 import { Button } from "@/component/ui/button";
 import { Badge } from "@/component/ui/badge";
-import {
-    roleAdded,
-    roleProjectsSet,
-    roleUpdated,
-    selectExperience,
-} from "@/store/profile/profileSlice";
+import { ApiError, addExperience, updateExperience } from "@/services";
+import { roleAdded, roleUpdated, selectExperience } from "@/store/profile/profileSlice";
 import { experienceInitialValues, experienceSchema } from "@/util/schema";
 import { MONTHS, PRESENT, cn, joinMonthYear } from "@/util/helper";
 
@@ -27,7 +23,8 @@ export function ExperienceSection() {
     // The role whose projects are open, or null.
     const [managing, setManaging] = useState(null);
 
-    function commit(values) {
+    // Writes straight through — this dialog's Save is the only save there is.
+    async function commit(values) {
         const entry = {
             title: values.title,
             company: values.company,
@@ -40,16 +37,17 @@ export function ExperienceSection() {
             // Carried through untouched: projects are owned by the other dialog.
             projects: values.projects,
         };
-        dispatch(
-            editing.entry
-                ? roleUpdated({ id: editing.entry.id, changes: entry })
-                : roleAdded(entry)
-        );
+        const existing = editing.entry;
+        const saved = existing ? await updateExperience(existing.id, entry) : await addExperience(entry);
+        dispatch(existing ? roleUpdated({ id: saved.id, changes: saved }) : roleAdded(saved));
         setEditing(null);
     }
 
-    function commitProjects(projects) {
-        dispatch(roleProjectsSet({ id: managing.id, projects }));
+    // Projects belong to a role, so saving them is a full update of that role.
+    async function commitProjects(projects) {
+        const { id, userId, ...role } = managing;
+        const saved = await updateExperience(id, { ...role, projects });
+        dispatch(roleUpdated({ id: saved.id, changes: saved }));
         setManaging(null);
     }
 
@@ -198,7 +196,15 @@ function ExperienceForm({ entry, onSave, onCancel }) {
     const formik = useFormik({
         initialValues: experienceInitialValues(entry),
         validationSchema: experienceSchema,
-        onSubmit: onSave,
+        onSubmit: async (values, { setStatus, setSubmitting }) => {
+            setStatus(null);
+            try {
+                await onSave(values);
+            } catch (error) {
+                setStatus(error instanceof ApiError ? error.message : "Could not save.");
+                setSubmitting(false);
+            }
+        },
     });
 
     const { values, touched, errors, setFieldValue } = formik;
@@ -291,13 +297,20 @@ function ExperienceForm({ entry, onSave, onCancel }) {
                     placeholder="Cut inference cost 38% through batching"
                     removeLabel={(i) => `Remove description line ${i + 1}`}
                 />
+
+                {formik.status ? (
+                    <p className="flex items-start gap-2 rounded-sm bg-risk px-3 py-2.5 text-[12.5px] leading-relaxed text-risk-ink">
+                        <AlertTriangle className="mt-0.5 size-[13px] shrink-0" />
+                        {formik.status}
+                    </p>
+                ) : null}
             </DialogBody>
 
             <DialogFooter>
                 <Button type="button" variant="outline" size="sm" onClick={onCancel}>
                     Cancel
                 </Button>
-                <Button type="submit" size="sm">
+                <Button type="submit" size="sm" disabled={formik.isSubmitting}>
                     {entry ? "Save changes" : "Add role"}
                 </Button>
             </DialogFooter>
@@ -314,16 +327,23 @@ function ProjectsForm({ projects, onSave, onCancel }) {
                 bullets: p.bullets?.length ? [...p.bullets] : [""],
             })),
         },
-        onSubmit: (values) =>
-            onSave(
-                values.projects
-                    .map((p) => ({
-                        name: p.name.trim(),
-                        bullets: p.bullets.map((b) => b.trim()).filter(Boolean),
-                    }))
-                    // A project with no name has nothing to render, so it is not kept.
-                    .filter((p) => p.name)
-            ),
+        onSubmit: async (values, { setStatus, setSubmitting }) => {
+            setStatus(null);
+            try {
+                await onSave(
+                    values.projects
+                        .map((p) => ({
+                            name: p.name.trim(),
+                            bullets: p.bullets.map((b) => b.trim()).filter(Boolean),
+                        }))
+                        // A project with no name has nothing to render, so it is not kept.
+                        .filter((p) => p.name)
+                );
+            } catch (error) {
+                setStatus(error instanceof ApiError ? error.message : "Could not save.");
+                setSubmitting(false);
+            }
+        },
     });
 
     const { values, setFieldValue } = formik;
@@ -381,13 +401,20 @@ function ProjectsForm({ projects, onSave, onCancel }) {
                     <Plus className="size-[14px]" />
                     Add project
                 </button>
+
+                {formik.status ? (
+                    <p className="flex items-start gap-2 rounded-sm bg-risk px-3 py-2.5 text-[12.5px] leading-relaxed text-risk-ink">
+                        <AlertTriangle className="mt-0.5 size-[13px] shrink-0" />
+                        {formik.status}
+                    </p>
+                ) : null}
             </DialogBody>
 
             <DialogFooter>
                 <Button type="button" variant="outline" size="sm" onClick={onCancel}>
                     Cancel
                 </Button>
-                <Button type="submit" size="sm">
+                <Button type="submit" size="sm" disabled={formik.isSubmitting}>
                     Save projects
                 </Button>
             </DialogFooter>

@@ -3,14 +3,16 @@
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useFormik } from "formik";
-import { GraduationCap, Pencil, Plus } from "lucide-react";
+import { AlertTriangle, GraduationCap, Pencil, Plus } from "lucide-react";
 import { Panel, PanelHeader, PanelTitle } from "@/component/ui/panel";
 import { Dialog, DialogBody, DialogFooter } from "@/component/ui/dialog";
-import { Field, Input } from "@/component/ui/field";
+import { Field, Input, Select } from "@/component/ui/field";
 import { Button } from "@/component/ui/button";
 import { Badge } from "@/component/ui/badge";
+import { ApiError, addEducation, updateEducation } from "@/services";
 import { educationAdded, educationUpdated, selectEducation } from "@/store/profile/profileSlice";
 import { educationInitialValues, educationSchema } from "@/util/schema";
+import { MONTHS, joinMonthYear } from "@/util/helper";
 import { cn } from "@/util/helper";
 
 export function EducationSection() {
@@ -19,12 +21,19 @@ export function EducationSection() {
     // null = closed. { entry: null } = adding; { entry } = editing that one.
     const [editing, setEditing] = useState(null);
 
-    function commit(values) {
-        dispatch(
-            editing.entry
-                ? educationUpdated({ id: editing.entry.id, changes: values })
-                : educationAdded(values)
-        );
+    // Writes straight through — this dialog's Save is the only save there is.
+    async function commit(values) {
+        const { entry } = editing;
+        // Month and year are two fields on the form and one string in the document.
+        const body = {
+            degree: values.degree,
+            institution: values.institution,
+            location: values.location,
+            start: joinMonthYear(values.startMonth, values.startYear),
+            end: joinMonthYear(values.endMonth, values.endYear),
+        };
+        const saved = entry ? await updateEducation(entry.id, body) : await addEducation(body);
+        dispatch(entry ? educationUpdated({ id: saved.id, changes: saved }) : educationAdded(saved));
         setEditing(null);
     }
 
@@ -70,7 +79,6 @@ export function EducationSection() {
                                 </p>
                                 <p className="mt-0.5 text-[12.5px] text-muted-foreground">
                                     {entry.start} — {entry.end}
-                                    {entry.note ? ` · ${entry.note}` : ""}
                                 </p>
                             </div>
                             <Button
@@ -109,7 +117,15 @@ function EducationForm({ entry, onSave, onCancel }) {
     const formik = useFormik({
         initialValues: educationInitialValues(entry),
         validationSchema: educationSchema,
-        onSubmit: onSave,
+        onSubmit: async (values, { setStatus, setSubmitting }) => {
+            setStatus(null);
+            try {
+                await onSave(values);
+            } catch (error) {
+                setStatus(error instanceof ApiError ? error.message : "Could not save.");
+                setSubmitting(false);
+            }
+        },
     });
 
     const { touched, errors } = formik;
@@ -140,25 +156,54 @@ function EducationForm({ entry, onSave, onCancel }) {
                         <Input placeholder="City, Country" {...formik.getFieldProps("location")} />
                     </Field>
 
-                    <Field label="Start">
-                        <Input placeholder="2014" {...formik.getFieldProps("start")} />
+                    <Field label="Start" error={error("startYear")}>
+                        <div className="flex gap-2.5">
+                            <Select className="w-[104px]" {...formik.getFieldProps("startMonth")}>
+                                <option value="">Month</option>
+                                {MONTHS.map((m) => (
+                                    <option key={m} value={m}>{m}</option>
+                                ))}
+                            </Select>
+                            <Input
+                                placeholder="2014"
+                                inputMode="numeric"
+                                invalid={Boolean(error("startYear"))}
+                                {...formik.getFieldProps("startYear")}
+                            />
+                        </div>
                     </Field>
 
-                    <Field label="End">
-                        <Input placeholder="2018" {...formik.getFieldProps("end")} />
+                    <Field label="End" error={error("endYear")}>
+                        <div className="flex gap-2.5">
+                            <Select className="w-[104px]" {...formik.getFieldProps("endMonth")}>
+                                <option value="">Month</option>
+                                {MONTHS.map((m) => (
+                                    <option key={m} value={m}>{m}</option>
+                                ))}
+                            </Select>
+                            <Input
+                                placeholder="2018"
+                                inputMode="numeric"
+                                invalid={Boolean(error("endYear"))}
+                                {...formik.getFieldProps("endYear")}
+                            />
+                        </div>
                     </Field>
                 </div>
 
-                <Field label="Note" hint="Honours, GPA, thesis — anything worth a line.">
-                    <Input placeholder="First class with distinction" {...formik.getFieldProps("note")} />
-                </Field>
+                {formik.status ? (
+                    <p className="flex items-start gap-2 rounded-sm bg-risk px-3 py-2.5 text-[12.5px] leading-relaxed text-risk-ink">
+                        <AlertTriangle className="mt-0.5 size-[13px] shrink-0" />
+                        {formik.status}
+                    </p>
+                ) : null}
             </DialogBody>
 
             <DialogFooter>
                 <Button type="button" variant="outline" size="sm" onClick={onCancel}>
                     Cancel
                 </Button>
-                <Button type="submit" size="sm">
+                <Button type="submit" size="sm" disabled={formik.isSubmitting}>
                     {entry ? "Save changes" : "Add education"}
                 </Button>
             </DialogFooter>

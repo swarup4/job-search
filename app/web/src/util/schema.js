@@ -35,13 +35,6 @@ export const signupSchema = Yup.object({
         .oneOf([Yup.ref("password")], "The two passwords do not match."),
 });
 
-// create the profile (POST /api/profile)
-
-export const profileCreateInitialValues = { name: "", email: "" };
-
-/** The server requires both of these, so the form does too. */
-export const profileCreateSchema = Yup.object({ name, email });
-
 // the identity fields of the profile, validated on save
 
 export const profileIdentitySchema = Yup.object({
@@ -78,14 +71,21 @@ export const profileIdentitySchema = Yup.object({
 
 // one education entry
 
+const year = Yup.string()
+    .trim()
+    .matches(/^\d{4}$/, { message: "Use a four-digit year.", excludeEmptyString: true });
+
 export function educationInitialValues(entry) {
+    const start = splitMonthYear(entry?.start);
+    const end = splitMonthYear(entry?.end);
     return {
         degree: entry?.degree ?? "",
         institution: entry?.institution ?? "",
         location: entry?.location ?? "",
-        start: entry?.start ?? "",
-        end: entry?.end ?? "",
-        note: entry?.note ?? "",
+        startMonth: start.month,
+        startYear: start.year,
+        endMonth: end.month,
+        endYear: end.year,
     };
 }
 
@@ -93,9 +93,10 @@ export const educationSchema = Yup.object({
     degree: Yup.string().trim().required("Enter the degree or qualification."),
     institution: Yup.string().trim().required("Enter the institution."),
     location: Yup.string().trim(),
-    start: Yup.string().trim(),
-    end: Yup.string().trim(),
-    note: Yup.string().trim(),
+    startMonth: Yup.string(),
+    startYear: year,
+    endMonth: Yup.string(),
+    endYear: year,
 });
 
 // one work-experience role
@@ -116,10 +117,6 @@ export function experienceInitialValues(entry) {
         projects: entry?.projects ?? [],
     };
 }
-
-const year = Yup.string()
-    .trim()
-    .matches(/^\d{4}$/, { message: "Use a four-digit year.", excludeEmptyString: true });
 
 export const experienceSchema = Yup.object({
     title: Yup.string().trim().required("Enter the job title."),
@@ -142,19 +139,20 @@ export const experienceSchema = Yup.object({
 // one certification
 
 export function certificationInitialValues(entry) {
+    const earned = splitMonthYear(entry?.year);
     return {
         name: entry?.name ?? "",
         issuer: entry?.issuer ?? "",
-        year: entry?.year ?? "",
+        month: earned.month,
+        year: earned.year,
     };
 }
 
 export const certificationSchema = Yup.object({
     name: Yup.string().trim().required("Enter the certification name."),
     issuer: Yup.string().trim().required("Enter the issuer."),
-    year: Yup.string()
-        .trim()
-        .matches(/^\d{4}$/, { message: "Use a four-digit year.", excludeEmptyString: true }),
+    month: Yup.string(),
+    year,
 });
 
 // one skill group

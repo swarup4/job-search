@@ -4,11 +4,9 @@ import { useMemo, useState } from "react";
 import { useDispatch, useSelector, useStore } from "react-redux";
 import { useFormik } from "formik";
 import { Pencil, Plus, X } from "lucide-react";
-// MOCK: saving is stubbed while the endpoint is being built.
-// import { updateProfile } from "@/services";
-import { ApiError } from "@/services";
+import { ApiError, createProfile, updateProfile } from "@/services";
 import { updateAccount } from "@/services/auth";
-import { selectUser, userChanged } from "@/store/auth/authSlice";
+import { userChanged } from "@/store/auth/authSlice";
 import { Panel, PanelBody, PanelHeader, PanelTitle } from "@/component/ui/panel";
 import { Field, Input, Textarea } from "@/component/ui/field";
 import { Button } from "@/component/ui/button";
@@ -20,6 +18,7 @@ import {
     linkRemoved,
     profileSaved,
     selectIdentity,
+    selectProfileExists,
     selectProfilePayload,
 } from "@/store/profile/profileSlice";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -28,7 +27,7 @@ import { initials } from "@/util/helper";
 
 export function ProfileIdentity() {
     const identity = useSelector(selectIdentity);
-    const user = useSelector(selectUser);
+    const exists = useSelector(selectProfileExists);
     const store = useStore();
     const dispatch = useDispatch();
     const { schedule, flush } = useDebounce();
@@ -57,17 +56,20 @@ export function ProfileIdentity() {
             // Anything still waiting on the debounce belongs in this save.
             flush();
             try {
-                // `role` is a column on the account, so it is saved through the account
-                // endpoint rather than with the rest of these fields.
-                const account = await updateAccount({ role: values.role });
+                // Name and role are columns on the account, so they go through the
+                // account endpoint. Email is absent on purpose: it is the login key
+                // and the server will not change it here.
+                const account = await updateAccount({ name: values.name, role: values.role });
                 // Keep the signed-in copy in step, or the sidebar goes stale.
-                dispatch(userChanged({ role: account.role }));
+                dispatch(userChanged({ name: account.name, role: account.role }));
 
-                // TODO: the rest of this form still is not persisted — it needs
-                // selectProfilePayload(store.getState()) sent to the profile endpoint,
-                // creating the profile first when there is none.
+                // Read the store rather than `values`: a debounced keystroke that was
+                // just flushed is in the store, not yet in Formik's copy.
+                const personal = selectProfilePayload(store.getState());
+                await (exists ? updateProfile(personal) : createProfile(personal));
+
                 dispatch(profileSaved());
-                setStatus({ ok: true, message: "Role saved. Other fields are not yet persisted." });
+                setStatus({ ok: true, message: "Saved." });
             } catch (error) {
                 setStatus({
                     ok: false,
@@ -163,14 +165,9 @@ export function ProfileIdentity() {
 
                         <Field
                             label="Email"
-                            hint="Required — this is your profile's key."
-                            error={error("email")}
+                            hint="Your sign-in address. Changing it is not part of this form."
                         >
-                            <Input
-                                type="email"
-                                invalid={Boolean(error("email"))}
-                                {...bind("email")}
-                            />
+                            <Input type="email" readOnly value={values.email} />
                         </Field>
 
                         <Field label="Phone" error={error("phone")}>

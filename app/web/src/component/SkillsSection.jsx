@@ -3,18 +3,18 @@
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useFormik } from "formik";
-import { Layers, Plus } from "lucide-react";
+import { AlertTriangle, Layers, Plus } from "lucide-react";
 import { Panel, PanelHeader, PanelTitle } from "@/component/ui/panel";
 import { Dialog, DialogBody, DialogFooter } from "@/component/ui/dialog";
 import { Field, Input } from "@/component/ui/field";
 import { Button } from "@/component/ui/button";
 import { Badge } from "@/component/ui/badge";
+import { ApiError, addSkill, updateSkill } from "@/services";
 import {
     selectSkillCount,
     selectSkillGroups,
-    skillAdded,
     skillGroupAdded,
-    skillRemoved,
+    skillGroupUpdated,
 } from "@/store/profile/profileSlice";
 import { skillGroupInitialValues, skillGroupSchema } from "@/util/schema";
 import { cn } from "@/util/helper";
@@ -24,10 +24,24 @@ export function SkillsSection() {
     const total = useSelector(selectSkillCount);
     const dispatch = useDispatch();
     const [addingGroup, setAddingGroup] = useState(false);
+    // A chip add or remove is one request; this shows when one of them fails.
+    const [error, setError] = useState(null);
 
-    function commitGroup({ name }) {
-        dispatch(skillGroupAdded(name.trim()));
+    async function commitGroup({ name }) {
+        const saved = await addSkill({ name: name.trim(), items: [] });
+        dispatch(skillGroupAdded(saved));
         setAddingGroup(false);
+    }
+
+    /** A group's items are one field, so changing them is a full update of the group. */
+    async function setItems(group, items) {
+        setError(null);
+        try {
+            const saved = await updateSkill(group.id, { name: group.name, items });
+            dispatch(skillGroupUpdated({ id: saved.id, changes: saved }));
+        } catch (failure) {
+            setError(failure instanceof ApiError ? failure.message : "Could not save that skill.");
+        }
     }
 
     return (
@@ -50,6 +64,13 @@ export function SkillsSection() {
                 </button>
             </PanelHeader>
 
+            {error ? (
+                <p className="flex items-start gap-2 border-b border-border bg-risk px-5 py-2.5 text-[12.5px] text-risk-ink">
+                    <AlertTriangle className="mt-0.5 size-[13px] shrink-0" />
+                    {error}
+                </p>
+            ) : null}
+
             <div>
                 {groups.length === 0 ? (
                     <p className="px-5 py-6 text-[13.5px] text-muted-foreground">
@@ -58,7 +79,7 @@ export function SkillsSection() {
                 ) : (
                     groups.map((g, i) => (
                         <div
-                            key={g.name}
+                            key={g.id}
                             className={cn(
                                 "flex flex-wrap items-start gap-x-5 gap-y-3 px-5 py-4",
                                 i < groups.length - 1 && "border-b border-border"
@@ -76,7 +97,7 @@ export function SkillsSection() {
                                             type="button"
                                             aria-label={`Remove ${s}`}
                                             onClick={() =>
-                                                dispatch(skillRemoved({ group: g.name, item: s }))
+                                                setItems(g, g.items.filter((i) => i !== s))
                                             }
                                             className="cursor-pointer text-[15px] leading-none opacity-45 hover:opacity-100"
                                         >
@@ -85,7 +106,11 @@ export function SkillsSection() {
                                     </span>
                                 ))}
                                 <SkillInput
-                                    onAdd={(item) => dispatch(skillAdded({ group: g.name, item }))}
+                                    onAdd={(item) =>
+                                        g.items.includes(item)
+                                            ? undefined
+                                            : setItems(g, [...g.items, item])
+                                    }
                                 />
                             </div>
                         </div>
@@ -157,7 +182,15 @@ function SkillGroupForm({ taken, onSave, onCancel }) {
     const formik = useFormik({
         initialValues: skillGroupInitialValues,
         validationSchema: skillGroupSchema(taken),
-        onSubmit: onSave,
+        onSubmit: async (values, { setStatus, setSubmitting }) => {
+            setStatus(null);
+            try {
+                await onSave(values);
+            } catch (error) {
+                setStatus(error instanceof ApiError ? error.message : "Could not save.");
+                setSubmitting(false);
+            }
+        },
     });
 
     const error = formik.touched.name && formik.errors.name;
@@ -173,13 +206,20 @@ function SkillGroupForm({ taken, onSave, onCancel }) {
                         {...formik.getFieldProps("name")}
                     />
                 </Field>
+
+                {formik.status ? (
+                    <p className="flex items-start gap-2 rounded-sm bg-risk px-3 py-2.5 text-[12.5px] leading-relaxed text-risk-ink">
+                        <AlertTriangle className="mt-0.5 size-[13px] shrink-0" />
+                        {formik.status}
+                    </p>
+                ) : null}
             </DialogBody>
 
             <DialogFooter>
                 <Button type="button" variant="outline" size="sm" onClick={onCancel}>
                     Cancel
                 </Button>
-                <Button type="submit" size="sm">
+                <Button type="submit" size="sm" disabled={formik.isSubmitting}>
                     Add group
                 </Button>
             </DialogFooter>
