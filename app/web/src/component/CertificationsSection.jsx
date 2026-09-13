@@ -3,18 +3,20 @@
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useFormik } from "formik";
-import { Award, Pencil, Plus } from "lucide-react";
+import { AlertTriangle, Award, Pencil, Plus } from "lucide-react";
 import { Panel, PanelHeader, PanelTitle } from "@/component/ui/panel";
 import { Dialog, DialogBody, DialogFooter } from "@/component/ui/dialog";
-import { Field, Input } from "@/component/ui/field";
+import { Field, Input, Select } from "@/component/ui/field";
 import { Button } from "@/component/ui/button";
 import { Badge } from "@/component/ui/badge";
+import { ApiError, addCertification, updateCertification } from "@/services";
 import {
     certificationAdded,
     certificationUpdated,
     selectCertifications,
 } from "@/store/profile/profileSlice";
 import { certificationInitialValues, certificationSchema } from "@/util/schema";
+import { MONTHS, joinMonthYear } from "@/util/helper";
 import { cn } from "@/util/helper";
 
 export function CertificationsSection() {
@@ -23,11 +25,20 @@ export function CertificationsSection() {
     // null = closed. { entry: null } = adding; { entry } = editing that one.
     const [editing, setEditing] = useState(null);
 
-    function commit(values) {
+    // Writes straight through — this dialog's Save is the only save there is.
+    async function commit(values) {
+        const { entry } = editing;
+        // Month and year are two fields on the form and one string in the document.
+        const body = {
+            name: values.name,
+            issuer: values.issuer,
+            year: joinMonthYear(values.month, values.year),
+        };
+        const saved = entry
+            ? await updateCertification(entry.id, body)
+            : await addCertification(body);
         dispatch(
-            editing.entry
-                ? certificationUpdated({ id: editing.entry.id, changes: values })
-                : certificationAdded(values)
+            entry ? certificationUpdated({ id: saved.id, changes: saved }) : certificationAdded(saved)
         );
         setEditing(null);
     }
@@ -109,7 +120,15 @@ function CertificationForm({ entry, onSave, onCancel }) {
     const formik = useFormik({
         initialValues: certificationInitialValues(entry),
         validationSchema: certificationSchema,
-        onSubmit: onSave,
+        onSubmit: async (values, { setStatus, setSubmitting }) => {
+            setStatus(null);
+            try {
+                await onSave(values);
+            } catch (error) {
+                setStatus(error instanceof ApiError ? error.message : "Could not save.");
+                setSubmitting(false);
+            }
+        },
     });
 
     const { touched, errors } = formik;
@@ -136,22 +155,37 @@ function CertificationForm({ entry, onSave, onCancel }) {
                         />
                     </Field>
 
-                    <Field label="Year" error={error("year")}>
-                        <Input
-                            placeholder="2024"
-                            inputMode="numeric"
-                            invalid={Boolean(error("year"))}
-                            {...formik.getFieldProps("year")}
-                        />
+                    <Field label="Earned" error={error("year")}>
+                        <div className="flex gap-2.5">
+                            <Select className="w-[104px]" {...formik.getFieldProps("month")}>
+                                <option value="">Month</option>
+                                {MONTHS.map((m) => (
+                                    <option key={m} value={m}>{m}</option>
+                                ))}
+                            </Select>
+                            <Input
+                                placeholder="2024"
+                                inputMode="numeric"
+                                invalid={Boolean(error("year"))}
+                                {...formik.getFieldProps("year")}
+                            />
+                        </div>
                     </Field>
                 </div>
+
+                {formik.status ? (
+                    <p className="flex items-start gap-2 rounded-sm bg-risk px-3 py-2.5 text-[12.5px] leading-relaxed text-risk-ink">
+                        <AlertTriangle className="mt-0.5 size-[13px] shrink-0" />
+                        {formik.status}
+                    </p>
+                ) : null}
             </DialogBody>
 
             <DialogFooter>
                 <Button type="button" variant="outline" size="sm" onClick={onCancel}>
                     Cancel
                 </Button>
-                <Button type="submit" size="sm">
+                <Button type="submit" size="sm" disabled={formik.isSubmitting}>
                     {entry ? "Save changes" : "Add certification"}
                 </Button>
             </DialogFooter>

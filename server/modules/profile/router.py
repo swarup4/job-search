@@ -19,6 +19,7 @@ from modules.profile.models import (
     Skill,
     SkillFields,
     SkillRead,
+    UserProfile,
 )
 
 # Every route works on the caller's own profile: `user_id` comes from the token, so
@@ -34,9 +35,10 @@ async def create_profile(payload: ProfileFields, user_id: CurrentUser) -> Profil
     return await service.create_profile(user_id, payload)
 
 
-@router.get("/getProfile", response_model=ProfileRead)
-async def get_profile(user_id: CurrentUser) -> Profile:
-    return await service.get_profile(user_id)
+@router.get("/getProfile", response_model=UserProfile)
+async def get_profile(user_id: CurrentUser) -> UserProfile:
+    """One aggregation: the account, the personal details, and the four lists."""
+    return await service.get_user_profile(user_id)
 
 
 @router.put("/updateProfile", response_model=ProfileRead)

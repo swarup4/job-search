@@ -1,14 +1,20 @@
-import { axiosInstance, orNull } from "@/lib/axiosInstance";
+import { axiosInstance } from "@/lib/axiosInstance";
 
 /**
  * The signed-in user's own profile. None of these take a user id: the server reads
  * it from the bearer token, so there is no id in any of these URLs.
  */
 
-// personal details. GET is null until the profile is created.
-
+/**
+ * Everything the My Details screen shows, in one request: the account, the personal
+ * details and the four lists, joined by an aggregation on the server.
+ *
+ * `profile` in the response is null until personal details are saved for the first
+ * time. The lists do not wait for it — each is keyed by the user on its own — so
+ * they can be filled in first and still come back here.
+ */
 export function getProfile() {
-    return orNull(axiosInstance.get("/profile/getProfile"));
+    return axiosInstance.get("/profile/getProfile");
 }
 
 export function createProfile(profile) {
