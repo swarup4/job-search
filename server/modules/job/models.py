@@ -48,9 +48,8 @@ class Company(BaseModel):
     blurb: str | None = None
 
 
-class JobContent(BaseModel):
-    """The posting as discovery found it. Shared by the document and both payloads,
-    so a field is declared once."""
+class JobCreate(BaseModel):
+    """The posting as discovery found it."""
 
     title: str
     company: Company
@@ -59,25 +58,40 @@ class JobContent(BaseModel):
     work_mode: WorkMode | None = None
     experience_band: str | None = None
     salary_text: str | None = None
-
     summary: str | None = None
     responsibilities: list[str] = Field(default_factory=list)
     requirements: list[str] = Field(default_factory=list)
+    source: JobSource
+    source_url: HttpUrl | None = None
+    posted_at: datetime | None = None
+    deadline_at: datetime | None = None
+    applicant_count: int | None = None
+    jd_text: str
+    dedup_hash: str | None = None
 
+
+class Job(Document):
+    # The account this job belongs to. Every query filters on it, so one user's
+    # board never shows another's postings.
+    userId: PydanticObjectId
+
+    title: str
+    company: Company
+    location: str
+    job_type: JobType | None = None
+    work_mode: WorkMode | None = None
+    experience_band: str | None = None
+    salary_text: str | None = None
+    summary: str | None = None
+    responsibilities: list[str] = Field(default_factory=list)
+    requirements: list[str] = Field(default_factory=list)
     source: JobSource
     source_url: HttpUrl | None = None
     posted_at: datetime | None = None
     deadline_at: datetime | None = None
     applicant_count: int | None = None
 
-
-class Job(Document, JobContent):
-    # The account this job belongs to. Every query filters on it, so one user's
-    # board never shows another's postings.
-    userId: PydanticObjectId
-
     jd_text: str
-
     # FR-1.4 — discovery hashes the normalized posting and refuses a repeat.
     dedup_hash: str
 
@@ -109,12 +123,9 @@ class Job(Document, JobContent):
         ]
 
 
-class JobCreate(JobContent):
-    jd_text: str
-    dedup_hash: str | None = None
-
-
 class JobUpdate(BaseModel):
+    """Every field optional: a PATCH sends only what changed."""
+
     status: JobStatus | None = None
     shortlisted: bool | None = None
     summary: str | None = None
@@ -122,14 +133,28 @@ class JobUpdate(BaseModel):
     requirements: list[str] | None = None
 
 
-class JobRead(JobContent):
+class JobRead(BaseModel):
     """`jd_text` and `dedup_hash` stay out — the dashboard never renders either."""
 
-    # Responses always carry every field; inheriting a default must not
-    # make it optional in the schema.
+    # A response always carries every field, defaults included.
     model_config = ConfigDict(json_schema_serialization_defaults_required=True)
 
     id: PydanticObjectId
+    title: str
+    company: Company
+    location: str
+    job_type: JobType | None = None
+    work_mode: WorkMode | None = None
+    experience_band: str | None = None
+    salary_text: str | None = None
+    summary: str | None = None
+    responsibilities: list[str] = Field(default_factory=list)
+    requirements: list[str] = Field(default_factory=list)
+    source: JobSource
+    source_url: HttpUrl | None = None
+    posted_at: datetime | None = None
+    deadline_at: datetime | None = None
+    applicant_count: int | None = None
     status: JobStatus
     shortlisted: bool
     discovered_at: datetime

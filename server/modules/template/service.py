@@ -12,7 +12,7 @@ from beanie import PydanticObjectId
 from pydantic import ValidationError
 
 from config.errors import Conflict, Invalid, NotFound
-from modules.profile import Resume
+from modules.profile import UserProfile
 from modules.template.latex import (
     certifications_block,
     contact_block,
@@ -208,24 +208,24 @@ async def update_template(template_id: PydanticObjectId, payload: TemplateUpdate
     return template
 
 
-def _skills(resume: Resume, style: TemplateStyle) -> str:
+def _skills(resume: UserProfile, style: TemplateStyle) -> str:
     if style.skills is SkillsStyle.GRID:
-        return skills_grid(resume.skills, style.columns)
-    return skills_pills(resume.skills)
+        return skills_grid(resume.skill, style.columns)
+    return skills_pills(resume.skill)
 
 
-def render(template: Template, resume: Resume) -> str:
+def render(template: Template, resume: UserProfile) -> str:
     style = template.style
     personal = resume.profile
     blocks = {
-        "{{FULL_NAME}}": escape(personal.name),
+        "{{FULL_NAME}}": escape(resume.name),
         "{{HEADLINE}}": escape(personal.headline or ""),
-        "{{CONTACT}}": contact_block(personal, style.contact),
+        "{{CONTACT}}": contact_block(personal, resume.email, style.contact),
         "{{SUMMARY}}": escape(personal.summary or ""),
         "{{SKILLS}}": _skills(resume, style),
-        "{{EXPERIENCE}}": experience_block(resume.experience, style.experience, style.location),
+        "{{EXPERIENCE}}": experience_block(resume.work, style.experience, style.location),
         "{{EDUCATION}}": education_block(resume.education),
-        "{{CERTIFICATIONS}}": certifications_block(resume.certifications),
+        "{{CERTIFICATIONS}}": certifications_block(resume.certification),
     }
 
     source = template.tex

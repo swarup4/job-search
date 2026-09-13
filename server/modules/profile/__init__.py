@@ -5,7 +5,7 @@ from modules.profile.models import (
     Education,
     Experience,
     Profile,
-    Resume,
+    UserProfile,
     Skill,
 )
 from modules.profile.router import router
@@ -19,7 +19,7 @@ __all__ = [
     "Education",
     "Experience",
     "Profile",
-    "Resume",
+    "UserProfile",
     "Skill",
     "get_profile",
     "get_resume",

@@ -4,37 +4,24 @@ import { PageHeader } from "@/layout/PageHeader";
 import { Panel, PanelBody, PanelHeader, PanelTitle } from "@/component/ui/panel";
 import { Button } from "@/component/ui/button";
 import { ROUTES } from "@/routes";
-// MOCK: live data is off while demoing the UI — restore this import and the call below.
-// import { getProfile, getShellCounts } from "@/services";
+// MOCK: the retrieval panel and the shell badges still read fixtures. Chunking is
+// Phase 6 and the badge endpoints are Phase 3/4 — neither exists to call yet.
 import profileData from "@/data/profile.json";
 import board from "@/data/board.json";
 import search from "@/data/search.json";
-import { ProfileIdentity } from "@/component/ProfileIdentity";
-import { EmptyProfile } from "@/component/EmptyProfile";
-import { EducationSection } from "@/component/EducationSection";
-import { ExperienceSection } from "@/component/ExperienceSection";
-import { CertificationsSection } from "@/component/CertificationsSection";
-import { SkillsSection } from "@/component/SkillsSection";
+import { ProfileEditor } from "@/component/ProfileEditor";
 import { IndexedStats } from "@/component/IndexedStats";
 
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
-    // const [profile, counts] = await Promise.all([getProfile(), getShellCounts()]);
-    // Only the retrieval panels read this now; everything editable lives in the store.
+    // Everything editable is loaded from the API by ProfileEditor, on the client —
+    // the bearer token lives in sessionStorage, which this component cannot read.
     const profile = profileData;
     const counts = {
         pending: board.pending.keywordSelections + board.pending.applicationsToSubmit,
         shortlisted: search.shortlistedCount,
     };
-
-    if (!profile) {
-        return (
-            <AppShell active={ROUTES.profile} counts={counts}>
-                <EmptyProfile />
-            </AppShell>
-        );
-    }
 
     return (
         <AppShell active={ROUTES.profile} counts={counts}>
@@ -45,15 +32,7 @@ export default async function Page() {
 
             <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
                 <div className="flex flex-col gap-5">
-                    <ProfileIdentity />
-
-                    <ExperienceSection />
-
-                    <EducationSection />
-
-                    <SkillsSection />
-
-                    <CertificationsSection />
+                    <ProfileEditor />
                 </div>
 
                 <div className="flex flex-col gap-5">

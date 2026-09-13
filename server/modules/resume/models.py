@@ -14,8 +14,8 @@ class LineChange(BaseModel):
     previous: str | None = None
 
 
-class TailoredOutput(BaseModel):
-    """What the tailoring agent produced for one job."""
+class ResumeStore(BaseModel):
+    """What the tailoring agent posts once it has written the file."""
 
     job_id: PydanticObjectId
     file_path: str
@@ -25,11 +25,17 @@ class TailoredOutput(BaseModel):
     changes: list[LineChange] = Field(default_factory=list)
 
 
-class TailoredResume(Document, TailoredOutput):
+class TailoredResume(Document):
     """FR-4.4 — a .tex path and the selection set that produced it. No PDF in v1."""
 
     userId: PydanticObjectId
+    job_id: PydanticObjectId
     match_id: PydanticObjectId
+    file_path: str
+    template_path: str = "templates/base_resume.tex"
+    incorporated: list[str] = Field(default_factory=list)
+    declined: list[str] = Field(default_factory=list)
+    changes: list[LineChange] = Field(default_factory=list)
     version: int = Field(default=1, ge=1)
 
     # The audit trail NFR-8 requires: every changed line traces back to these.
@@ -46,17 +52,18 @@ class TailoredResume(Document, TailoredOutput):
         ]
 
 
-class ResumeStore(TailoredOutput):
-    """What the tailoring agent posts once it has written the file."""
-
-
-class ResumeRead(TailoredOutput):
-    # Responses always carry every field; inheriting a default must not
-    # make it optional in the schema.
+class ResumeRead(BaseModel):
+    # A response always carries every field, defaults included.
     model_config = ConfigDict(json_schema_serialization_defaults_required=True)
 
     id: PydanticObjectId
+    job_id: PydanticObjectId
     match_id: PydanticObjectId
+    file_path: str
+    template_path: str = "templates/base_resume.tex"
+    incorporated: list[str] = Field(default_factory=list)
+    declined: list[str] = Field(default_factory=list)
+    changes: list[LineChange] = Field(default_factory=list)
     version: int
     selected_keys: list[str]
     rendered_at: datetime

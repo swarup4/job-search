@@ -5,7 +5,10 @@ import { AlertTriangle, Check, Loader2, Save } from "lucide-react";
 import { Button } from "@/component/ui/button";
 import { selectDirty } from "@/store/profile/profileSlice";
 
-/** Submits the identity form, which persists the whole profile from the store. */
+/**
+ * Saves the personal-details form. The sections below it have no save of their own to
+ * wait for — each writes through as you edit it — so `dirty` tracks only this form.
+ */
 export function ProfileSaveBar({ status, isSubmitting }) {
     const dirty = useSelector(selectDirty);
 

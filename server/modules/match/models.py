@@ -51,8 +51,8 @@ class KeywordReview(BaseModel):
         return self
 
 
-class MatchFindings(BaseModel):
-    """What the matching agent produced. The JD vector goes to Atlas, never here."""
+class MatchWrite(BaseModel):
+    """What the matching agent posts. The JD vector goes to Atlas, never here."""
 
     job_id: PydanticObjectId
     score: int = Field(ge=0, le=100)
@@ -63,8 +63,14 @@ class MatchFindings(BaseModel):
     model_name: str | None = None
 
 
-class Match(Document, MatchFindings):
+class Match(Document):
     userId: PydanticObjectId
+    job_id: PydanticObjectId
+    score: int = Field(ge=0, le=100)
+    present: list[PresentKeyword] = Field(default_factory=list)
+    missing: list[MissingKeyword] = Field(default_factory=list)
+    risks: list[RiskFlag] = Field(default_factory=list)
+    model_name: str | None = None
     review: KeywordReview = Field(default_factory=KeywordReview)
     scored_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
@@ -79,16 +85,17 @@ class Match(Document, MatchFindings):
         ]
 
 
-class MatchWrite(MatchFindings):
-    """What the matching agent posts. The vector goes to Atlas, never here."""
-
-
-class MatchRead(MatchFindings):
-    # Responses always carry every field; inheriting a default must not
-    # make it optional in the schema.
+class MatchRead(BaseModel):
+    # A response always carries every field, defaults included.
     model_config = ConfigDict(json_schema_serialization_defaults_required=True)
 
     id: PydanticObjectId
+    job_id: PydanticObjectId
+    score: int = Field(ge=0, le=100)
+    present: list[PresentKeyword] = Field(default_factory=list)
+    missing: list[MissingKeyword] = Field(default_factory=list)
+    risks: list[RiskFlag] = Field(default_factory=list)
+    model_name: str | None = None
     review: KeywordReview
     scored_at: datetime
 

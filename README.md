@@ -415,7 +415,8 @@ UI box means the screen is built, **not** that it talks to the API — that wiri
   - ✅ `accounts` with argon2 hashes; signup and login both issue a JWT
   - ✅ `account` module — signup (name, email, password and nothing else), login,
     refresh, read, partial update
-  - ✅ Profile as five collections keyed by `userId`
+  - ✅ Profile as five collections keyed by `userId`, with name and email left on
+    `accounts` rather than copied into `profile`
   - ✅ Server-side token enforcement; `userId` comes from the token, never the URL
   - ✅ Access token refreshed by a longer-lived refresh token, so the 60-minute TTL
     does not mean signing in every hour
