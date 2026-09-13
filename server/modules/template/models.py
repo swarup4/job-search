@@ -76,9 +76,19 @@ class TemplateRead(BaseModel):
     updated_at: datetime
 
 
-class TemplateSource(TemplateRead):
+class TemplateSource(BaseModel):
     """One template with its raw, unfilled .tex."""
 
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
+    id: PydanticObjectId
+    name: str
+    style: TemplateStyle
+    tokens: list[str]
+    has_preview: bool
+    status: bool
+    created_at: datetime
+    updated_at: datetime
     tex: str
 
 

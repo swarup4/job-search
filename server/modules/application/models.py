@@ -42,8 +42,8 @@ class ScreeningAnswer(BaseModel):
     answered_by_user: bool = False
 
 
-class ApplicationTarget(BaseModel):
-    """Where this application goes and which .tex belongs to it."""
+class ApplicationStage(BaseModel):
+    """What `resume` posts once a .tex exists for the job."""
 
     job_id: PydanticObjectId
     resume_id: PydanticObjectId
@@ -52,8 +52,13 @@ class ApplicationTarget(BaseModel):
     apply_url: HttpUrl | None = None
 
 
-class ApplicationProgress(BaseModel):
-    """Everything the pipeline board reads. Only a human moves any of it forward."""
+class Application(Document):
+    userId: PydanticObjectId
+    job_id: PydanticObjectId
+    resume_id: PydanticObjectId
+    tex_path: str
+    ats: AtsPlatform = AtsPlatform.OTHER
+    apply_url: HttpUrl | None = None
 
     status: ApplicationStatus = ApplicationStatus.STAGED
     fields_filled: list[FieldFill] = Field(default_factory=list)
@@ -69,10 +74,6 @@ class ApplicationProgress(BaseModel):
     last_activity_note: str | None = None
     follow_up_due_at: datetime | None = None
     follow_up_sent_at: datetime | None = None
-
-
-class Application(Document, ApplicationTarget, ApplicationProgress):
-    userId: PydanticObjectId
 
     class Settings:
         name = "applications"
@@ -112,10 +113,6 @@ class AnswerBank(Document):
         ]
 
 
-class ApplicationStage(ApplicationTarget):
-    """What `resume` posts once a .tex exists for the job."""
-
-
 class ApplicationFill(BaseModel):
     """The extension reporting what it filled. Reporting only — it submits nothing."""
 
@@ -130,12 +127,26 @@ class StatusTransition(BaseModel):
     confirmed_by_user: bool = False
 
 
-class ApplicationRead(ApplicationTarget, ApplicationProgress):
-    # Responses always carry every field; inheriting a default must not
-    # make it optional in the schema.
+class ApplicationRead(BaseModel):
+    # A response always carries every field, defaults included.
     model_config = ConfigDict(json_schema_serialization_defaults_required=True)
 
     id: PydanticObjectId
+    job_id: PydanticObjectId
+    resume_id: PydanticObjectId
+    tex_path: str
+    ats: AtsPlatform = AtsPlatform.OTHER
+    apply_url: HttpUrl | None = None
+    status: ApplicationStatus = ApplicationStatus.STAGED
+    fields_filled: list[FieldFill] = Field(default_factory=list)
+    screening_answers: list[ScreeningAnswer] = Field(default_factory=list)
+    approved_by_user: bool = False
+    staged_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    submitted_at: datetime | None = None
+    last_activity_at: datetime | None = None
+    last_activity_note: str | None = None
+    follow_up_due_at: datetime | None = None
+    follow_up_sent_at: datetime | None = None
 
     @computed_field
     @property

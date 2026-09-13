@@ -19,7 +19,6 @@ class Project(BaseModel):
 
 # --- personal details --------------------------------------------------------
 
-
 class ProfileFields(BaseModel):
     headline: str | None = None
     phone: str | None = None
@@ -53,7 +52,6 @@ class ProfileRead(BaseModel):
 
 
 # --- work experience ---------------------------------------------------------
-
 
 class ExperienceFields(BaseModel):
     title: str
@@ -162,7 +160,6 @@ class SkillRead(BaseModel):
 
 # --- certifications ----------------------------------------------------------
 
-
 class CertificationFields(BaseModel):
     name: str
     issuer: str
@@ -190,7 +187,6 @@ class CertificationRead(BaseModel):
 
 
 # --- everything at once ------------------------------------------------------
-
 
 class Resume(BaseModel):
     """What a template renders from: the account, for the name and email it owns,

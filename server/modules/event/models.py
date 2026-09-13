@@ -30,7 +30,9 @@ class Actor(StrEnum):
     SCHEDULER = "scheduler"
 
 
-class EventFacts(BaseModel):
+class EventAppend(BaseModel):
+    """Append-only: there is no update or delete on an event."""
+
     event_type: EventType
     actor: Actor
     job_id: PydanticObjectId | None = None
@@ -39,8 +41,14 @@ class EventFacts(BaseModel):
     payload: dict[str, object] = Field(default_factory=dict)
 
 
-class Event(Document, EventFacts):
+class Event(Document):
     userId: PydanticObjectId
+    event_type: EventType
+    actor: Actor
+    job_id: PydanticObjectId | None = None
+    application_id: PydanticObjectId | None = None
+    notes: str | None = None
+    payload: dict[str, object] = Field(default_factory=dict)
     occurred_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     class Settings:
@@ -60,14 +68,15 @@ class Event(Document, EventFacts):
         ]
 
 
-class EventAppend(EventFacts):
-    """Append-only: there is no update or delete on an event."""
-
-
-class EventRead(EventFacts):
-    # Responses always carry every field; inheriting a default must not
-    # make it optional in the schema.
+class EventRead(BaseModel):
+    # A response always carries every field, defaults included.
     model_config = ConfigDict(json_schema_serialization_defaults_required=True)
 
     id: PydanticObjectId
+    event_type: EventType
+    actor: Actor
+    job_id: PydanticObjectId | None = None
+    application_id: PydanticObjectId | None = None
+    notes: str | None = None
+    payload: dict[str, object] = Field(default_factory=dict)
     occurred_at: datetime
