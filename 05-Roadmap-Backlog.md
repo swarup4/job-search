@@ -65,6 +65,9 @@ hanging off it. Everything else in the product is keyed by `userId`, so this com
 - ✅ `account` module: signup, login, refresh, read one account, partial update
 - ✅ Profile split into five collections keyed by `userId` — `profile`,
   `work_experience`, `education`, `skills`, `certifications`
+- ✅ Name and email live on `accounts` only. The `profile` collection held a second
+  copy of both; it now starts at `headline`, and the renderer reads the two off the
+  account. Saving them is `PATCH /account/updateAccount`, same as `role`
 - ✅ **Server-side enforcement.** Every endpoint outside signup/login/refresh requires a
   bearer token, and **no URL carries a user id any more** — one `verify_token` dependency
   reads it from the token and hands it to the route. Reading another user's data is not

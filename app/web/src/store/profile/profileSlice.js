@@ -145,12 +145,13 @@ export const selectRole = (state) => state.profile.identity.role;
  * education, skills and certifications are their own endpoints, so they are not
  * bundled here. Builds a fresh object, so read it with store.getState() when saving
  * rather than through useSelector.
+ *
+ * `name` and `email` are absent for the same reason as `role`: the account owns all
+ * three, and they are saved through PATCH /account/updateAccount.
  */
 export function selectProfilePayload(state) {
     const { identity } = state.profile;
     return {
-        name: identity.name,
-        email: identity.email,
         headline: identity.headline || null,
         phone: identity.phone || null,
         location: identity.location || null,

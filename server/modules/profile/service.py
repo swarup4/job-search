@@ -232,8 +232,13 @@ async def remove_certification(user_id: PydanticObjectId, entry_id: PydanticObje
 
 
 async def get_resume(user_id: PydanticObjectId) -> Resume:
-    """What a template renders from: the five collections for one user."""
+    """What a template renders from: the account, plus the five collections."""
+    account = await Account.get(user_id)
+    if account is None:
+        raise UnknownUser(user_id)
+
     return Resume(
+        account=account,
         profile=await get_profile(user_id),
         experience=await list_experience(user_id),
         education=await list_education(user_id),

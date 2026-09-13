@@ -12,11 +12,6 @@
         ],
         "summary": "List Jobs",
         "operationId": "list_jobs_api_job_get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
         "parameters": [
           {
             "name": "status",
@@ -86,6 +81,22 @@
               "default": 0,
               "title": "Skip"
             }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
           }
         ]
       },
@@ -95,9 +106,22 @@
         ],
         "summary": "Create Job",
         "operationId": "create_job_api_job_post",
-        "security": [
+        "parameters": [
           {
-            "HTTPBearer": []
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
           }
         ],
         "requestBody": {
@@ -119,11 +143,6 @@
         ],
         "summary": "Get Job",
         "operationId": "get_job_api_job__job_id__get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
         "parameters": [
           {
             "name": "job_id",
@@ -131,6 +150,22 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ]
@@ -141,11 +176,6 @@
         ],
         "summary": "Update Job",
         "operationId": "update_job_api_job__job_id__patch",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
         "parameters": [
           {
             "name": "job_id",
@@ -153,6 +183,22 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -175,9 +221,22 @@
         ],
         "summary": "Pending",
         "operationId": "pending_api_match_pending_get",
-        "security": [
+        "parameters": [
           {
-            "HTTPBearer": []
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
           }
         ]
       }
@@ -190,11 +249,6 @@
         "summary": "Record Selection",
         "description": "Resolves the FR-7.3 keyword interrupt. There is no bulk variant on purpose.",
         "operationId": "record_selection_api_match_selection__job_id__post",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
         "parameters": [
           {
             "name": "job_id",
@@ -202,6 +256,22 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -224,21 +294,34 @@
         ],
         "summary": "Write Match",
         "operationId": "write_match_api_match_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/MatchWrite"
               }
             }
-          },
-          "required": true
-        },
-        "security": [
-          {
-            "HTTPBearer": []
           }
-        ]
+        }
       }
     },
     "/api/match/{job_id}": {
@@ -248,11 +331,6 @@
         ],
         "summary": "Get Match",
         "operationId": "get_match_api_match__job_id__get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
         "parameters": [
           {
             "name": "job_id",
@@ -260,6 +338,22 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ]
@@ -272,11 +366,6 @@
         ],
         "summary": "List Versions",
         "operationId": "list_versions_api_resume_versions__job_id__get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
         "parameters": [
           {
             "name": "job_id",
@@ -284,6 +373,22 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ]
@@ -296,21 +401,34 @@
         ],
         "summary": "Store Resume",
         "operationId": "store_resume_api_resume_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/ResumeStore"
               }
             }
-          },
-          "required": true
-        },
-        "security": [
-          {
-            "HTTPBearer": []
           }
-        ]
+        }
       }
     },
     "/api/resume/{job_id}": {
@@ -320,11 +438,6 @@
         ],
         "summary": "Get Resume",
         "operationId": "get_resume_api_resume__job_id__get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
         "parameters": [
           {
             "name": "job_id",
@@ -332,6 +445,22 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ]
@@ -344,11 +473,6 @@
         ],
         "summary": "Render Template",
         "operationId": "render_template_api_template_render__template_id__get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
         "parameters": [
           {
             "name": "template_id",
@@ -356,6 +480,22 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ]
@@ -368,11 +508,6 @@
         ],
         "summary": "Template Preview",
         "operationId": "template_preview_api_template_preview__template_id__get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
         "parameters": [
           {
             "name": "template_id",
@@ -380,6 +515,22 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ]
@@ -392,11 +543,6 @@
         ],
         "summary": "List Templates",
         "operationId": "list_templates_api_template_get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
         "parameters": [
           {
             "name": "status",
@@ -413,6 +559,22 @@
               ],
               "title": "Status"
             }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
           }
         ]
       }
@@ -425,21 +587,34 @@
         "summary": "Upload Template",
         "description": "The layout is read from the .tex itself, so the upload is the file and\nlittle else. A `%%! skills=grid location=city` line in the .tex overrides it.",
         "operationId": "upload_template_api_template_upload_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "multipart/form-data": {
               "schema": {
                 "$ref": "#/components/schemas/Body_upload_template_api_template_upload_post"
               }
             }
-          },
-          "required": true
-        },
-        "security": [
-          {
-            "HTTPBearer": []
           }
-        ]
+        }
       }
     },
     "/api/template/getTemplate/{template_id}": {
@@ -449,11 +624,6 @@
         ],
         "summary": "Get Template",
         "operationId": "get_template_api_template_getTemplate__template_id__get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
         "parameters": [
           {
             "name": "template_id",
@@ -461,6 +631,22 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ]
@@ -473,11 +659,6 @@
         ],
         "summary": "Update Template",
         "operationId": "update_template_api_template_updateTemplate__template_id__patch",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
         "parameters": [
           {
             "name": "template_id",
@@ -485,6 +666,22 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -508,9 +705,22 @@
         "summary": "Answer Bank",
         "description": "Read by the extension's background worker for screening questions.",
         "operationId": "answer_bank_api_application_answer_bank_get",
-        "security": [
+        "parameters": [
           {
-            "HTTPBearer": []
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
           }
         ]
       }
@@ -522,11 +732,6 @@
         ],
         "summary": "Get For Job",
         "operationId": "get_for_job_api_application_for_job__job_id__get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
         "parameters": [
           {
             "name": "job_id",
@@ -534,6 +739,22 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ]
@@ -546,11 +767,6 @@
         ],
         "summary": "Record Fill",
         "operationId": "record_fill_api_application_fill__application_id__post",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
         "parameters": [
           {
             "name": "application_id",
@@ -558,6 +774,22 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -580,11 +812,6 @@
         ],
         "summary": "Set Status",
         "operationId": "set_status_api_application_status__application_id__patch",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
         "parameters": [
           {
             "name": "application_id",
@@ -592,6 +819,22 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -614,11 +857,6 @@
         ],
         "summary": "List Applications",
         "operationId": "list_applications_api_application_get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
         "parameters": [
           {
             "name": "status",
@@ -635,6 +873,22 @@
               ],
               "title": "Status"
             }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
           }
         ]
       },
@@ -644,9 +898,22 @@
         ],
         "summary": "Stage Application",
         "operationId": "stage_application_api_application_post",
-        "security": [
+        "parameters": [
           {
-            "HTTPBearer": []
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
           }
         ],
         "requestBody": {
@@ -668,11 +935,6 @@
         ],
         "summary": "Get Application",
         "operationId": "get_application_api_application__application_id__get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
         "parameters": [
           {
             "name": "application_id",
@@ -680,6 +942,22 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ]
@@ -692,11 +970,6 @@
         ],
         "summary": "List Events",
         "operationId": "list_events_api_event_get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
         "parameters": [
           {
             "name": "job_id",
@@ -740,6 +1013,22 @@
               "default": 100,
               "title": "Limit"
             }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
           }
         ]
       },
@@ -749,9 +1038,22 @@
         ],
         "summary": "Append Event",
         "operationId": "append_event_api_event_post",
-        "security": [
+        "parameters": [
           {
-            "HTTPBearer": []
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
           }
         ],
         "requestBody": {
@@ -773,21 +1075,34 @@
         ],
         "summary": "Create Profile",
         "operationId": "create_profile_api_profile_createProfile_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/ProfileFields"
               }
             }
-          },
-          "required": true
-        },
-        "security": [
-          {
-            "HTTPBearer": []
           }
-        ]
+        }
       }
     },
     "/api/profile/getProfile": {
@@ -797,9 +1112,22 @@
         ],
         "summary": "Get Profile",
         "operationId": "get_profile_api_profile_getProfile_get",
-        "security": [
+        "parameters": [
           {
-            "HTTPBearer": []
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
           }
         ]
       }
@@ -811,21 +1139,34 @@
         ],
         "summary": "Replace Profile",
         "operationId": "replace_profile_api_profile_updateProfile_put",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/ProfileFields"
               }
             }
-          },
-          "required": true
-        },
-        "security": [
-          {
-            "HTTPBearer": []
           }
-        ]
+        }
       }
     },
     "/api/profile/getExperience": {
@@ -835,9 +1176,22 @@
         ],
         "summary": "List Experience",
         "operationId": "list_experience_api_profile_getExperience_get",
-        "security": [
+        "parameters": [
           {
-            "HTTPBearer": []
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
           }
         ]
       }
@@ -849,21 +1203,34 @@
         ],
         "summary": "Add Experience",
         "operationId": "add_experience_api_profile_addExperience_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/ExperienceFields"
               }
             }
-          },
-          "required": true
-        },
-        "security": [
-          {
-            "HTTPBearer": []
           }
-        ]
+        }
       }
     },
     "/api/profile/updateExperience/{entry_id}": {
@@ -873,11 +1240,6 @@
         ],
         "summary": "Replace Experience",
         "operationId": "replace_experience_api_profile_updateExperience__entry_id__put",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
         "parameters": [
           {
             "name": "entry_id",
@@ -885,6 +1247,22 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -907,11 +1285,6 @@
         ],
         "summary": "Remove Experience",
         "operationId": "remove_experience_api_profile_deleteExperience__entry_id__delete",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
         "parameters": [
           {
             "name": "entry_id",
@@ -919,6 +1292,22 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ]
@@ -931,9 +1320,22 @@
         ],
         "summary": "List Education",
         "operationId": "list_education_api_profile_getEducation_get",
-        "security": [
+        "parameters": [
           {
-            "HTTPBearer": []
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
           }
         ]
       }
@@ -945,21 +1347,34 @@
         ],
         "summary": "Add Education",
         "operationId": "add_education_api_profile_addEducation_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/EducationFields"
               }
             }
-          },
-          "required": true
-        },
-        "security": [
-          {
-            "HTTPBearer": []
           }
-        ]
+        }
       }
     },
     "/api/profile/updateEducation/{entry_id}": {
@@ -969,11 +1384,6 @@
         ],
         "summary": "Replace Education",
         "operationId": "replace_education_api_profile_updateEducation__entry_id__put",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
         "parameters": [
           {
             "name": "entry_id",
@@ -981,6 +1391,22 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -1003,11 +1429,6 @@
         ],
         "summary": "Remove Education",
         "operationId": "remove_education_api_profile_deleteEducation__entry_id__delete",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
         "parameters": [
           {
             "name": "entry_id",
@@ -1015,6 +1436,22 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ]
@@ -1027,9 +1464,22 @@
         ],
         "summary": "List Skills",
         "operationId": "list_skills_api_profile_getSkills_get",
-        "security": [
+        "parameters": [
           {
-            "HTTPBearer": []
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
           }
         ]
       }
@@ -1041,21 +1491,34 @@
         ],
         "summary": "Add Skill",
         "operationId": "add_skill_api_profile_addSkill_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/SkillFields"
               }
             }
-          },
-          "required": true
-        },
-        "security": [
-          {
-            "HTTPBearer": []
           }
-        ]
+        }
       }
     },
     "/api/profile/updateSkill/{entry_id}": {
@@ -1065,11 +1528,6 @@
         ],
         "summary": "Replace Skill",
         "operationId": "replace_skill_api_profile_updateSkill__entry_id__put",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
         "parameters": [
           {
             "name": "entry_id",
@@ -1077,6 +1535,22 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -1099,11 +1573,6 @@
         ],
         "summary": "Remove Skill",
         "operationId": "remove_skill_api_profile_deleteSkill__entry_id__delete",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
         "parameters": [
           {
             "name": "entry_id",
@@ -1111,6 +1580,22 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ]
@@ -1123,9 +1608,22 @@
         ],
         "summary": "List Certifications",
         "operationId": "list_certifications_api_profile_getCertifications_get",
-        "security": [
+        "parameters": [
           {
-            "HTTPBearer": []
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
           }
         ]
       }
@@ -1137,21 +1635,34 @@
         ],
         "summary": "Add Certification",
         "operationId": "add_certification_api_profile_addCertification_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/CertificationFields"
               }
             }
-          },
-          "required": true
-        },
-        "security": [
-          {
-            "HTTPBearer": []
           }
-        ]
+        }
       }
     },
     "/api/profile/updateCertification/{entry_id}": {
@@ -1161,11 +1672,6 @@
         ],
         "summary": "Replace Certification",
         "operationId": "replace_certification_api_profile_updateCertification__entry_id__put",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
         "parameters": [
           {
             "name": "entry_id",
@@ -1173,6 +1679,22 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -1195,11 +1717,6 @@
         ],
         "summary": "Remove Certification",
         "operationId": "remove_certification_api_profile_deleteCertification__entry_id__delete",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
         "parameters": [
           {
             "name": "entry_id",
@@ -1207,6 +1724,22 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ]
@@ -1276,9 +1809,22 @@
         ],
         "summary": "Get Account",
         "operationId": "get_account_api_account_getAccount_get",
-        "security": [
+        "parameters": [
           {
-            "HTTPBearer": []
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
           }
         ]
       }
@@ -1290,21 +1836,34 @@
         ],
         "summary": "Update Account",
         "operationId": "update_account_api_account_updateAccount_patch",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/AccountUpdate"
               }
             }
-          },
-          "required": true
-        },
-        "security": [
-          {
-            "HTTPBearer": []
           }
-        ]
+        }
       }
     },
     "/health": {
@@ -2297,15 +2856,6 @@
       },
       "ProfileFields": {
         "properties": {
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "email": {
-            "type": "string",
-            "format": "email",
-            "title": "Email"
-          },
           "headline": {
             "anyOf": [
               {
@@ -2359,10 +2909,6 @@
           }
         },
         "type": "object",
-        "required": [
-          "name",
-          "email"
-        ],
         "title": "ProfileFields"
       },
       "Project": {
@@ -2664,12 +3210,6 @@
           "remote"
         ],
         "title": "WorkMode"
-      }
-    },
-    "securitySchemes": {
-      "HTTPBearer": {
-        "type": "http",
-        "scheme": "bearer"
       }
     }
   },

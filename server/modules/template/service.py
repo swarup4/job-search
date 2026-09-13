@@ -218,9 +218,9 @@ def render(template: Template, resume: Resume) -> str:
     style = template.style
     personal = resume.profile
     blocks = {
-        "{{FULL_NAME}}": escape(personal.name),
+        "{{FULL_NAME}}": escape(resume.account.name),
         "{{HEADLINE}}": escape(personal.headline or ""),
-        "{{CONTACT}}": contact_block(personal, style.contact),
+        "{{CONTACT}}": contact_block(personal, resume.account.email, style.contact),
         "{{SUMMARY}}": escape(personal.summary or ""),
         "{{SKILLS}}": _skills(resume, style),
         "{{EXPERIENCE}}": experience_block(resume.experience, style.experience, style.location),
