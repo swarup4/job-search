@@ -30,6 +30,10 @@ app/extension/dist/
 *.log
 *.out
 
+# Template previews are copied out of templates/Template*/ by import_templates.py
+# and named after the row's id, so they are per-database, not source.
+templates/previews/
+
 .DS_Store
 .vscode/settings.json
 

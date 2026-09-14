@@ -23,7 +23,7 @@ anything starts reasoning.
 | Phase | Delivers | State |
 |---|---|---|
 | [1](#2-phase-1--authentication--profile) | Sign in, and the profile everything hangs off | ✅ done |
-| [2](#3-phase-2--resume-generation--download) | A resume built from that profile, downloadable | 🚧 backend done, no UI |
+| [2](#3-phase-2--resume-generation--download) | A resume built from that profile, downloadable | 🚧 default resume done, no PDF |
 | [3](#4-phase-3--job-scraping-search--shortlist) | Real jobs in the system, searchable and shortlistable | ⬜ API only, no sources |
 | [4](#5-phase-4--applications--settings) | Tracking what you applied to, and the preferences driving it | ⬜ API only |
 | [5](#6-phase-5--llm-integration--resume-rectification) | A resume rectified against a specific job | ⬜ not started |
@@ -112,8 +112,8 @@ the product is keyed by `userId`, so this comes first.
 ---
 
 ## 3. Phase 2 — Resume generation & download
-🚧 **backend done, no UI.** Turn the profile into a document you can send. No LLM in this phase —
-it is templating, not intelligence.
+🚧 **default resume done, no PDF.** Turn the profile into a document you can send. No LLM in this
+phase — it is templating, not intelligence.
 
 **API**
 - ✅ `P2-01` `templates` collection: `.tex` source, token list, preview path, archive flag
@@ -125,17 +125,33 @@ it is templating, not intelligence.
   delimiters). *Superseded: the `template` module renders `{{TOKEN}}` placeholders out of
   uploaded `.tex` files instead. There is no `jinja2` dependency, `base_resume.tex` carries
   no `\VAR{}` or `\BLOCK{}` markers — only comments describing them — and nothing reads it*
-- ⬜ `P2-07` Download the generated `.tex`
+- ✅ `P2-07` Download the generated `.tex` — the Resume screen offers it straight from the
+  render, so there is no server endpoint for it
 - ⬜ `P2-08` PDF compilation and download
+- ✅ `P2-13` `base_resumes` collection — one default resume per user: the chosen template and
+  the `.tex` it produced, stored verbatim. `GET`/`PUT /resume/base`
 
 **UI**
 - ✅ `P2-09` Resume Preview screen built: Preview / Diff / Source tabs
 - ⬜ `P2-10` Point the Resume Preview screen at a real render instead of `resume.json`
-- ⬜ `P2-11` Template picker in the dashboard
+- ✅ `P2-11` Template picker in the dashboard — preview image per template, on the Resume screen
+- ✅ `P2-14` **Resume screen** (`/resume`): pick a template, see your own details rendered into
+  it, submit it as the default resume. The preview parses the rendered `.tex` in the browser
+  (`util/texResume.js`), so the page and the stored document are the same string
+- ⬜ `P2-15` **`Template2_BoldHeaderBand` has two contact links hardcoded in its `.tex`**
+  (`linkedin.com/in/swarup-saha-d7`, `github.com/swarup4`), printed after `{{CONTACT}}`. Every
+  user rendering that template gets them
+- ✅ `P2-16` **Resume review screen** (`/resume/preview`): where submitting lands. Shows the
+  stored resume, and **Regenerate** re-renders the same template from My Details and saves it —
+  the stored `.tex` is a snapshot and does not follow later profile edits
+- 🟡 `P2-17` **Rectification chat panel** on the review screen — laid out, deliberately inert.
+  The composer, the suggested prompts and Send are disabled behind the usual "not connected"
+  footer; wiring it is adding the call, not rebuilding the panel. Needs the `ai` tier (Phase 5)
 
 **Verification**
 - ⬜ `P2-12` **Prove a rendered `.tex` compiles under a TeX engine.** No output of this
-  pipeline has ever been through one, so its LaTeX validity is unconfirmed
+  pipeline has ever been through one, so its LaTeX validity is unconfirmed — the Resume
+  screen's preview is an HTML approximation and proves nothing about LaTeX
 
 **PDF compilation was promoted** from the v1 stretch list: "generate and download" is hollow if the output
 is a `.tex` the reader cannot open. It needs a TeX engine and an amendment to invariant 5 / FR-4.4.
@@ -363,7 +379,8 @@ against it end to end and hold real data; **the other eight screens still render
 fixture** in `app/web/src/data/`. No story meets the §10 Definition of Done, because the §15
 test-case requirement is unmet everywhere: `server/` has no tests and there is no CI.
 
-Audited against the codebase on 2026-09-13. Counts: **41 ✅ · 67 ⬜ · 2 ⛔** of 110 tasks.
+Audited against the codebase on 2026-09-13; Phase 2 re-audited 2026-09-14. Counts predate the
+Phase 2 additions (`P2-13`…`P2-17`) and are due a recount.
 
 `ai/` and the Chrome extension do not exist yet, so nothing agentic runs.
 
@@ -374,6 +391,8 @@ Audited against the codebase on 2026-09-13. Counts: **41 ✅ · 67 ⬜ · 2 ⛔*
 | Resume Preview — Preview / Diff / Source tabs, `.tex` download | `resume.json` + `templates/base_resume.tex` |
 | **Login · Signup · sign-out · route guard** | **live — `POST /api/account/{signup,login}`, JWT in `sessionStorage`, mirrored into Redux** |
 | **My Details — identity, experience, education, skills, certifications** | **live — `getAccount` + the five profile endpoints on load, one Save writes them all back. Only the "Indexed for retrieval" panel still reads `profile.json`; chunking is Phase 6** |
+| **Resume — template picker, render, submit as default** | **live — `GET /api/template`, `GET /api/template/render/{id}`, `PUT /api/resume/base`** |
+| **Resume review — stored resume, Regenerate** | **live — `GET /api/resume/base`. The chat panel beside it is layout only** |
 
 **Five deviations from this document, recorded deliberately:**
 
@@ -387,7 +406,8 @@ Audited against the codebase on 2026-09-13. Counts: **41 ✅ · 67 ⬜ · 2 ⛔*
    now carries only *comments* describing `\VAR{}`/`\BLOCK{}`, with no such markers in it and nothing
    reading the file. The six `templates/Template*/` designs use `{{TOKEN}}` and are what the module
    expects. **No output of this pipeline has been compiled by a TeX engine** — its LaTeX validity is
-   still unverified, and the `templates` collection is empty, so nothing has been uploaded yet either.
+   still unverified. The six designs were imported into the `templates` collection on 2026-09-14 via
+   `import_templates.py`, and the Resume screen renders and stores them.
 3. **Authentication was built**, which PRD §4, SRS §42 and `.claude/rules/server-api.md` all rule out
    on single-user grounds. As of 2026-09-11 the screens are no longer interface-only: accounts are
    stored with argon2 hashes, login and signup both issue a JWT, and every dashboard route redirects

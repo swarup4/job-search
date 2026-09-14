@@ -1,4 +1,5 @@
 import "@/style/globals.scss";
+import { Toaster } from "@/component/ui/toast";
 import { StoreProvider } from "@/store/StoreProvider";
 
 export const metadata = {
@@ -22,6 +23,10 @@ export default function RootLayout({ children }) {
                 element's own attributes; everything inside still reports normally. */}
             <body suppressHydrationWarning>
                 <StoreProvider>{children}</StoreProvider>
+                {/* Outside StoreProvider: toasts carry their own store and must
+                    survive any screen that unmounts, including a sign-out.
+                    `position` is the only knob — see PLACEMENT in toast.jsx. */}
+                <Toaster position="top-right" />
             </body>
         </html>
     );

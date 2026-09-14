@@ -67,3 +67,43 @@ class ResumeRead(BaseModel):
     version: int
     selected_keys: list[str]
     rendered_at: datetime
+
+
+class BaseResumeStore(BaseModel):
+    """What the Resume screen submits once the user accepts the render."""
+
+    template_id: PydanticObjectId
+    tex: str = Field(min_length=1)
+
+
+class BaseResume(Document):
+    """The user's default resume: the template they prefer, and the .tex it produced.
+
+    The source is kept verbatim rather than re-rendered on read, so the document a
+    tailoring run starts from is the one the user actually approved — later edits to
+    the profile or the template cannot rewrite it behind their back.
+    """
+
+    userId: PydanticObjectId
+    template_id: PydanticObjectId
+    template_name: str
+    tex: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+    class Settings:
+        name = "base_resumes"
+        indexes = [
+            pymongo.IndexModel([("userId", pymongo.ASCENDING)], unique=True),
+        ]
+
+
+class BaseResumeRead(BaseModel):
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
+    id: PydanticObjectId
+    template_id: PydanticObjectId
+    template_name: str
+    tex: str
+    created_at: datetime
+    updated_at: datetime

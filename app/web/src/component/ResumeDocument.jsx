@@ -1,4 +1,12 @@
+"use client";
+
+import { useLayoutEffect, useRef, useState } from "react";
+
 import { cn } from "@/util/helper";
+
+/** The page's true width. Everything inside is laid out against this, never against
+ *  the column it happens to be sitting in. */
+const PAGE_WIDTH = 840;
 
 /**
  * The resume as a page, not as source.
@@ -7,15 +15,81 @@ import { cn } from "@/util/helper";
  * It depicts a printed page, which is white in both themes — `bg-card` would turn the
  * paper dark and `text-primary` would wash the accent out, so ink and paper are fixed
  * utilities here. Everything outside the page still uses tokens.
+ *
+ * The page is a FIXED width and deliberately not responsive: a resume is printed at
+ * one size, and reflowing it into a narrow column would show a layout that does not
+ * exist in the document being approved. A narrow column shrinks the whole page
+ * instead — see `FitToWidth` — so the proportions are always the real ones.
  */
-export function ResumeDocument({ blocks }) {
+export function ResumeDocument({ blocks, className }) {
     return (
-        <div className="overflow-x-auto bg-well px-6 py-8">
-            <article className="mx-auto w-full max-w-[840px] bg-white px-14 py-12 text-slate-800 shadow-card">
-                {group(blocks).map((block, i) => (
-                    <Block key={i} block={block} first={i === 0} />
-                ))}
-            </article>
+        <div className={cn("bg-well px-6 py-8", className)}>
+            <FitToWidth>
+                <article className="w-[840px] bg-white px-14 py-12 text-slate-800 shadow-card">
+                    {group(blocks).map((block, i) => (
+                        <Block key={i} block={block} first={i === 0} />
+                    ))}
+                </article>
+            </FitToWidth>
+        </div>
+    );
+}
+
+/**
+ * Scales a fixed-width page down until it fits the space available, and never up —
+ * past full size there is nothing to gain, so a wide column just centres the page.
+ *
+ * A transform does not change layout size, so the scaled page would still reserve its
+ * full 840px of width and height. The measured height is put back on the wrapper to
+ * close that gap.
+ */
+function FitToWidth({ children }) {
+    const holder = useRef(null);
+    const page = useRef(null);
+    const [fit, setFit] = useState({ scale: 1, height: undefined });
+
+    // Layout effect, not effect: measuring after paint would show one frame of the
+    // page at full width before it shrinks.
+    useLayoutEffect(() => {
+        const holderEl = holder.current;
+        const pageEl = page.current;
+        if (!holderEl || !pageEl) return undefined;
+
+        const measure = () => {
+            const available = holderEl.clientWidth;
+            if (!available) return;
+
+            const scale = Math.min(1, available / PAGE_WIDTH);
+            const height = pageEl.offsetHeight * scale;
+
+            // Same numbers, same object — otherwise writing the height back onto the
+            // wrapper re-triggers the observer that just measured it.
+            setFit((was) =>
+                Math.abs(was.scale - scale) < 0.001 && Math.abs((was.height ?? 0) - height) < 0.5
+                    ? was
+                    : { scale, height }
+            );
+        };
+
+        measure();
+
+        // The page is observed too: its height changes with the content, and the
+        // wrapper has to follow it.
+        const observer = new ResizeObserver(measure);
+        observer.observe(holderEl);
+        observer.observe(pageEl);
+        return () => observer.disconnect();
+    }, []);
+
+    return (
+        <div ref={holder} className="overflow-hidden" style={{ height: fit.height }}>
+            <div
+                ref={page}
+                className="mx-auto w-[840px] origin-top-left"
+                style={{ transform: `scale(${fit.scale})` }}
+            >
+                {children}
+            </div>
         </div>
     );
 }
@@ -34,6 +108,19 @@ function group(blocks) {
         }
     }
     return out;
+}
+
+function Bullets({ items }) {
+    if (!items.length) return null;
+    return (
+        <ul className="mt-1.5 list-disc space-y-1 pl-5">
+            {items.map((item, i) => (
+                <li key={i} className="text-[12.5px] leading-snug text-pretty text-slate-700">
+                    {item}
+                </li>
+            ))}
+        </ul>
+    );
 }
 
 function Block({ block, first }) {
@@ -74,13 +161,37 @@ function Block({ block, first }) {
         case "skills":
             return (
                 <dl className="mt-3 grid grid-cols-[minmax(96px,auto)_1fr] gap-x-5 gap-y-1.5">
-                    {block.rows.map((row) => (
-                        <div key={row.label} className="col-span-2 grid grid-cols-subgrid">
-                            <dt className="text-[12.5px] font-semibold text-slate-900">{row.label}</dt>
-                            <dd className="text-[12.5px] leading-snug text-slate-700">{row.value}</dd>
+                    {block.rows.map((row, i) => (
+                        <div key={i} className="col-span-2 grid grid-cols-subgrid">
+                            {/* A grid template loses the group names — the row is the grouping. */}
+                            {row.label ? (
+                                <dt className="text-[12.5px] font-semibold text-slate-900">{row.label}</dt>
+                            ) : null}
+                            <dd
+                                className={cn(
+                                    "text-[12.5px] leading-snug text-slate-700",
+                                    row.label || "col-span-2"
+                                )}
+                            >
+                                {row.value}
+                            </dd>
                         </div>
                     ))}
                 </dl>
+            );
+
+        case "pills":
+            return (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                    {block.items.map((item) => (
+                        <span
+                            key={item}
+                            className="rounded-pill bg-slate-100 px-2.5 py-1 text-[11.5px] text-slate-700"
+                        >
+                            {item}
+                        </span>
+                    ))}
+                </div>
             );
 
         case "job":
@@ -94,13 +205,15 @@ function Block({ block, first }) {
                     <p className="mt-0.5 text-[11.5px] font-medium uppercase tracking-wide text-slate-600">
                         {block.company}
                     </p>
-                    <ul className="mt-1.5 list-disc space-y-1 pl-5">
-                        {block.bullets.map((bullet, i) => (
-                            <li key={i} className="text-[12.5px] leading-snug text-pretty text-slate-700">
-                                {bullet}
-                            </li>
-                        ))}
-                    </ul>
+                    <Bullets items={block.bullets} />
+                    {(block.projects ?? []).map((project) => (
+                        <div key={project.name} className="mt-2">
+                            <p className="text-[12.5px] font-semibold italic text-slate-800">
+                                {project.name}
+                            </p>
+                            <Bullets items={project.bullets} />
+                        </div>
+                    ))}
                 </section>
             );
 
@@ -113,7 +226,7 @@ function Block({ block, first }) {
                         <span className="shrink-0 text-[12px] italic text-slate-500">{block.dates}</span>
                     </div>
                     <p className="mt-0.5 text-[11.5px] font-medium uppercase tracking-wide text-slate-600">
-                        {block.institution} — {block.location}
+                        {[block.institution, block.location].filter(Boolean).join(" — ")}
                     </p>
                 </section>
             );
