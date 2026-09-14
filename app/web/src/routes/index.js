@@ -3,6 +3,8 @@ export const ROUTES = {
   search: "/search",
   shortlist: "/shortlist",
   applications: "/applications",
+  resume: "/resume",
+  resumePreview: "/resume/preview",
   profile: "/profile",
   settings: "/settings",
 
@@ -41,5 +43,6 @@ export const NAV = [
   { label: "Shortlist", href: ROUTES.shortlist, icon: "shortlist", badgeKey: "shortlisted" },
   { label: "Applications", href: ROUTES.applications, icon: "applications", badgeKey: "pending" },
   { label: "My details", href: ROUTES.profile, icon: "profile" },
+  { label: "Resume", href: ROUTES.resume, icon: "resume" },
   { label: "Settings", href: ROUTES.settings, icon: "settings" },
 ];

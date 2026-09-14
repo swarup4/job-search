@@ -1,15 +1,23 @@
+from datetime import UTC, datetime
+
 from beanie import PydanticObjectId
 
 from config.errors import Conflict, Invalid, NotFound
 from modules.application import ApplicationStage, stage_application
 from modules.job import JobStatus, JobUpdate, update_job
 from modules.match import ReviewState, get_match
-from modules.resume.models import ResumeStore, TailoredResume
+from modules.resume.models import BaseResume, BaseResumeStore, ResumeStore, TailoredResume
+from modules.template import get_template
 
 
 class ResumeNotFound(NotFound):
     def __init__(self, job_id: PydanticObjectId) -> None:
         super().__init__(f"no tailored resume for job {job_id}")
+
+
+class BaseResumeNotFound(NotFound):
+    def __init__(self, user_id: PydanticObjectId) -> None:
+        super().__init__(f"no default resume for user {user_id}")
 
 
 class SelectionGateNotPassed(Conflict):
@@ -82,3 +90,41 @@ async def _latest(user_id: PydanticObjectId, job_id: PydanticObjectId) -> Tailor
         .sort(-TailoredResume.version)
         .first_or_none()
     )
+
+
+# --- the default resume ------------------------------------------------------
+
+
+async def get_base_resume(user_id: PydanticObjectId) -> BaseResume:
+    resume = await BaseResume.find_one(BaseResume.userId == user_id)
+    if resume is None:
+        raise BaseResumeNotFound(user_id)
+    return resume
+
+
+async def save_base_resume(user_id: PydanticObjectId, payload: BaseResumeStore) -> BaseResume:
+    """Upsert: there is one default resume per user, so submitting again replaces it.
+
+    The .tex is stored exactly as posted. `get_template` runs only to reject a
+    template id that does not exist and to record the name alongside the id, so the
+    picker can show what was chosen without a second read.
+    """
+    template = await get_template(payload.template_id)
+
+    resume = await BaseResume.find_one(BaseResume.userId == user_id)
+    if resume is None:
+        resume = BaseResume(
+            userId=user_id,
+            template_id=template.id,
+            template_name=template.name,
+            tex=payload.tex,
+        )
+        await resume.insert()
+        return resume
+
+    resume.template_id = template.id
+    resume.template_name = template.name
+    resume.tex = payload.tex
+    resume.updated_at = datetime.now(UTC)
+    await resume.save()
+    return resume

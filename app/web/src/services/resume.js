@@ -9,3 +9,13 @@ export function getResume(jobId) {
 export function listResumeVersions(jobId) {
     return axiosInstance.get(`/resume/versions/${jobId}`);
 }
+
+/** GET /api/resume/base — the default resume. Null until one is submitted. */
+export function getBaseResume() {
+    return orNull(axiosInstance.get("/resume/base"));
+}
+
+/** PUT /api/resume/base — store the approved .tex verbatim. Replaces any earlier one. */
+export function saveBaseResume({ templateId, tex }) {
+    return axiosInstance.put("/resume/base", { template_id: templateId, tex });
+}
