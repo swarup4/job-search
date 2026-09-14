@@ -1,6 +1,6 @@
 import Link from "next/link";
 import {
-    Columns3, ListFilter, Search, Send, Settings2, UserRound, Database, Cpu,
+    Columns3, FileText, ListFilter, Search, Send, Settings2, UserRound, Database, Cpu,
 } from "lucide-react";
 import { SidebarIdentity } from "@/component/SidebarIdentity";
 import { NAV } from "@/routes";
@@ -12,6 +12,7 @@ const ICON = {
     shortlist: ListFilter,
     applications: Send,
     profile: UserRound,
+    resume: FileText,
     settings: Settings2,
 };
 

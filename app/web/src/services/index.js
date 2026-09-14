@@ -7,7 +7,8 @@ export { API_URL, ApiError, axiosInstance } from "@/lib/axiosInstance";
 
 export { getJob, listJobs, setShortlisted, updateJob } from "./job";
 export { getMatch, getPendingCounts, recordSelection, skipSelection } from "./match";
-export { getResume, listResumeVersions } from "./resume";
+export { getBaseResume, getResume, listResumeVersions, saveBaseResume } from "./resume";
+export { getTemplatePreview, listTemplates, renderTemplate } from "./template";
 export {
     getApplication,
     getApplicationForJob,

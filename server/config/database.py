@@ -10,7 +10,7 @@ from modules.event import Event
 from modules.job import Job
 from modules.match import Match
 from modules.profile import Certification, Education, Experience, Profile, Skill
-from modules.resume import TailoredResume
+from modules.resume import BaseResume, TailoredResume
 from modules.template import Template
 
 _client: AsyncMongoClient | None = None
@@ -22,6 +22,7 @@ def document_models() -> list[type]:
         Job,
         Match,
         TailoredResume,
+        BaseResume,
         Application,
         AnswerBank,
         Event,
