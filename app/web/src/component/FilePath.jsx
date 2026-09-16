@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Check, Copy } from "lucide-react";
+import { toast } from "@/component/ui/toast";
 import { cn } from "@/util/helper";
 
 /** Copyable, not attachable: browsers do not let an extension set a file input (FR-5.5). */
@@ -14,7 +15,10 @@ export function FilePath({ path, className }) {
             setCopied(true);
             setTimeout(() => setCopied(false), 1400);
         } catch {
+            // Success stays in the button — it is beside the thing you clicked, and a
+            // toast would be further from it. A failure has nowhere else to appear.
             setCopied(false);
+            toast.error("Could not copy to the clipboard.");
         }
     };
 

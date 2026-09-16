@@ -40,7 +40,8 @@ async def connect() -> AsyncDatabase:
     """The only place a Mongo client is opened."""
     global _client
 
-    uri = os.environ.get("MONGODB_LOCAL_URI", "mongodb://127.0.0.1:27017")
+    # uri = os.environ.get("MONGODB_LOCAL_URI", "mongodb://127.0.0.1:27017")
+    uri = os.environ.get("MONGODB_URI", "mongodb://127.0.0.1:27017")
     # # mongodb+srv is Atlas. server has no business reaching the vector store.
     # if uri.startswith("mongodb+srv://"):
     #     raise RuntimeError("server may only connect to the local MongoDB, never Atlas")

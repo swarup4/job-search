@@ -5,10 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useDispatch } from "react-redux";
 import { useFormik } from "formik";
-import { AlertTriangle, Eye, EyeOff, Loader2, UserPlus } from "lucide-react";
+import { Eye, EyeOff, Loader2, UserPlus } from "lucide-react";
 import { AuthShell } from "@/component/AuthShell";
 import { Field, Input } from "@/component/ui/field";
 import { Button } from "@/component/ui/button";
+import { toast } from "@/component/ui/toast";
 import { MIN_PASSWORD, signupInitialValues, signupSchema } from "@/util/schema";
 import { signup } from "@/services/auth";
 import { signedIn } from "@/store/auth/authSlice";
@@ -23,16 +24,13 @@ export default function Page() {
     const formik = useFormik({
         initialValues: signupInitialValues,
         validationSchema: signupSchema,
-        onSubmit: async ({ name, email, password }, { setStatus }) => {
-            setStatus(null);
+        onSubmit: async ({ name, email, password }) => {
             try {
                 // Signing up signs you in, so there is no second form to fill.
                 dispatch(signedIn(await signup({ name, email, password })));
                 router.replace(ROUTES.board);
             } catch (error) {
-                setStatus(
-                    error instanceof ApiError ? error.message : "Could not create the account."
-                );
+                toast.error(error instanceof ApiError ? error.message : "Could not create the account.");
             }
         },
     });
@@ -110,13 +108,6 @@ export default function Page() {
                         {...formik.getFieldProps("confirm")}
                     />
                 </Field>
-
-                {formik.status ? (
-                    <p className="flex items-start gap-2 rounded-sm bg-risk px-3 py-2.5 text-[12.5px] leading-relaxed text-pretty text-risk-ink">
-                        <AlertTriangle className="mt-0.5 size-[13px] shrink-0" />
-                        {formik.status}
-                    </p>
-                ) : null}
 
                 <Button type="submit" disabled={formik.isSubmitting} className="mt-1 w-full">
                     {formik.isSubmitting ? <Loader2 className="animate-spin" /> : <UserPlus />}

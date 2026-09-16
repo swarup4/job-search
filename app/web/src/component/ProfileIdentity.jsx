@@ -11,6 +11,7 @@ import { Panel, PanelBody, PanelHeader, PanelTitle } from "@/component/ui/panel"
 import { Field, Input, Textarea } from "@/component/ui/field";
 import { Button } from "@/component/ui/button";
 import { ProfileSaveBar } from "@/component/ProfileSaveBar";
+import { toast } from "@/component/ui/toast";
 import {
     identityChanged,
     linkAdded,
@@ -51,8 +52,7 @@ export function ProfileIdentity() {
         initialTouched,
         validationSchema: profileIdentitySchema,
         validateOnMount: true,
-        onSubmit: async (values, { setStatus }) => {
-            setStatus(null);
+        onSubmit: async (values) => {
             // Anything still waiting on the debounce belongs in this save.
             flush();
             try {
@@ -69,17 +69,14 @@ export function ProfileIdentity() {
                 await (exists ? updateProfile(personal) : createProfile(personal));
 
                 dispatch(profileSaved());
-                setStatus({ ok: true, message: "Saved." });
+                toast.success("Personal details saved.");
             } catch (error) {
-                setStatus({
-                    ok: false,
-                    message: error instanceof ApiError ? error.message : "Could not save.",
-                });
+                toast.error(error instanceof ApiError ? error.message : "Could not save.");
             }
         },
     });
 
-    const { values, touched, errors, status, isSubmitting } = formik;
+    const { values, touched, errors, isSubmitting } = formik;
 
     const bind = (field) => ({
         ...formik.getFieldProps(field),
@@ -109,7 +106,7 @@ export function ProfileIdentity() {
 
     return (
         <form onSubmit={formik.handleSubmit} noValidate className="flex flex-col gap-5">
-            <ProfileSaveBar status={status} isSubmitting={isSubmitting} />
+            <ProfileSaveBar isSubmitting={isSubmitting} />
 
             <Panel>
                 <PanelHeader>
