@@ -11,8 +11,9 @@ router = APIRouter(tags=["event"])
 @router.get("", response_model=list[EventRead])
 async def list_events(
     user_id: CurrentUser,
-    job_id: PydanticObjectId | None = None,
-    event_type: EventType | None = None,
+    # Aliased: the parameter is Python, the query string is what the dashboard sends.
+    job_id: PydanticObjectId | None = Query(default=None, alias="jobId"),
+    event_type: EventType | None = Query(default=None, alias="eventType"),
     limit: int = Query(default=100, le=500),
 ) -> list[Event]:
     return await service.list_events(user_id, job_id, event_type, limit)

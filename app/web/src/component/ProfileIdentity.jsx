@@ -18,7 +18,9 @@ import {
     linkChanged,
     linkRemoved,
     profileSaved,
+    selectAccountChanges,
     selectIdentity,
+    selectProfileChanges,
     selectProfileExists,
     selectProfilePayload,
 } from "@/store/profile/profileSlice";
@@ -56,17 +58,28 @@ export function ProfileIdentity() {
             // Anything still waiting on the debounce belongs in this save.
             flush();
             try {
-                // Name and role are columns on the account, so they go through the
-                // account endpoint. Email is absent on purpose: it is the login key
-                // and the server will not change it here.
-                const account = await updateAccount({ name: values.name, role: values.role });
-                // Keep the signed-in copy in step, or the sidebar goes stale.
-                dispatch(userChanged({ name: account.name, role: account.role }));
-
                 // Read the store rather than `values`: a debounced keystroke that was
                 // just flushed is in the store, not yet in Formik's copy.
-                const personal = selectProfilePayload(store.getState());
-                await (exists ? updateProfile(personal) : createProfile(personal));
+                const state = store.getState();
+
+                // The two rows are saved independently, so each endpoint is called only
+                // when its own fields moved. Name and role live on the account; email is
+                // absent on purpose, being the login key the server will not change here.
+                const changes = selectAccountChanges(state);
+                if (changes) {
+                    const account = await updateAccount(changes);
+                    // Keep the signed-in copy in step, or the sidebar goes stale.
+                    dispatch(userChanged({ name: account.name, role: account.role }));
+                }
+
+                // Creating needs the whole body; updating is a PATCH, so it carries
+                // only the fields that moved.
+                if (!exists) {
+                    await createProfile(selectProfilePayload(state));
+                } else {
+                    const personal = selectProfileChanges(state);
+                    if (personal) await updateProfile(personal);
+                }
 
                 dispatch(profileSaved());
                 toast.success("Personal details saved.");

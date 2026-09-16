@@ -21,7 +21,7 @@ export async function getShellCounts() {
             listJobs({ shortlisted: true, limit: 200 }),
         ]);
         return {
-            pending: pending.keyword_selections + staged.length,
+            pending: pending.keywordSelections + staged.length,
             shortlisted: shortlisted.length,
         };
     } catch {

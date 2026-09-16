@@ -16,6 +16,7 @@ from modules.profile.models import (
     Profile,
     ProfileFields,
     ProfileRead,
+    ProfileUpdate,
     Skill,
     SkillFields,
     SkillRead,
@@ -41,9 +42,9 @@ async def get_profile(user_id: CurrentUser) -> UserProfile:
     return await service.get_user_profile(user_id)
 
 
-@router.put("/updateProfile", response_model=ProfileRead)
-async def replace_profile(payload: ProfileFields, user_id: CurrentUser) -> Profile:
-    return await service.replace_profile(user_id, payload)
+@router.patch("/updateProfile", response_model=ProfileRead)
+async def update_profile(payload: ProfileUpdate, user_id: CurrentUser) -> Profile:
+    return await service.update_profile(user_id, payload)
 
 
 # --- work experience ---------------------------------------------------------

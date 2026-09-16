@@ -27,26 +27,26 @@ class UnknownKeyword(Invalid):
 async def write_match(user_id: PydanticObjectId, payload: MatchWrite) -> Match:
     # Raises JobNotFound for a job that is not yours, so a match never dangles and
     # never attaches to someone else's posting.
-    await get_job(user_id, payload.job_id)
+    await get_job(user_id, payload.jobId)
 
-    match = await Match.find_one(Match.userId == user_id, Match.job_id == payload.job_id)
+    match = await Match.find_one(Match.userId == user_id, Match.jobId == payload.jobId)
     if match is None:
         match = Match(**payload.model_dump(), userId=user_id)
     else:
         # A re-score replaces the agent's findings and resets the gate: the user
         # must not inherit an approval given against different keywords.
-        for field, value in payload.model_dump(exclude={"job_id"}).items():
+        for field, value in payload.model_dump(exclude={"jobId"}).items():
             setattr(match, field, value)
         match.review = KeywordReview()
-        match.scored_at = datetime.now(UTC)
+        match.scoredAt = datetime.now(UTC)
 
     await match.save()
-    await update_job(user_id, payload.job_id, JobUpdate(status=JobStatus.REVIEWED))
+    await update_job(user_id, payload.jobId, JobUpdate(status=JobStatus.REVIEWED))
     return match
 
 
 async def get_match(user_id: PydanticObjectId, job_id: PydanticObjectId) -> Match:
-    match = await Match.find_one(Match.userId == user_id, Match.job_id == job_id)
+    match = await Match.find_one(Match.userId == user_id, Match.jobId == job_id)
     if match is None:
         raise MatchNotFound(job_id)
     return match
@@ -59,14 +59,14 @@ async def record_selection(
     match = await get_match(user_id, job_id)
 
     offered = {keyword.key for keyword in match.missing}
-    unknown = [key for key in payload.selected_keys if key not in offered]
+    unknown = [key for key in payload.selectedKeys if key not in offered]
     if unknown:
         raise UnknownKeyword(unknown)
 
     match.review = KeywordReview(
         state=ReviewState.SKIPPED if payload.skip else ReviewState.SELECTED,
-        selected_keys=[] if payload.skip else list(dict.fromkeys(payload.selected_keys)),
-        reviewed_at=datetime.now(UTC),
+        selectedKeys=[] if payload.skip else list(dict.fromkeys(payload.selectedKeys)),
+        reviewedAt=datetime.now(UTC),
     )
     await match.save()
     return match
@@ -74,7 +74,7 @@ async def record_selection(
 
 async def pending_counts(user_id: PydanticObjectId) -> PendingCounts:
     return PendingCounts(
-        keyword_selections=await Match.find(
+        keywordSelections=await Match.find(
             Match.userId == user_id, Match.review.state == ReviewState.PENDING
         ).count()
     )

@@ -39,22 +39,22 @@ async def main() -> None:
             continue
 
         source = tex_files[0].read_text()
-        template_id = PydanticObjectId()
-        preview_path = None
+        templateId = PydanticObjectId()
+        previewPath = None
         source_preview = folder / "Template_Preview.png"
         if source_preview.is_file():
             previews_dir().mkdir(parents=True, exist_ok=True)
-            target = previews_dir() / f"{template_id}.png"
+            target = previews_dir() / f"{templateId}.png"
             target.write_bytes(source_preview.read_bytes())
-            preview_path = str(target)
+            previewPath = str(target)
 
         await Template(
-            id=template_id,
+            id=templateId,
             name=name,
             tex=source,
             style=infer_style(source),
             tokens=validate_source(source),
-            preview_path=preview_path,
+            previewPath=previewPath,
         ).insert()
         print(f"  import  {name:24} from {folder.name}")
         imported += 1

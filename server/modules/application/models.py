@@ -39,55 +39,55 @@ class FieldFill(BaseModel):
 class ScreeningAnswer(BaseModel):
     question: str
     answer: str | None = None
-    answered_by_user: bool = False
+    answeredByUser: bool = False
 
 
 class ApplicationStage(BaseModel):
     """What `resume` posts once a .tex exists for the job."""
 
-    job_id: PydanticObjectId
-    resume_id: PydanticObjectId
-    tex_path: str
+    jobId: PydanticObjectId
+    resumeId: PydanticObjectId
+    texPath: str
     ats: AtsPlatform = AtsPlatform.OTHER
-    apply_url: HttpUrl | None = None
+    applyUrl: HttpUrl | None = None
 
 
 class Application(Document):
     userId: PydanticObjectId
-    job_id: PydanticObjectId
-    resume_id: PydanticObjectId
-    tex_path: str
+    jobId: PydanticObjectId
+    resumeId: PydanticObjectId
+    texPath: str
     ats: AtsPlatform = AtsPlatform.OTHER
-    apply_url: HttpUrl | None = None
+    applyUrl: HttpUrl | None = None
 
     status: ApplicationStatus = ApplicationStatus.STAGED
-    fields_filled: list[FieldFill] = Field(default_factory=list)
-    screening_answers: list[ScreeningAnswer] = Field(default_factory=list)
+    fieldsFilled: list[FieldFill] = Field(default_factory=list)
+    screeningAnswers: list[ScreeningAnswer] = Field(default_factory=list)
 
     # FR-5.3 / NFR-7. Nothing in this codebase ever sets this; only a human's
     # confirmation through the dashboard or the extension popup does.
-    approved_by_user: bool = False
+    approvedByUser: bool = False
 
-    staged_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    submitted_at: datetime | None = None
-    last_activity_at: datetime | None = None
-    last_activity_note: str | None = None
-    follow_up_due_at: datetime | None = None
-    follow_up_sent_at: datetime | None = None
+    stagedAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    submittedAt: datetime | None = None
+    lastActivityAt: datetime | None = None
+    lastActivityNote: str | None = None
+    followUpDueAt: datetime | None = None
+    followUpSentAt: datetime | None = None
 
     class Settings:
         name = "applications"
         indexes = [
-            pymongo.IndexModel([("userId", pymongo.ASCENDING), ("job_id", pymongo.ASCENDING)]),
+            pymongo.IndexModel([("userId", pymongo.ASCENDING), ("jobId", pymongo.ASCENDING)]),
             pymongo.IndexModel(
                 [
                     ("userId", pymongo.ASCENDING),
                     ("status", pymongo.ASCENDING),
-                    ("staged_at", pymongo.DESCENDING),
+                    ("stagedAt", pymongo.DESCENDING),
                 ]
             ),
             pymongo.IndexModel(
-                [("userId", pymongo.ASCENDING), ("follow_up_due_at", pymongo.ASCENDING)]
+                [("userId", pymongo.ASCENDING), ("followUpDueAt", pymongo.ASCENDING)]
             ),
         ]
 
@@ -100,8 +100,9 @@ class AnswerBank(Document):
     question: str
     answer: str
     tags: list[str] = Field(default_factory=list)
-    used_count: int = 0
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    usedCount: int = 0
+    createdAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updatedAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     class Settings:
         name = "answer_bank"
@@ -116,15 +117,15 @@ class AnswerBank(Document):
 class ApplicationFill(BaseModel):
     """The extension reporting what it filled. Reporting only — it submits nothing."""
 
-    fields_filled: list[FieldFill] = Field(default_factory=list)
-    screening_answers: list[ScreeningAnswer] = Field(default_factory=list)
+    fieldsFilled: list[FieldFill] = Field(default_factory=list)
+    screeningAnswers: list[ScreeningAnswer] = Field(default_factory=list)
 
 
 class StatusTransition(BaseModel):
     status: ApplicationStatus
     note: str | None = None
     # Moving to APPLIED is the user confirming they pressed Submit themselves.
-    confirmed_by_user: bool = False
+    confirmedByUser: bool = False
 
 
 class ApplicationRead(BaseModel):
@@ -132,23 +133,23 @@ class ApplicationRead(BaseModel):
     model_config = ConfigDict(json_schema_serialization_defaults_required=True)
 
     id: PydanticObjectId
-    job_id: PydanticObjectId
-    resume_id: PydanticObjectId
-    tex_path: str
+    jobId: PydanticObjectId
+    resumeId: PydanticObjectId
+    texPath: str
     ats: AtsPlatform = AtsPlatform.OTHER
-    apply_url: HttpUrl | None = None
+    applyUrl: HttpUrl | None = None
     status: ApplicationStatus = ApplicationStatus.STAGED
-    fields_filled: list[FieldFill] = Field(default_factory=list)
-    screening_answers: list[ScreeningAnswer] = Field(default_factory=list)
-    approved_by_user: bool = False
-    staged_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    submitted_at: datetime | None = None
-    last_activity_at: datetime | None = None
-    last_activity_note: str | None = None
-    follow_up_due_at: datetime | None = None
-    follow_up_sent_at: datetime | None = None
+    fieldsFilled: list[FieldFill] = Field(default_factory=list)
+    screeningAnswers: list[ScreeningAnswer] = Field(default_factory=list)
+    approvedByUser: bool = False
+    stagedAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    submittedAt: datetime | None = None
+    lastActivityAt: datetime | None = None
+    lastActivityNote: str | None = None
+    followUpDueAt: datetime | None = None
+    followUpSentAt: datetime | None = None
 
     @computed_field
     @property
     def needs_answer(self) -> int:
-        return sum(1 for answer in self.screening_answers if not answer.answer)
+        return sum(1 for answer in self.screeningAnswers if not answer.answer)
