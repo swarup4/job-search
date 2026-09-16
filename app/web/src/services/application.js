@@ -5,7 +5,7 @@ export function listApplications(status) {
     return axiosInstance.get("/application", { params: { status } });
 }
 
-/** GET /api/application/for-job/{job_id} — null when nothing is staged yet. */
+/** GET /api/application/for-job/{jobId} — null when nothing is staged yet. */
 export function getApplicationForJob(jobId) {
     return orNull(axiosInstance.get(`/application/for-job/${jobId}`));
 }
@@ -25,6 +25,6 @@ export function setApplicationStatus(applicationId, status, { note, confirmedByU
     return axiosInstance.patch(`/application/status/${applicationId}`, {
         status,
         note,
-        confirmed_by_user: confirmedByUser,
+        confirmedByUser: confirmedByUser,
     });
 }

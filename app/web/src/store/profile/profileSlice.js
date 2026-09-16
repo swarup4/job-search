@@ -25,12 +25,20 @@ const initialState = {
     education: [],
     certifications: [],
     skillGroups: [],
-    // Unsaved edits are pending until the save bar persists them.
-    dirty: false,
+    // The identity as last persisted. Edits are diffed against it, so a save calls
+    // only the endpoint whose data actually changed.
+    saved: null,
 };
 
 /** The server sends null for an empty optional; the inputs want a string. */
 const text = (value) => value ?? "";
+
+/** The account row owns these two; the profile row owns the rest of the identity. */
+const ACCOUNT_FIELDS = ["name", "role"];
+const PROFILE_FIELDS = ["headline", "phone", "location", "summary", "links"];
+
+const snapshot = (identity) => ({ ...identity, links: identity.links.map((l) => ({ ...l })) });
+const equal = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 // Entries arrive already saved, so the payload is whatever the server stored — its
 // id included. Nothing here invents one.
@@ -47,18 +55,6 @@ function patchIn(list) {
         if (entry) Object.assign(entry, changes);
     };
 }
-
-/**
- * Only the personal-details form has a Save button, so only its edits can be unsaved.
- * Every other section writes to the API as you edit it, and its actions record what
- * the server already stored.
- */
-const IDENTITY_EDITS = [
-    "profile/identityChanged",
-    "profile/linkChanged",
-    "profile/linkAdded",
-    "profile/linkRemoved",
-];
 
 const profileSlice = createSlice({
     name: "profile",
@@ -101,7 +97,7 @@ const profileSlice = createSlice({
             state.education = education ?? [];
             state.skillGroups = skill ?? [];
             state.certifications = certification ?? [];
-            state.dirty = false;
+            state.saved = snapshot(state.identity);
         },
 
         profileFailed(state, action) {
@@ -140,17 +136,8 @@ const profileSlice = createSlice({
         /** Personal details are saved; the row now exists whether or not it did. */
         profileSaved(state) {
             state.exists = true;
-            state.dirty = false;
+            state.saved = snapshot(state.identity);
         },
-    },
-    extraReducers: (builder) => {
-        // One place marks the form dirty, so a new identity action cannot forget to.
-        builder.addMatcher(
-            (action) => IDENTITY_EDITS.includes(action.type),
-            (state) => {
-                state.dirty = true;
-            }
-        );
     },
 });
 
@@ -184,7 +171,45 @@ export const selectCertifications = (state) => state.profile.certifications;
 export const selectSkillGroups = (state) => state.profile.skillGroups;
 export const selectSkillCount = (state) =>
     state.profile.skillGroups.reduce((n, g) => n + g.items.length, 0);
-export const selectDirty = (state) => state.profile.dirty;
+/**
+ * Only the personal-details form has a Save button, so only its edits can be unsaved.
+ * Every other section writes to the API as you edit it.
+ *
+ * Derived rather than flagged, so typing a change and undoing it disables Save again.
+ */
+export const selectDirty = (state) =>
+    Boolean(selectAccountChanges(state)) || Boolean(selectProfileChanges(state));
+
+/**
+ * The changed subset of `name` and `role` for PATCH /account/updateAccount, or null
+ * when neither moved. A PATCH carrying a field the user did not touch is a write the
+ * server should never have been asked to make.
+ */
+export function selectAccountChanges(state) {
+    const { identity, saved } = state.profile;
+    if (!saved) return null;
+
+    const changes = {};
+    for (const field of ACCOUNT_FIELDS) {
+        if (identity[field] !== saved[field]) changes[field] = identity[field];
+    }
+    return Object.keys(changes).length > 0 ? changes : null;
+}
+
+/**
+ * The changed subset of the profile row for PATCH /profile/updateProfile, or null when
+ * nothing moved. `links` is sent whole — a partial list has no meaning.
+ */
+export function selectProfileChanges(state) {
+    const { identity, saved } = state.profile;
+    if (!saved) return null;
+
+    const changes = {};
+    for (const field of PROFILE_FIELDS) {
+        if (!equal(identity[field], saved[field])) changes[field] = identity[field];
+    }
+    return Object.keys(changes).length > 0 ? changes : null;
+}
 
 /** `role` is not here: it belongs to the account, and has its own endpoint. */
 export const selectRole = (state) => state.profile.identity.role;

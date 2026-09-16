@@ -163,21 +163,21 @@ async def create_template(
         raise TemplateExists(name)
 
     # Generated up front so the preview file can be named after the row it belongs to.
-    template_id = PydanticObjectId()
-    preview_path: str | None = None
+    templateId = PydanticObjectId()
+    previewPath: str | None = None
     if preview is not None:
         previews_dir().mkdir(parents=True, exist_ok=True)
-        target = previews_dir() / f"{template_id}.png"
+        target = previews_dir() / f"{templateId}.png"
         target.write_bytes(preview)
-        preview_path = str(target)
+        previewPath = str(target)
 
     template = Template(
-        id=template_id,
+        id=templateId,
         name=name,
         tex=source,
         style=style,
         tokens=tokens,
-        preview_path=preview_path,
+        previewPath=previewPath,
     )
     await template.insert()
     return template
@@ -203,7 +203,7 @@ async def update_template(template_id: PydanticObjectId, payload: TemplateUpdate
 
     for field, value in changes.items():
         setattr(template, field, value)
-    template.updated_at = datetime.now(UTC)
+    template.updatedAt = datetime.now(UTC)
     await template.save()
     return template
 

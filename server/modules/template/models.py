@@ -47,11 +47,11 @@ class Template(Document):
     style: TemplateStyle = Field(default_factory=TemplateStyle)
     tokens: list[str] = Field(default_factory=list)
     # Previews stay on disk: a 300 KB PNG per row would be dragged through every list.
-    preview_path: str | None = None
+    previewPath: str | None = None
     # False archives it: kept for the resumes already built from it, hidden from the picker.
     status: bool = True
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    createdAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updatedAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     class Settings:
         name = "templates"
@@ -70,10 +70,10 @@ class TemplateRead(BaseModel):
     name: str
     style: TemplateStyle
     tokens: list[str]
-    has_preview: bool
+    hasPreview: bool
     status: bool
-    created_at: datetime
-    updated_at: datetime
+    createdAt: datetime
+    updatedAt: datetime
 
 
 class TemplateSource(BaseModel):
@@ -85,10 +85,10 @@ class TemplateSource(BaseModel):
     name: str
     style: TemplateStyle
     tokens: list[str]
-    has_preview: bool
+    hasPreview: bool
     status: bool
-    created_at: datetime
-    updated_at: datetime
+    createdAt: datetime
+    updatedAt: datetime
     tex: str
 
 

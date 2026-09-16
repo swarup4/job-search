@@ -3,12 +3,13 @@
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useFormik } from "formik";
-import { AlertTriangle, Briefcase, Building2, FolderGit2, Pencil, Plus, X } from "lucide-react";
+import { Briefcase, Building2, FolderGit2, Pencil, Plus, X } from "lucide-react";
 import { Panel, PanelHeader, PanelTitle } from "@/component/ui/panel";
 import { Dialog, DialogBody, DialogFooter } from "@/component/ui/dialog";
 import { Field, Input, Select } from "@/component/ui/field";
 import { Checkbox } from "@/component/ui/checkbox";
 import { Button } from "@/component/ui/button";
+import { toast } from "@/component/ui/toast";
 import { Badge } from "@/component/ui/badge";
 import { ApiError, addExperience, updateExperience } from "@/services";
 import { roleAdded, roleUpdated, selectExperience } from "@/store/profile/profileSlice";
@@ -196,12 +197,12 @@ function ExperienceForm({ entry, onSave, onCancel }) {
     const formik = useFormik({
         initialValues: experienceInitialValues(entry),
         validationSchema: experienceSchema,
-        onSubmit: async (values, { setStatus, setSubmitting }) => {
-            setStatus(null);
+        onSubmit: async (values, { setSubmitting }) => {
             try {
                 await onSave(values);
+                toast.success("Experience saved.");
             } catch (error) {
-                setStatus(error instanceof ApiError ? error.message : "Could not save.");
+                toast.error(error instanceof ApiError ? error.message : "Could not save.");
                 setSubmitting(false);
             }
         },
@@ -297,13 +298,6 @@ function ExperienceForm({ entry, onSave, onCancel }) {
                     placeholder="Cut inference cost 38% through batching"
                     removeLabel={(i) => `Remove description line ${i + 1}`}
                 />
-
-                {formik.status ? (
-                    <p className="flex items-start gap-2 rounded-sm bg-risk px-3 py-2.5 text-[12.5px] leading-relaxed text-risk-ink">
-                        <AlertTriangle className="mt-0.5 size-[13px] shrink-0" />
-                        {formik.status}
-                    </p>
-                ) : null}
             </DialogBody>
 
             <DialogFooter>
@@ -327,8 +321,7 @@ function ProjectsForm({ projects, onSave, onCancel }) {
                 bullets: p.bullets?.length ? [...p.bullets] : [""],
             })),
         },
-        onSubmit: async (values, { setStatus, setSubmitting }) => {
-            setStatus(null);
+        onSubmit: async (values, { setSubmitting }) => {
             try {
                 await onSave(
                     values.projects
@@ -339,8 +332,9 @@ function ProjectsForm({ projects, onSave, onCancel }) {
                         // A project with no name has nothing to render, so it is not kept.
                         .filter((p) => p.name)
                 );
+                toast.success("Projects saved.");
             } catch (error) {
-                setStatus(error instanceof ApiError ? error.message : "Could not save.");
+                toast.error(error instanceof ApiError ? error.message : "Could not save.");
                 setSubmitting(false);
             }
         },
@@ -401,13 +395,6 @@ function ProjectsForm({ projects, onSave, onCancel }) {
                     <Plus className="size-[14px]" />
                     Add project
                 </button>
-
-                {formik.status ? (
-                    <p className="flex items-start gap-2 rounded-sm bg-risk px-3 py-2.5 text-[12.5px] leading-relaxed text-risk-ink">
-                        <AlertTriangle className="mt-0.5 size-[13px] shrink-0" />
-                        {formik.status}
-                    </p>
-                ) : null}
             </DialogBody>
 
             <DialogFooter>

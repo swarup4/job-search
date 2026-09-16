@@ -21,8 +21,9 @@ export function createProfile(profile) {
     return axiosInstance.post("/profile/createProfile", profile);
 }
 
-export function updateProfile(profile) {
-    return axiosInstance.put("/profile/updateProfile", profile);
+/** PATCH /api/profile/updateProfile — partial; sends only what changed. */
+export function updateProfile(changes) {
+    return axiosInstance.patch("/profile/updateProfile", changes);
 }
 
 // work experience

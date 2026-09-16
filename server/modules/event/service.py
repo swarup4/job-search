@@ -17,7 +17,7 @@ async def list_events(
 ) -> list[Event]:
     query: dict[str, object] = {"userId": user_id}
     if job_id is not None:
-        query["job_id"] = job_id
+        query["jobId"] = job_id
     if event_type is not None:
-        query["event_type"] = event_type
-    return await Event.find(query).sort(-Event.occurred_at).limit(limit).to_list()
+        query["eventType"] = event_type
+    return await Event.find(query).sort(-Event.occurredAt).limit(limit).to_list()

@@ -26,7 +26,7 @@ async def stage_application(user_id: PydanticObjectId, payload: ApplicationStage
     """Re-tailoring a job updates the staged application rather than adding a second one."""
     application = await Application.find_one(
         Application.userId == user_id,
-        Application.job_id == payload.job_id,
+        Application.jobId == payload.jobId,
         Application.status == ApplicationStatus.STAGED,
     )
     if application is None:
@@ -53,8 +53,8 @@ async def get_application(
 
 async def get_for_job(user_id: PydanticObjectId, job_id: PydanticObjectId) -> Application | None:
     return (
-        await Application.find(Application.userId == user_id, Application.job_id == job_id)
-        .sort(-Application.staged_at)
+        await Application.find(Application.userId == user_id, Application.jobId == job_id)
+        .sort(-Application.stagedAt)
         .first_or_none()
     )
 
@@ -65,7 +65,7 @@ async def list_applications(
     query: dict[str, object] = {"userId": user_id}
     if status:
         query["status"] = status
-    return await Application.find(query).sort(-Application.staged_at).to_list()
+    return await Application.find(query).sort(-Application.stagedAt).to_list()
 
 
 async def record_fill(
@@ -74,8 +74,8 @@ async def record_fill(
     """The extension reports what it filled and highlighted. Status does not move —
     only the user pressing Submit moves it."""
     application = await get_application(user_id, application_id)
-    application.fields_filled = payload.fields_filled
-    application.screening_answers = payload.screening_answers
+    application.fieldsFilled = payload.fieldsFilled
+    application.screeningAnswers = payload.screeningAnswers
     await application.save()
     return application
 
@@ -88,23 +88,23 @@ async def set_status(
 ) -> Application:
     application = await get_application(user_id, application_id)
 
-    if payload.status is ApplicationStatus.APPLIED and not payload.confirmed_by_user:
+    if payload.status is ApplicationStatus.APPLIED and not payload.confirmedByUser:
         raise SubmitNotConfirmed(
             "an application becomes APPLIED only when the user confirms they submitted it"
         )
 
     now = datetime.now(UTC)
     application.status = payload.status
-    application.last_activity_at = now
-    application.last_activity_note = payload.note
+    application.lastActivityAt = now
+    application.lastActivityNote = payload.note
 
     if payload.status is ApplicationStatus.APPLIED:
-        application.approved_by_user = True
-        application.submitted_at = now
-        application.follow_up_due_at = now + timedelta(days=follow_up_days)
+        application.approvedByUser = True
+        application.submittedAt = now
+        application.followUpDueAt = now + timedelta(days=follow_up_days)
 
     if payload.status in (ApplicationStatus.REJECTED, ApplicationStatus.WITHDRAWN):
-        application.follow_up_due_at = None
+        application.followUpDueAt = None
 
     await application.save()
     return application
@@ -115,7 +115,7 @@ async def due_for_follow_up(
 ) -> list[Application]:
     moment = now or datetime.now(UTC)
     return await Application.find(
-        {"userId": user_id, "follow_up_due_at": {"$ne": None, "$lte": moment}},
+        {"userId": user_id, "followUpDueAt": {"$ne": None, "$lte": moment}},
     ).to_list()
 
 
@@ -127,7 +127,7 @@ async def staged_count(user_id: PydanticObjectId) -> int:
 
 async def list_answer_bank(user_id: PydanticObjectId) -> list[AnswerBank]:
     return (
-        await AnswerBank.find(AnswerBank.userId == user_id).sort(-AnswerBank.used_count).to_list()
+        await AnswerBank.find(AnswerBank.userId == user_id).sort(-AnswerBank.usedCount).to_list()
     )
 
 
@@ -141,6 +141,6 @@ async def upsert_answer(
         entry.question = question
         entry.answer = answer
         entry.tags = tags
-        entry.updated_at = datetime.now(UTC)
+        entry.updatedAt = datetime.now(UTC)
     await entry.save()
     return entry

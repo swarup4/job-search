@@ -20,7 +20,7 @@ class PresentKeyword(BaseModel):
     """Already in the resume. Read-only on the selection screen."""
 
     label: str
-    chunk_id: str | None = None
+    chunkId: str | None = None
 
 
 class MissingKeyword(BaseModel):
@@ -40,44 +40,44 @@ class RiskFlag(BaseModel):
 
 class KeywordReview(BaseModel):
     state: ReviewState = ReviewState.PENDING
-    selected_keys: list[str] = Field(default_factory=list)
-    reviewed_at: datetime | None = None
+    selectedKeys: list[str] = Field(default_factory=list)
+    reviewedAt: datetime | None = None
 
     @model_validator(mode="after")
     def _selection_requires_review(self) -> KeywordReview:
         # FR-2.5 / NFR-8: a selection that nobody made is a fabrication.
-        if self.selected_keys and self.state is ReviewState.PENDING:
-            raise ValueError("selected_keys may only be set once a user has reviewed the match")
+        if self.selectedKeys and self.state is ReviewState.PENDING:
+            raise ValueError("selectedKeys may only be set once a user has reviewed the match")
         return self
 
 
 class MatchWrite(BaseModel):
     """What the matching agent posts. The JD vector goes to Atlas, never here."""
 
-    job_id: PydanticObjectId
+    jobId: PydanticObjectId
     score: int = Field(ge=0, le=100)
     present: list[PresentKeyword] = Field(default_factory=list)
     missing: list[MissingKeyword] = Field(default_factory=list)
     risks: list[RiskFlag] = Field(default_factory=list)
     # Which local model produced this, so a re-score is comparable.
-    model_name: str | None = None
+    modelName: str | None = None
 
 
 class Match(Document):
     userId: PydanticObjectId
-    job_id: PydanticObjectId
+    jobId: PydanticObjectId
     score: int = Field(ge=0, le=100)
     present: list[PresentKeyword] = Field(default_factory=list)
     missing: list[MissingKeyword] = Field(default_factory=list)
     risks: list[RiskFlag] = Field(default_factory=list)
-    model_name: str | None = None
+    modelName: str | None = None
     review: KeywordReview = Field(default_factory=KeywordReview)
-    scored_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    scoredAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     class Settings:
         name = "matches"
         indexes = [
-            pymongo.IndexModel([("job_id", pymongo.ASCENDING)], unique=True),
+            pymongo.IndexModel([("jobId", pymongo.ASCENDING)], unique=True),
             pymongo.IndexModel(
                 [("userId", pymongo.ASCENDING), ("review.state", pymongo.ASCENDING)]
             ),
@@ -90,24 +90,24 @@ class MatchRead(BaseModel):
     model_config = ConfigDict(json_schema_serialization_defaults_required=True)
 
     id: PydanticObjectId
-    job_id: PydanticObjectId
+    jobId: PydanticObjectId
     score: int = Field(ge=0, le=100)
     present: list[PresentKeyword] = Field(default_factory=list)
     missing: list[MissingKeyword] = Field(default_factory=list)
     risks: list[RiskFlag] = Field(default_factory=list)
-    model_name: str | None = None
+    modelName: str | None = None
     review: KeywordReview
-    scored_at: datetime
+    scoredAt: datetime
 
 
 class KeywordSelection(BaseModel):
     """The user's answer at the interrupt. An empty list is a valid answer."""
 
-    selected_keys: list[str] = Field(default_factory=list)
+    selectedKeys: list[str] = Field(default_factory=list)
     skip: bool = False
 
 
 class PendingCounts(BaseModel):
     """Feeds the board's "⚠ Pending your review" banner."""
 
-    keyword_selections: int
+    keywordSelections: int

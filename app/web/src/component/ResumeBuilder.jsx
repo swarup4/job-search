@@ -61,7 +61,7 @@ export function ResumeBuilder() {
                 setTemplates(rows);
                 setSaved(base);
                 // Reopening the screen lands on the template already in use.
-                setSelected(base?.template_id ?? rows[0]?.id ?? null);
+                setSelected(base?.templateId ?? rows[0]?.id ?? null);
             } catch (failure) {
                 setLoadError(
                     failure instanceof ApiError ? failure.message : "Could not load templates."
@@ -104,7 +104,7 @@ export function ResumeBuilder() {
     }, [selected]);
 
     // Nothing to submit when the stored .tex is already character-for-character this one.
-    const unchanged = saved?.template_id === selected && saved?.tex === render?.tex;
+    const unchanged = saved?.templateId === selected && saved?.tex === render?.tex;
 
     async function submit() {
         if (!render) return;
@@ -170,7 +170,7 @@ export function ResumeBuilder() {
                     <span className="grow" />
                     <span className="text-[12.5px] text-muted-foreground">
                         {saved
-                            ? `Preference: ${saved.template_name}`
+                            ? `Preference: ${saved.templateName}`
                             : "No default resume yet"}
                     </span>
                 </PanelHeader>
@@ -178,7 +178,7 @@ export function ResumeBuilder() {
                     <TemplatePicker
                         templates={templates}
                         selected={selected}
-                        preferred={saved?.template_id ?? null}
+                        preferred={saved?.templateId ?? null}
                         onSelect={setSelected}
                         disabled={saving}
                     />
@@ -193,7 +193,7 @@ export function ResumeBuilder() {
                         </p>
                         <p className="mt-0.5 text-[12.5px] text-muted-foreground">
                             {saved
-                                ? `Stored from ${saved.template_name} · updated ${when(saved.updated_at)}`
+                                ? `Stored from ${saved.templateName} · updated ${when(saved.updatedAt)}`
                                 : "Submitting stores this .tex as the resume every tailored version starts from."}
                         </p>
                     </div>

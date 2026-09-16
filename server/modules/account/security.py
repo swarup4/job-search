@@ -22,7 +22,7 @@ ALGORITHM = "HS256"
 
 # Read once at import; `config/__init__.py` has already loaded server/.env by then.
 # The fallback is a placeholder, not a secret — seeing it means JWT_SECRET is missing.
-SECRET = os.environ.get("JWT_SECRET", "jobpilot-jwt-secret-missing-from-dot-env")
+SECRET = os.environ.get("JWT_SECRET", "swarupjobs")
 ACCESS_TTL = timedelta(minutes=int(os.environ.get("JWT_TTL_MINUTES", "60")))
 REFRESH_TTL = timedelta(days=int(os.environ.get("JWT_REFRESH_TTL_DAYS", "30")))
 

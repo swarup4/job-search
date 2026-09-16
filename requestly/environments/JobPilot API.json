@@ -12,6 +12,28 @@
       "updatedAt": "2026-08-28T06:13:00.268341Z",
       "createdBy": null,
       "updatedBy": null
+    },
+    "access_token": {
+      "id": "ad389390-2969-4e3f-a449-ad7c9f542027",
+      "syncValue": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2YWE1MDQxODYxZDI5MDFhOGRjN2VlYzkiLCJraW5kIjoiYWNjZXNzIiwiZXhwIjoxNzg5NTg1ODgzfQ.j-l4C9lo4V4g-AJr1Mb43EEGOT2C9TvSroNvKkEnsm8",
+      "type": "string",
+      "isEnabled": true,
+      "rank": "a1",
+      "createdAt": "2026-09-16T18:02:23.377329Z",
+      "updatedAt": "2026-09-16T18:11:40.146002Z",
+      "createdBy": null,
+      "updatedBy": null
+    },
+    "refresh_token": {
+      "id": "52d9697e-6914-4894-92ee-4bf3444fab52",
+      "syncValue": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2YWE1MDQxODYxZDI5MDFhOGRjN2VlYzkiLCJraW5kIjoicmVmcmVzaCIsImV4cCI6MTc5MDE4NzA4M30.MLBPUkIz5YfAVF0I8sxfIaA-kldVvH9xY3Jwl5GZZZU",
+      "type": "string",
+      "isEnabled": true,
+      "rank": "a2",
+      "createdAt": "2026-09-16T18:02:23.377329Z",
+      "updatedAt": "2026-09-16T18:11:40.146002Z",
+      "createdBy": null,
+      "updatedBy": null
     }
   }
 }

@@ -9,7 +9,7 @@ class LineChange(BaseModel):
     """One tailored line of the .tex, kept with what it replaced so the diff
     screen and the source screen can never disagree."""
 
-    line_no: int = Field(ge=1)
+    lineNo: int = Field(ge=1)
     text: str
     previous: str | None = None
 
@@ -17,9 +17,9 @@ class LineChange(BaseModel):
 class ResumeStore(BaseModel):
     """What the tailoring agent posts once it has written the file."""
 
-    job_id: PydanticObjectId
-    file_path: str
-    template_path: str = "templates/base_resume.tex"
+    jobId: PydanticObjectId
+    filePath: str
+    templatePath: str = "templates/base_resume.tex"
     incorporated: list[str] = Field(default_factory=list)
     declined: list[str] = Field(default_factory=list)
     changes: list[LineChange] = Field(default_factory=list)
@@ -29,25 +29,25 @@ class TailoredResume(Document):
     """FR-4.4 — a .tex path and the selection set that produced it. No PDF in v1."""
 
     userId: PydanticObjectId
-    job_id: PydanticObjectId
-    match_id: PydanticObjectId
-    file_path: str
-    template_path: str = "templates/base_resume.tex"
+    jobId: PydanticObjectId
+    matchId: PydanticObjectId
+    filePath: str
+    templatePath: str = "templates/base_resume.tex"
     incorporated: list[str] = Field(default_factory=list)
     declined: list[str] = Field(default_factory=list)
     changes: list[LineChange] = Field(default_factory=list)
     version: int = Field(default=1, ge=1)
 
     # The audit trail NFR-8 requires: every changed line traces back to these.
-    selected_keys: list[str] = Field(default_factory=list)
+    selectedKeys: list[str] = Field(default_factory=list)
 
-    rendered_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    renderedAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     class Settings:
         name = "resumes"
         indexes = [
             pymongo.IndexModel(
-                [("job_id", pymongo.ASCENDING), ("version", pymongo.DESCENDING)], unique=True
+                [("jobId", pymongo.ASCENDING), ("version", pymongo.DESCENDING)], unique=True
             ),
         ]
 
@@ -57,22 +57,22 @@ class ResumeRead(BaseModel):
     model_config = ConfigDict(json_schema_serialization_defaults_required=True)
 
     id: PydanticObjectId
-    job_id: PydanticObjectId
-    match_id: PydanticObjectId
-    file_path: str
-    template_path: str = "templates/base_resume.tex"
+    jobId: PydanticObjectId
+    matchId: PydanticObjectId
+    filePath: str
+    templatePath: str = "templates/base_resume.tex"
     incorporated: list[str] = Field(default_factory=list)
     declined: list[str] = Field(default_factory=list)
     changes: list[LineChange] = Field(default_factory=list)
     version: int
-    selected_keys: list[str]
-    rendered_at: datetime
+    selectedKeys: list[str]
+    renderedAt: datetime
 
 
 class BaseResumeStore(BaseModel):
     """What the Resume screen submits once the user accepts the render."""
 
-    template_id: PydanticObjectId
+    templateId: PydanticObjectId
     tex: str = Field(min_length=1)
 
 
@@ -85,11 +85,11 @@ class BaseResume(Document):
     """
 
     userId: PydanticObjectId
-    template_id: PydanticObjectId
-    template_name: str
+    templateId: PydanticObjectId
+    templateName: str
     tex: str
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    createdAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updatedAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     class Settings:
         name = "base_resumes"
@@ -102,8 +102,8 @@ class BaseResumeRead(BaseModel):
     model_config = ConfigDict(json_schema_serialization_defaults_required=True)
 
     id: PydanticObjectId
-    template_id: PydanticObjectId
-    template_name: str
+    templateId: PydanticObjectId
+    templateName: str
     tex: str
-    created_at: datetime
-    updated_at: datetime
+    createdAt: datetime
+    updatedAt: datetime

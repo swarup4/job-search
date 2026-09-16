@@ -5,10 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useDispatch } from "react-redux";
 import { useFormik } from "formik";
-import { AlertTriangle, Eye, EyeOff, Loader2, LogIn } from "lucide-react";
+import { Eye, EyeOff, Loader2, LogIn } from "lucide-react";
 import { AuthShell } from "@/component/AuthShell";
 import { Field, Input } from "@/component/ui/field";
 import { Button } from "@/component/ui/button";
+import { toast } from "@/component/ui/toast";
 import { loginInitialValues, loginSchema } from "@/util/schema";
 import { login } from "@/services/auth";
 import { signedIn } from "@/store/auth/authSlice";
@@ -23,8 +24,7 @@ export default function Page() {
     const formik = useFormik({
         initialValues: loginInitialValues,
         validationSchema: loginSchema,
-        onSubmit: async (values, { setStatus }) => {
-            setStatus(null);
+        onSubmit: async (values) => {
             try {
                 dispatch(signedIn(await login(values)));
                 // Back to whatever the guard interrupted, or the dashboard. Read here
@@ -32,9 +32,7 @@ export default function Page() {
                 const next = new URLSearchParams(window.location.search).get("next");
                 router.replace(next || ROUTES.board);
             } catch (error) {
-                setStatus(
-                    error instanceof ApiError ? error.message : "Could not sign you in."
-                );
+                toast.error(error instanceof ApiError ? error.message : "Could not sign you in.");
             }
         },
     });
@@ -91,13 +89,6 @@ export default function Page() {
                         </button>
                     </span>
                 </Field>
-
-                {formik.status ? (
-                    <p className="flex items-start gap-2 rounded-sm bg-risk px-3 py-2.5 text-[12.5px] leading-relaxed text-pretty text-risk-ink">
-                        <AlertTriangle className="mt-0.5 size-[13px] shrink-0" />
-                        {formik.status}
-                    </p>
-                ) : null}
 
                 <Button type="submit" disabled={formik.isSubmitting} className="mt-1 w-full">
                     {formik.isSubmitting ? <Loader2 className="animate-spin" /> : <LogIn />}

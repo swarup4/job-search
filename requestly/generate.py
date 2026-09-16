@@ -30,6 +30,21 @@ BASE_URL = "http://127.0.0.1:8000"  # NFR-4: the API binds loopback only
 SCHEMA = "https://assets.requestly.com/local/v1.15.0"
 METHODS = ("get", "post", "put", "patch", "delete", "head", "options")
 
+# Every route is behind a bearer token except these: the server guards the rest with
+# CurrentUser / Depends(verify_token), which is a plain dependency rather than an
+# OpenAPI security scheme — so the spec cannot tell us and this list must.
+PUBLIC_PATHS = frozenset(
+    {"/health", "/api/account/signup", "/api/account/login", "/api/account/refresh"}
+)
+
+# Filled in by the login request, then sent by every other one.
+TOKEN_VARIABLE = "access_token"
+AUTH_HEADER = {
+    "key": "Authorization",
+    "value": "Bearer {{" + TOKEN_VARIABLE + "}}",
+    "isEnabled": True,
+}
+
 
 # ---------------------------------------------------------------- the spec
 
@@ -201,10 +216,19 @@ def write_request(
     query_params: list[dict[str, Any]],
     path_variables: list[dict[str, Any]],
     body: tuple[str, Any] | None,
+    needs_auth: bool = True,
 ) -> None:
     """`body` is (kind, payload): ("json", example) or ("multipart/form-data", rows)."""
     path.mkdir(parents=True, exist_ok=True)
     kind = body[0] if body else "none"
+
+    def headers(*rows: dict[str, Any]) -> list[dict[str, Any]]:
+        out = [dict(row) for row in rows]
+        if needs_auth:
+            out.append(dict(AUTH_HEADER))
+        for index, row in enumerate(out):
+            row["id"] = index
+        return out
 
     _write(
         path / "__metadata.json",
@@ -222,7 +246,7 @@ def write_request(
 
     if body is None:
         _write(path / "__body.json", {"$schema": f"{SCHEMA}/body.json", "contentType": "none"})
-        _write(path / "__headers.json", [])
+        _write(path / "__headers.json", headers())
     elif kind == "multipart/form-data":
         _write(
             path / "__body.json",
@@ -232,8 +256,9 @@ def write_request(
                 "formData": body[1],
             },
         )
-        # The boundary is the transport's to set — a hand-written header breaks it.
-        _write(path / "__headers.json", [])
+        # The boundary is the transport's to set — a hand-written header breaks it,
+        # so multipart gets the auth header and no Content-Type.
+        _write(path / "__headers.json", headers())
     else:
         _write(
             path / "__body.json",
@@ -246,7 +271,7 @@ def write_request(
         )
         _write(
             path / "__headers.json",
-            [{"id": 0, "key": "Content-Type", "value": "application/json", "isEnabled": True}],
+            headers({"key": "Content-Type", "value": "application/json", "isEnabled": True}),
         )
 
     _write(path / "__query-params.json", query_params)
@@ -353,7 +378,16 @@ def build_project(spec: dict[str, Any], force: bool) -> tuple[int, int]:
 
             # Requestly resolves path variables with the same {{...}} syntax as any variable.
             url = "{{base_url}}" + path.replace("{", "{{").replace("}", "}}")
-            write_request(request, f"a{rank}", method, url, query, variables, body)
+            write_request(
+                request,
+                f"a{rank}",
+                method,
+                url,
+                query,
+                variables,
+                body,
+                needs_auth=path not in PUBLIC_PATHS,
+            )
             created += 1
 
     return created, skipped

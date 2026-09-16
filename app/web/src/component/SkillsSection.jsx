@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useFormik } from "formik";
-import { AlertTriangle, Layers, Plus } from "lucide-react";
+import { Layers, Plus } from "lucide-react";
 import { Panel, PanelHeader, PanelTitle } from "@/component/ui/panel";
 import { Dialog, DialogBody, DialogFooter } from "@/component/ui/dialog";
 import { Field, Input } from "@/component/ui/field";
 import { Button } from "@/component/ui/button";
+import { toast } from "@/component/ui/toast";
 import { Badge } from "@/component/ui/badge";
 import { ApiError, addSkill, updateSkill } from "@/services";
 import {
@@ -24,8 +25,6 @@ export function SkillsSection() {
     const total = useSelector(selectSkillCount);
     const dispatch = useDispatch();
     const [addingGroup, setAddingGroup] = useState(false);
-    // A chip add or remove is one request; this shows when one of them fails.
-    const [error, setError] = useState(null);
 
     async function commitGroup({ name }) {
         const saved = await addSkill({ name: name.trim(), items: [] });
@@ -35,12 +34,15 @@ export function SkillsSection() {
 
     /** A group's items are one field, so changing them is a full update of the group. */
     async function setItems(group, items) {
-        setError(null);
         try {
             const saved = await updateSkill(group.id, { name: group.name, items });
             dispatch(skillGroupUpdated({ id: saved.id, changes: saved }));
         } catch (failure) {
-            setError(failure instanceof ApiError ? failure.message : "Could not save that skill.");
+            // No success toast here: a chip appearing is its own confirmation, and one
+            // per keystroke-sized edit would be noise.
+            toast.error(
+                failure instanceof ApiError ? failure.message : "Could not save that skill."
+            );
         }
     }
 
@@ -63,13 +65,6 @@ export function SkillsSection() {
                     Group
                 </button>
             </PanelHeader>
-
-            {error ? (
-                <p className="flex items-start gap-2 border-b border-border bg-risk px-5 py-2.5 text-[12.5px] text-risk-ink">
-                    <AlertTriangle className="mt-0.5 size-[13px] shrink-0" />
-                    {error}
-                </p>
-            ) : null}
 
             <div>
                 {groups.length === 0 ? (
@@ -182,12 +177,12 @@ function SkillGroupForm({ taken, onSave, onCancel }) {
     const formik = useFormik({
         initialValues: skillGroupInitialValues,
         validationSchema: skillGroupSchema(taken),
-        onSubmit: async (values, { setStatus, setSubmitting }) => {
-            setStatus(null);
+        onSubmit: async (values, { setSubmitting }) => {
             try {
                 await onSave(values);
+                toast.success("Skill group saved.");
             } catch (error) {
-                setStatus(error instanceof ApiError ? error.message : "Could not save.");
+                toast.error(error instanceof ApiError ? error.message : "Could not save.");
                 setSubmitting(false);
             }
         },
@@ -206,13 +201,6 @@ function SkillGroupForm({ taken, onSave, onCancel }) {
                         {...formik.getFieldProps("name")}
                     />
                 </Field>
-
-                {formik.status ? (
-                    <p className="flex items-start gap-2 rounded-sm bg-risk px-3 py-2.5 text-[12.5px] leading-relaxed text-risk-ink">
-                        <AlertTriangle className="mt-0.5 size-[13px] shrink-0" />
-                        {formik.status}
-                    </p>
-                ) : null}
             </DialogBody>
 
             <DialogFooter>
