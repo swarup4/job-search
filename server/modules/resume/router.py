@@ -20,7 +20,7 @@ async def list_versions(job_id: PydanticObjectId, user_id: CurrentUser) -> list[
     return await service.list_versions(user_id, job_id)
 
 
-# Declared before `/{job_id}`: a literal path must be matched ahead of the
+# Declared before `/{jobId}`: a literal path must be matched ahead of the
 # parameterised one, or `/base` is read as a job id.
 @router.get("/base", response_model=BaseResumeRead)
 async def get_base_resume(user_id: CurrentUser) -> BaseResume:

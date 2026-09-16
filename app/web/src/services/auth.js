@@ -3,8 +3,8 @@ import { axiosInstance } from "@/lib/axiosInstance";
 /** Signup, login and refresh all answer with the same shape, so all three land here. */
 function toSession(result) {
     return {
-        token: result.access_token,
-        refreshToken: result.refresh_token,
+        token: result.accessToken,
+        refreshToken: result.refreshToken,
         user: {
             id: result.account.id,
             name: result.account.name,

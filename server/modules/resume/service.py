@@ -34,35 +34,35 @@ class Fabrication(Invalid):
 
 
 async def store_resume(user_id: PydanticObjectId, payload: ResumeStore) -> TailoredResume:
-    match = await get_match(user_id, payload.job_id)
+    match = await get_match(user_id, payload.jobId)
 
     if match.review.state is not ReviewState.SELECTED:
         raise SelectionGateNotPassed(
-            f"job {payload.job_id} is {match.review.state}, not a completed keyword selection"
+            f"job {payload.jobId} is {match.review.state}, not a completed keyword selection"
         )
 
     # The load-bearing check. The agent may incorporate fewer keywords than the
     # user chose — a selection with no honest place is left out — but never more.
     labels = {keyword.key: keyword.label for keyword in match.missing}
-    allowed = {labels[key] for key in match.review.selected_keys if key in labels}
+    allowed = {labels[key] for key in match.review.selectedKeys if key in labels}
     invented = [keyword for keyword in payload.incorporated if keyword not in allowed]
     if invented:
         raise Fabrication(invented)
 
-    latest = await _latest(user_id, payload.job_id)
+    latest = await _latest(user_id, payload.jobId)
     resume = TailoredResume(
         **payload.model_dump(),
         userId=user_id,
-        match_id=match.id,
-        selected_keys=list(match.review.selected_keys),
+        matchId=match.id,
+        selectedKeys=list(match.review.selectedKeys),
         version=1 if latest is None else latest.version + 1,
     )
     await resume.insert()
 
-    await update_job(user_id, payload.job_id, JobUpdate(status=JobStatus.TAILORED))
+    await update_job(user_id, payload.jobId, JobUpdate(status=JobStatus.TAILORED))
     await stage_application(
         user_id,
-        ApplicationStage(job_id=payload.job_id, resume_id=resume.id, tex_path=resume.file_path),
+        ApplicationStage(jobId=payload.jobId, resumeId=resume.id, texPath=resume.filePath),
     )
     return resume
 
@@ -78,7 +78,7 @@ async def list_versions(
     user_id: PydanticObjectId, job_id: PydanticObjectId
 ) -> list[TailoredResume]:
     return (
-        await TailoredResume.find(TailoredResume.userId == user_id, TailoredResume.job_id == job_id)
+        await TailoredResume.find(TailoredResume.userId == user_id, TailoredResume.jobId == job_id)
         .sort(-TailoredResume.version)
         .to_list()
     )
@@ -86,7 +86,7 @@ async def list_versions(
 
 async def _latest(user_id: PydanticObjectId, job_id: PydanticObjectId) -> TailoredResume | None:
     return (
-        await TailoredResume.find(TailoredResume.userId == user_id, TailoredResume.job_id == job_id)
+        await TailoredResume.find(TailoredResume.userId == user_id, TailoredResume.jobId == job_id)
         .sort(-TailoredResume.version)
         .first_or_none()
     )
@@ -109,22 +109,22 @@ async def save_base_resume(user_id: PydanticObjectId, payload: BaseResumeStore) 
     template id that does not exist and to record the name alongside the id, so the
     picker can show what was chosen without a second read.
     """
-    template = await get_template(payload.template_id)
+    template = await get_template(payload.templateId)
 
     resume = await BaseResume.find_one(BaseResume.userId == user_id)
     if resume is None:
         resume = BaseResume(
             userId=user_id,
-            template_id=template.id,
-            template_name=template.name,
+            templateId=template.id,
+            templateName=template.name,
             tex=payload.tex,
         )
         await resume.insert()
         return resume
 
-    resume.template_id = template.id
-    resume.template_name = template.name
+    resume.templateId = template.id
+    resume.templateName = template.name
     resume.tex = payload.tex
-    resume.updated_at = datetime.now(UTC)
+    resume.updatedAt = datetime.now(UTC)
     await resume.save()
     return resume

@@ -29,10 +29,10 @@ def _read(template: Template) -> TemplateRead:
         name=template.name,
         style=template.style,
         tokens=template.tokens,
-        has_preview=template.preview_path is not None,
+        hasPreview=template.previewPath is not None,
         status=template.status,
-        created_at=template.created_at,
-        updated_at=template.updated_at,
+        createdAt=template.createdAt,
+        updatedAt=template.updatedAt,
     )
 
 
@@ -51,9 +51,9 @@ async def render_template(template_id: PydanticObjectId, user_id: CurrentUser) -
 @router.get("/preview/{template_id}", dependencies=[Depends(verify_token)])
 async def template_preview(template_id: PydanticObjectId) -> FileResponse:
     template = await service.get_template(template_id)
-    if template.preview_path is None:
+    if template.previewPath is None:
         raise service.TemplateNotFound(f"{template_id} preview")
-    return FileResponse(template.preview_path, media_type="image/png")
+    return FileResponse(template.previewPath, media_type="image/png")
 
 
 @router.get("", response_model=list[TemplateRead], dependencies=[Depends(verify_token)])
@@ -92,7 +92,7 @@ async def upload_template(
 
 
 @router.get(
-    "/getTemplate/{template_id}",
+    '/getTemplate/{template_id}',
     response_model=TemplateSource,
     dependencies=[Depends(verify_token)],
 )
@@ -102,7 +102,7 @@ async def get_template(template_id: PydanticObjectId) -> TemplateSource:
 
 
 @router.patch(
-    "/updateTemplate/{template_id}",
+    '/updateTemplate/{template_id}',
     response_model=TemplateRead,
     dependencies=[Depends(verify_token)],
 )

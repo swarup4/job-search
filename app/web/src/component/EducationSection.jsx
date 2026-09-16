@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useFormik } from "formik";
-import { AlertTriangle, GraduationCap, Pencil, Plus } from "lucide-react";
+import { GraduationCap, Pencil, Plus } from "lucide-react";
 import { Panel, PanelHeader, PanelTitle } from "@/component/ui/panel";
 import { Dialog, DialogBody, DialogFooter } from "@/component/ui/dialog";
 import { Field, Input, Select } from "@/component/ui/field";
 import { Button } from "@/component/ui/button";
+import { toast } from "@/component/ui/toast";
 import { Badge } from "@/component/ui/badge";
 import { ApiError, addEducation, updateEducation } from "@/services";
 import { educationAdded, educationUpdated, selectEducation } from "@/store/profile/profileSlice";
@@ -117,12 +118,12 @@ function EducationForm({ entry, onSave, onCancel }) {
     const formik = useFormik({
         initialValues: educationInitialValues(entry),
         validationSchema: educationSchema,
-        onSubmit: async (values, { setStatus, setSubmitting }) => {
-            setStatus(null);
+        onSubmit: async (values, { setSubmitting }) => {
             try {
                 await onSave(values);
+                toast.success("Education saved.");
             } catch (error) {
-                setStatus(error instanceof ApiError ? error.message : "Could not save.");
+                toast.error(error instanceof ApiError ? error.message : "Could not save.");
                 setSubmitting(false);
             }
         },
@@ -190,13 +191,6 @@ function EducationForm({ entry, onSave, onCancel }) {
                         </div>
                     </Field>
                 </div>
-
-                {formik.status ? (
-                    <p className="flex items-start gap-2 rounded-sm bg-risk px-3 py-2.5 text-[12.5px] leading-relaxed text-risk-ink">
-                        <AlertTriangle className="mt-0.5 size-[13px] shrink-0" />
-                        {formik.status}
-                    </p>
-                ) : null}
             </DialogBody>
 
             <DialogFooter>

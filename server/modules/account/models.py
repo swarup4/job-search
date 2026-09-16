@@ -8,11 +8,11 @@ from pydantic import BaseModel, EmailStr, Field
 class Account(Document):
     name: str
     email: EmailStr
-    password_hash: str
+    passwordHash: str
     role: str = ""
-    profile_picture: str | None = None
+    profilePicture: str | None = None
     active: bool = True
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    createdAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     class Settings:
         name = "accounts"
@@ -39,7 +39,7 @@ class AccountRead(BaseModel):
     name: str
     email: EmailStr
     role: str
-    profile_picture: str | None
+    profilePicture: str | None
 
 
 class AccountUpdate(BaseModel):
@@ -48,17 +48,17 @@ class AccountUpdate(BaseModel):
 
     name: str | None = None
     role: str | None = None
-    profile_picture: str | None = None
+    profilePicture: str | None = None
 
 
 class Refresh(BaseModel):
-    refresh_token: str
+    refreshToken: str
 
 
 class LoginResult(BaseModel):
     """Every way of becoming signed in — signup, login, refresh — answers with this,
     so the client stores the result the same way whichever call produced it."""
 
-    access_token: str
-    refresh_token: str
+    accessToken: str
+    refreshToken: str
     account: AccountRead

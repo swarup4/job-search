@@ -54,20 +54,20 @@ class JobCreate(BaseModel):
     title: str
     company: Company
     location: str
-    job_type: JobType | None = None
-    work_mode: WorkMode | None = None
-    experience_band: str | None = None
-    salary_text: str | None = None
+    jobType: JobType | None = None
+    workMode: WorkMode | None = None
+    experienceBand: str | None = None
+    salaryText: str | None = None
     summary: str | None = None
     responsibilities: list[str] = Field(default_factory=list)
     requirements: list[str] = Field(default_factory=list)
     source: JobSource
-    source_url: HttpUrl | None = None
-    posted_at: datetime | None = None
-    deadline_at: datetime | None = None
-    applicant_count: int | None = None
-    jd_text: str
-    dedup_hash: str | None = None
+    sourceUrl: HttpUrl | None = None
+    postedAt: datetime | None = None
+    deadlineAt: datetime | None = None
+    applicantCount: int | None = None
+    jdText: str
+    dedupHash: str | None = None
 
 
 class Job(Document):
@@ -78,27 +78,27 @@ class Job(Document):
     title: str
     company: Company
     location: str
-    job_type: JobType | None = None
-    work_mode: WorkMode | None = None
-    experience_band: str | None = None
-    salary_text: str | None = None
+    jobType: JobType | None = None
+    workMode: WorkMode | None = None
+    experienceBand: str | None = None
+    salaryText: str | None = None
     summary: str | None = None
     responsibilities: list[str] = Field(default_factory=list)
     requirements: list[str] = Field(default_factory=list)
     source: JobSource
-    source_url: HttpUrl | None = None
-    posted_at: datetime | None = None
-    deadline_at: datetime | None = None
-    applicant_count: int | None = None
+    sourceUrl: HttpUrl | None = None
+    postedAt: datetime | None = None
+    deadlineAt: datetime | None = None
+    applicantCount: int | None = None
 
-    jd_text: str
+    jdText: str
     # FR-1.4 — discovery hashes the normalized posting and refuses a repeat.
-    dedup_hash: str
+    dedupHash: str
 
     status: JobStatus = JobStatus.NEW
     shortlisted: bool = False
-    discovered_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    discoveredAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updatedAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     class Settings:
         name = "jobs"
@@ -106,20 +106,20 @@ class Job(Document):
             # Unique per user, not globally: the same posting found by two people is
             # two rows, and one user's discovery must not silently dedup another's.
             pymongo.IndexModel(
-                [("userId", pymongo.ASCENDING), ("dedup_hash", pymongo.ASCENDING)], unique=True
+                [("userId", pymongo.ASCENDING), ("dedupHash", pymongo.ASCENDING)], unique=True
             ),
             pymongo.IndexModel(
                 [
                     ("userId", pymongo.ASCENDING),
                     ("status", pymongo.ASCENDING),
-                    ("discovered_at", pymongo.DESCENDING),
+                    ("discoveredAt", pymongo.DESCENDING),
                 ]
             ),
             pymongo.IndexModel([("userId", pymongo.ASCENDING), ("shortlisted", pymongo.ASCENDING)]),
             pymongo.IndexModel(
                 [("userId", pymongo.ASCENDING), ("company.name", pymongo.ASCENDING)]
             ),
-            pymongo.IndexModel([("title", pymongo.TEXT), ("jd_text", pymongo.TEXT)]),
+            pymongo.IndexModel([("title", pymongo.TEXT), ("jdText", pymongo.TEXT)]),
         ]
 
 
@@ -134,7 +134,7 @@ class JobUpdate(BaseModel):
 
 
 class JobRead(BaseModel):
-    """`jd_text` and `dedup_hash` stay out — the dashboard never renders either."""
+    """`jdText` and `dedupHash` stay out — the dashboard never renders either."""
 
     # A response always carries every field, defaults included.
     model_config = ConfigDict(json_schema_serialization_defaults_required=True)
@@ -143,21 +143,21 @@ class JobRead(BaseModel):
     title: str
     company: Company
     location: str
-    job_type: JobType | None = None
-    work_mode: WorkMode | None = None
-    experience_band: str | None = None
-    salary_text: str | None = None
+    jobType: JobType | None = None
+    workMode: WorkMode | None = None
+    experienceBand: str | None = None
+    salaryText: str | None = None
     summary: str | None = None
     responsibilities: list[str] = Field(default_factory=list)
     requirements: list[str] = Field(default_factory=list)
     source: JobSource
-    source_url: HttpUrl | None = None
-    posted_at: datetime | None = None
-    deadline_at: datetime | None = None
-    applicant_count: int | None = None
+    sourceUrl: HttpUrl | None = None
+    postedAt: datetime | None = None
+    deadlineAt: datetime | None = None
+    applicantCount: int | None = None
     status: JobStatus
     shortlisted: bool
-    discovered_at: datetime
+    discoveredAt: datetime
 
 
 class JobCreated(BaseModel):

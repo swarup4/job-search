@@ -26,8 +26,8 @@ def _signed_in(account: Account) -> LoginResult:
     """What every way of becoming signed in answers with, so the dashboard stores
     the result the same way whichever call produced it."""
     return LoginResult(
-        access_token=create_token(str(account.id), ACCESS),
-        refresh_token=create_token(str(account.id), REFRESH),
+        accessToken=create_token(str(account.id), ACCESS),
+        refreshToken=create_token(str(account.id), REFRESH),
         account=AccountRead(**account.model_dump()),
     )
 
@@ -40,7 +40,7 @@ async def sign_up(payload: SignUp) -> LoginResult:
 
     account = Account(
         **payload.model_dump(exclude={"password"}),
-        password_hash=hash_password(payload.password),
+        passwordHash=hash_password(payload.password),
     )
     await account.insert()
     return _signed_in(account)
@@ -48,7 +48,7 @@ async def sign_up(payload: SignUp) -> LoginResult:
 
 async def login(payload: Login) -> LoginResult:
     account = await Account.find_one({"email": payload.email, "active": True})
-    if account is None or not verify_password(payload.password, account.password_hash):
+    if account is None or not verify_password(payload.password, account.passwordHash):
         # Deliberately identical for an unknown email and a wrong password, so the
         # response cannot be used to find out which addresses are registered.
         raise Unauthorized("email or password is incorrect")
@@ -62,7 +62,7 @@ async def refresh(payload: Refresh) -> LoginResult:
     The new refresh token replaces the one just spent, so a session in daily use
     never has to sign in again while one left idle past the refresh lifetime does.
     """
-    token = decode_token(payload.refresh_token)
+    token = decode_token(payload.refreshToken)
     if token["kind"] != REFRESH:
         raise Unauthorized("token is invalid or has expired")
 

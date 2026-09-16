@@ -17,6 +17,7 @@ from modules.profile.models import (
     Profile,
     ProfileFields,
     ProfileRead,
+    ProfileUpdate,
     Skill,
     SkillFields,
     SkillRead,
@@ -112,7 +113,7 @@ async def get_user_profile(user_id: PydanticObjectId) -> UserProfile:
         name=row["name"],
         email=row["email"],
         role=row.get("role", ""),
-        profile_picture=row.get("profile_picture"),
+        profilePicture=row.get("profilePicture"),
         profile=ProfileRead(**_with_id(profile)) if profile else None,
         work=[ExperienceRead(**_with_id(entry)) for entry in row["work"]],
         education=[EducationRead(**_with_id(entry)) for entry in row["education"]],
@@ -134,9 +135,9 @@ async def create_profile(user_id: PydanticObjectId, payload: ProfileFields) -> P
     return profile
 
 
-async def replace_profile(user_id: PydanticObjectId, payload: ProfileFields) -> Profile:
+async def update_profile(user_id: PydanticObjectId, payload: ProfileUpdate) -> Profile:
     profile = await get_profile(user_id)
-    for field, value in payload.model_dump().items():
+    for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(profile, field, value)
     profile.updatedAt = datetime.now(UTC)
     await profile.save()

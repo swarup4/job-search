@@ -33,23 +33,23 @@ class Actor(StrEnum):
 class EventAppend(BaseModel):
     """Append-only: there is no update or delete on an event."""
 
-    event_type: EventType
+    eventType: EventType
     actor: Actor
-    job_id: PydanticObjectId | None = None
-    application_id: PydanticObjectId | None = None
+    jobId: PydanticObjectId | None = None
+    applicationId: PydanticObjectId | None = None
     notes: str | None = None
     payload: dict[str, object] = Field(default_factory=dict)
 
 
 class Event(Document):
     userId: PydanticObjectId
-    event_type: EventType
+    eventType: EventType
     actor: Actor
-    job_id: PydanticObjectId | None = None
-    application_id: PydanticObjectId | None = None
+    jobId: PydanticObjectId | None = None
+    applicationId: PydanticObjectId | None = None
     notes: str | None = None
     payload: dict[str, object] = Field(default_factory=dict)
-    occurred_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    occurredAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     class Settings:
         name = "events"
@@ -57,13 +57,13 @@ class Event(Document):
             pymongo.IndexModel(
                 [
                     ("userId", pymongo.ASCENDING),
-                    ("job_id", pymongo.ASCENDING),
-                    ("occurred_at", pymongo.DESCENDING),
+                    ("jobId", pymongo.ASCENDING),
+                    ("occurredAt", pymongo.DESCENDING),
                 ]
             ),
-            pymongo.IndexModel([("userId", pymongo.ASCENDING), ("event_type", pymongo.ASCENDING)]),
+            pymongo.IndexModel([("userId", pymongo.ASCENDING), ("eventType", pymongo.ASCENDING)]),
             pymongo.IndexModel(
-                [("userId", pymongo.ASCENDING), ("occurred_at", pymongo.DESCENDING)]
+                [("userId", pymongo.ASCENDING), ("occurredAt", pymongo.DESCENDING)]
             ),
         ]
 
@@ -73,10 +73,10 @@ class EventRead(BaseModel):
     model_config = ConfigDict(json_schema_serialization_defaults_required=True)
 
     id: PydanticObjectId
-    event_type: EventType
+    eventType: EventType
     actor: Actor
-    job_id: PydanticObjectId | None = None
-    application_id: PydanticObjectId | None = None
+    jobId: PydanticObjectId | None = None
+    applicationId: PydanticObjectId | None = None
     notes: str | None = None
     payload: dict[str, object] = Field(default_factory=dict)
-    occurred_at: datetime
+    occurredAt: datetime

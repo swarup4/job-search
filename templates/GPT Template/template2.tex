@@ -1,0 +1,282 @@
+% ============================================================
+% SWARUP SAHA — ATS Resume — Template 2
+% Design: Sidebar Layout (Professional & Modern)
+% Engine: pdflatex
+% ============================================================
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[
+  top=0.38in,
+  bottom=0.38in,
+  left=0.38in,
+  right=0.38in
+]{geometry}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{paracol}
+\usepackage{titlesec}
+\usepackage{hyperref}
+\usepackage{microtype}
+\usepackage{fontawesome5}
+
+% ---------- Colors ----------
+\definecolor{sidebar}{HTML}{06284A}
+\definecolor{accent}{HTML}{1D76B8}
+\definecolor{textmain}{HTML}{1B2733}
+\definecolor{textmuted}{HTML}{66727E}
+\definecolor{sidebarline}{HTML}{4D8CB8}
+
+\hypersetup{
+  colorlinks=true,
+  urlcolor=accent,
+  linkcolor=accent,
+  pdfauthor={Swarup Saha},
+  pdftitle={Swarup Saha — Resume}
+}
+
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0pt}
+
+% ---------- Main section headings ----------
+\titleformat{\section}
+  {\color{sidebar}\fontsize{10.2}{12}\bfseries}
+  {}{0pt}{}
+  [\vspace{-3pt}\textcolor{accent}{\rule{\linewidth}{0.65pt}}]
+
+\titlespacing{\section}{0pt}{7pt}{4pt}
+
+% ---------- Bullet style ----------
+\setlist[itemize]{
+  leftmargin=13pt,
+  itemsep=1pt,
+  parsep=0pt,
+  topsep=2pt,
+  label=\textcolor{sidebar}{\textbullet}
+}
+
+% ---------- Sidebar helpers ----------
+\newcommand{\sideheading}[1]{%
+  \vspace{6pt}
+  {\fontsize{9.3}{11}\bfseries\color{white}#1}\par
+  \vspace{2pt}
+  \textcolor{sidebarline}{\rule{\linewidth}{0.45pt}}
+  \vspace{3pt}
+}
+
+\newcommand{\sideitem}[2]{%
+  {\fontsize{8}{9.5}\bfseries\color{white}#1}\par
+  {\fontsize{7.8}{9.5}\color{white}#2}\par
+  \vspace{3pt}
+}
+
+\newcommand{\contact}[2]{%
+  {\color{white}\fontsize{8}{9.5}\selectfont #1}\quad
+  {\color{white}\fontsize{7.6}{9.5}\selectfont #2}\par
+  \vspace{4pt}
+}
+
+% ---------- Main-column helpers ----------
+\newcommand{\job}[4]{%
+  \vspace{2pt}
+  {\fontsize{10}{11.5}\bfseries\color{sidebar}#1}
+  {\color{textmuted}\ \textbar\ #2}
+  \hfill
+  {\fontsize{8.5}{10}\color{accent}#3}\\
+  {\fontsize{8.4}{10}\color{textmuted}#4}
+  \vspace{1pt}
+}
+
+\newcommand{\project}[1]{%
+  \vspace{2pt}
+  {\fontsize{8.6}{10}\bfseries\color{sidebar}#1}\par
+}
+
+\newcommand{\edu}[3]{%
+  {\fontsize{8.8}{10.5}\bfseries\color{sidebar}#1}\par
+  {\fontsize{8}{9.5}\color{textmuted}#2}
+  \hfill {\fontsize{7.8}{9.5}\color{textmuted}#3}\par
+  \vspace{4pt}
+}
+
+\begin{document}
+
+% ============================================================
+% SIDEBAR + MAIN CONTENT
+% ============================================================
+\columnratio{0.285,0.715}
+\setlength{\columnsep}{0.25in}
+
+\begin{paracol}{2}
+
+% ============================================================
+% LEFT SIDEBAR
+% ============================================================
+\colorbox{sidebar}{%
+\begin{minipage}[t][10.95in][t]{\dimexpr\linewidth-2\fboxsep\relax}
+\raggedright
+
+\vspace{12pt}
+
+% Monogram
+\begin{center}
+  \fcolorbox{accent}{sidebar}{%
+    \begin{minipage}[c][0.62in][c]{0.62in}
+      \centering
+      {\fontsize{18}{20}\bfseries\color{white}SS}
+    \end{minipage}
+  }
+\end{center}
+
+\vspace{8pt}
+
+\begin{center}
+  {\fontsize{16}{18}\bfseries\color{white}SWARUP SAHA}\par
+  \vspace{3pt}
+  {\fontsize{8.6}{10.5}\color{white}
+  Technical Lead \& Full Stack / GenAI Engineer}
+\end{center}
+
+\vspace{8pt}
+\textcolor{sidebarline}{\rule{\linewidth}{0.55pt}}
+\vspace{7pt}
+
+% Contact
+\contact{\faPhone}{+91-90358-45781}
+\contact{\faEnvelope}{swarup.saha004@hotmail.com}
+\contact{\faMapMarker*}{Bengaluru, India}
+\contact{\faLinkedin}{linkedin.com/in/swarup-saha-d7}
+\contact{\faGithub}{github.com/swarup4}
+
+\sideheading{SKILLS}
+
+\sideitem{Frontend}{JavaScript, TypeScript, React.js, Redux, Next.js, Angular, Angular.js, Tailwind CSS, Material UI}
+
+\sideitem{Backend}{Node.js, Express.js, Python, FastAPI, Flask, HTML5, CSS3/SCSS}
+
+\sideitem{Databases}{MongoDB, PostgreSQL, MySQL, Redis, MongoDB Atlas, PGVector}
+
+\sideitem{AI / GenAI}{Agentic AI, Multi-Agent, RAG, LangChain, LangGraph, LangSmith, Azure OpenAI, MCP, A2A, CrewAI, N8N, RASA, Tableau}
+
+\sideitem{Cloud \& DevOps}{AWS, Azure, Azure Service Bus, RabbitMQ, Docker, Nginx, Git, CI/CD, Jenkins, Azure DevOps}
+
+\sideitem{Testing \& Security}{Jest, Sinon, Supertest, Mocha, XSS/CSRF, SQL Injection, RBAC/ABAC}
+
+\sideitem{Architecture}{Agile/Scrum, Microservices, Event-Driven}
+
+\sideheading{EDUCATION}
+
+\sideitem{MCA in Machine Learning \& AI}{Amity University, Delhi}
+
+\sideitem{BSc. IT — Information Technology}{Kuvempu University, Delhi}
+
+\sideitem{GNIIT — Diploma in Information Technology}{NIIT University, Delhi}
+
+\vfill
+\end{minipage}
+}
+
+\switchcolumn
+
+% ============================================================
+% MAIN COLUMN
+% ============================================================
+
+% Header is intentionally kept in the main text flow so ATS
+% parsers can extract the contact information normally.
+{\fontsize{0.1}{0.1}\color{white}
+Swarup Saha — Technical Lead \& Full Stack / GenAI Engineer
+}
+
+\section{Professional Summary}
+
+{\fontsize{8.7}{12}\color{textmain}
+Technical Lead and Full Stack / GenAI Engineer with 12.4 years of experience building scalable
+web applications and AI-powered systems. Deep expertise in MERN/MEAN stack, LangChain,
+LangGraph, Azure OpenAI, and Agentic AI/RAG pipelines. Proven track record delivering
+multi-tenant SaaS platforms, ML models, and LLM-based products at enterprise scale. Skilled
+at leading cross-functional agile teams and owning full SDLC from design to deployment.
+}
+
+\section{Work Experience}
+
+\job{Technical Lead}{Trigent Software Pvt. Ltd.}{Jul 2023 -- Present}{Bengaluru, India}
+
+\project{Zeltri (Multi-Tenant Elder Care Management Platform)}
+\begin{itemize}
+  \item Architected a multi-tenant, cloud-native SaaS platform for care homes and assisted-living providers using MERN stack, FastAPI, MongoDB Atlas, Redis, and Azure; enforced strict tenant isolation, RBAC/ABAC security, and scalable REST APIs across 10+ facilities.
+  \item Integrated Agentic AI, Multi-Agent Orchestration \& RAG pipelines using LangChain, LangGraph, MCP, LangSmith, and Azure OpenAI with MongoDB Atlas as vector stores to enable semantic document search, email intelligence, conversational assistance, and automated task workflows.
+\end{itemize}
+
+\project{CV (AI-Powered Social Media Reels Generation)}
+\begin{itemize}
+  \item Developed an end-to-end AI-powered content pipeline for automated Reels creation across YouTube, Instagram, and Facebook; integrated Azure OpenAI (script generation), multilingual translation, Whisper (TTS), Midjourney (image gen), and RunwayML (video render), reducing production cycles by 60\%.
+\end{itemize}
+
+\project{PlanITRoI (Refurbished Laptop Price Prediction \& Specification Extraction)}
+\begin{itemize}
+  \item Designed microservices-based data pipelines using Node.js, Python, and PostgreSQL with event-driven processing for large-scale web scraping and data normalization.
+  \item Developed ML models for spec extraction and price prediction using KNN with fuzzy logic, Random Forest, and LLM-assisted enrichment, improving pricing accuracy and catalog quality.
+\end{itemize}
+
+\project{Sizeright (Shoe Measurement \& Sizing Solution)}
+\begin{itemize}
+  \item Built a cloud-native Flask web widget on AWS for real-time shoe sizing; developed scalable RESTful APIs with predictive ML models (Random Forest, KNN) for accurate measurement recommendations.
+\end{itemize}
+
+\job{Technical Lead}{Encora Inc.}{Aug 2022 -- Jun 2023}{Bengaluru, India}
+\begin{itemize}
+  \item Developed an ML model (Random Forest + XGBoost) for Brightside to predict loan eligibility and detect fraud by analyzing credit scores, employment, and financial history.
+  \item Built a serverless, cloud-native backend on AWS Lambda, Node.js, and MySQL for scalable loan evaluation services; implemented CI/CD pipelines using Azure DevOps and enforced security best practices including SQL injection prevention, XSS protection, and rate limiting.
+  \item Authored unit tests and integration tests using Jest, Chai, and Mocha to ensure code coverage and vulnerability remediation across critical loan processing modules.
+  \item Designed and implemented ETL pipelines using Python and AWS Glue for automated data extraction and transformation, streamlining ML model training workflows.
+\end{itemize}
+
+\job{Senior Software Engineer}{Larsen \& Toubro Infotech (LTI)}{May 2019 -- Jul 2022}{Bengaluru, India}
+\begin{itemize}
+  \item Built an AI-powered Virtual Assistant chatbot for Travelers (insurance domain) using RASA, Python, and MongoDB, significantly improving automated query resolution; used Azure Service Bus \& RabbitMQ for event-driven message processing and Tableau for reporting and visualization.
+  \item Developed full-stack features with React, Redux, Node.js, and integrated AWS Lambda, Amplify, S3, API Gateway, and EC2 for scalable policy data access; managed deployments via Jenkins CI/CD pipelines and wrote unit tests using Sinon, Supertest, and Mocha.
+\end{itemize}
+
+\job{Senior Software Engineer}{Mphasis Ltd.}{Jun 2017 -- May 2019}{Bengaluru, India}
+\begin{itemize}
+  \item Collaborated with Schneider Electric to build EcoReach, an IoT commissioning tool for Automatic Circuit Breakers using Angular.js, Node.js, and Socket.IO for real-time device data retrieval and cloud-based analysis.
+\end{itemize}
+
+\job{UI Developer}{Harman Connected Services}{Aug 2015 -- Jun 2017}{Bengaluru, India}
+\begin{itemize}
+  \item Engineered the I2E retail store management and supply chain optimization tool for EYC using Angular Material, Angular.js, Node.js, and MySQL.
+\end{itemize}
+
+\job{UI Developer}{SMACera Technologies (Mindtree Ltd.)}{Dec 2014 -- Aug 2015}{Bengaluru, India}
+\begin{itemize}
+  \item Contributed to E-commerce CMS development for client P\&G using Angular.js and HTML \& CSS, working on various product websites.
+\end{itemize}
+
+\job{Web Developer}{Gowyn Technologies Pvt. Ltd.}{Apr 2014 -- Nov 2014}{Delhi, India}
+\begin{itemize}
+  \item Built and maintained LIMOUSINE GROUP, a PHP-based car booking site for Canada, using HTML, CSS, \& Bootstrap to deliver premium car services.
+\end{itemize}
+
+\section{Education}
+
+\edu{MCA — Machine Learning \& Artificial Intelligence}{Amity University, Delhi}{Jul 2022 -- Aug 2024}
+\edu{BSc. IT — Information Technology}{Kuvempu University, Delhi}{Jun 2010 -- May 2013}
+\edu{GNIIT — Diploma in Information Technology}{NIIT University, Delhi}{Jun 2009 -- May 2012}
+
+\section{Certifications}
+
+\edu{Azure AI Cloud Developer Associate}{Microsoft Azure}{July 2026}
+\edu{Azure AI Apps and Agents Developer Associate}{Microsoft Azure}{Jun 2026}
+\edu{AWS Certified Developer Associate}{AWS}{Jun 2026}
+\edu{Building AI Agents with MongoDB}{MongoDB}{May 2026}
+
+\end{paracol}
+
+\end{document}

@@ -25,7 +25,7 @@ export function TemplatePicker({ templates, selected, preferred, onSelect, disab
 }
 
 function TemplateCard({ template, active, preferred, onSelect, disabled }) {
-    const preview = usePreview(template.has_preview ? template.id : null);
+    const preview = usePreview(template.hasPreview ? template.id : null);
 
     return (
         <button

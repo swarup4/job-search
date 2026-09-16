@@ -5,8 +5,8 @@ from modules.profile.models import (
     Education,
     Experience,
     Profile,
-    UserProfile,
     Skill,
+    UserProfile,
 )
 from modules.profile.router import router
 from modules.profile.service import get_profile, get_resume
@@ -19,8 +19,8 @@ __all__ = [
     "Education",
     "Experience",
     "Profile",
-    "UserProfile",
     "Skill",
+    "UserProfile",
     "get_profile",
     "get_resume",
     "router",

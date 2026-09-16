@@ -25,6 +25,20 @@ class ProfileFields(BaseModel):
     links: list[Link] = Field(default_factory=list)
 
 
+class ProfileUpdate(BaseModel):
+    """A PATCH body: only the fields the caller sent are touched. Distinguishing
+    "absent" from "null" is the point — an explicit null clears the field, which
+    `exclude_unset` preserves and `exclude_none` would swallow.
+
+    `links` is all-or-nothing: half a list means nothing, so sending it replaces it."""
+
+    headline: str | None = None
+    phone: str | None = None
+    location: str | None = None
+    summary: str | None = None
+    links: list[Link] | None = None
+
+
 class Profile(Document):
     userId: PydanticObjectId
     headline: str | None = None
@@ -32,6 +46,7 @@ class Profile(Document):
     location: str | None = None
     summary: str | None = None
     links: list[Link] = Field(default_factory=list)
+    createdAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updatedAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     class Settings:
@@ -72,6 +87,7 @@ class Experience(Document):
     current: bool = False
     bullets: list[str] = Field(default_factory=list)
     projects: list[Project] = Field(default_factory=list)
+    createdAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updatedAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     class Settings:
@@ -109,6 +125,7 @@ class Education(Document):
     location: str | None = None
     start: str | None = None
     end: str | None = None
+    createdAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updatedAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     class Settings:
@@ -139,6 +156,7 @@ class Skill(Document):
     userId: PydanticObjectId
     name: str
     items: list[str] = Field(default_factory=list)
+    createdAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updatedAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     class Settings:
@@ -166,6 +184,7 @@ class Certification(Document):
     name: str
     issuer: str
     year: str | None = None
+    createdAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updatedAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     class Settings:
@@ -196,7 +215,7 @@ class UserProfile(BaseModel):
     name: str
     email: EmailStr
     role: str = ""
-    profile_picture: str | None = None
+    profilePicture: str | None = None
     profile: ProfileRead | None = None
     work: list[ExperienceRead] = Field(default_factory=list)
     education: list[EducationRead] = Field(default_factory=list)

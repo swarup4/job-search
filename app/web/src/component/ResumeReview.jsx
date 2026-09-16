@@ -50,9 +50,9 @@ export function ResumeReview() {
         if (!resume) return;
         setBusy(true);
         try {
-            const rendered = await renderTemplate(resume.template_id);
+            const rendered = await renderTemplate(resume.templateId);
             setResume(
-                await saveBaseResume({ templateId: resume.template_id, tex: rendered.tex })
+                await saveBaseResume({ templateId: resume.templateId, tex: rendered.tex })
             );
             toast.success("Resume regenerated from your latest details.");
         } catch (failure) {
@@ -112,9 +112,9 @@ export function ResumeReview() {
                 <Panel className="p-4">
                     <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
                         <div className="min-w-0">
-                            <p className="text-[14px] font-medium">{resume.template_name}</p>
+                            <p className="text-[14px] font-medium">{resume.templateName}</p>
                             <p className="mt-0.5 text-[12.5px] text-muted-foreground">
-                                Saved {when(resume.updated_at)}
+                                Saved {when(resume.updatedAt)}
                             </p>
                         </div>
 
@@ -140,7 +140,7 @@ export function ResumeReview() {
 
                 <ResumeView
                     tex={resume.tex}
-                    filename={filenameFor(resume.template_name)}
+                    filename={filenameFor(resume.templateName)}
                     busy={busy}
                     busyLabel="Regenerating from your details…"
                 />

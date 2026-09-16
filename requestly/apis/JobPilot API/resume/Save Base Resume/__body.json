@@ -1,0 +1,6 @@
+{
+  "$schema": "https://assets.requestly.com/local/v1.15.0/body.json",
+  "contentType": "json",
+  "raw": "{\n  \"template_id\": \"5eb7cf5a86d9755df3a6c593\",\n  \"tex\": \"string\"\n}",
+  "rawContentType": "application/json"
+}

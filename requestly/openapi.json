@@ -394,6 +394,68 @@
         ]
       }
     },
+    "/api/resume/base": {
+      "get": {
+        "tags": [
+          "resume"
+        ],
+        "summary": "Get Base Resume",
+        "operationId": "get_base_resume_api_resume_base_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "resume"
+        ],
+        "summary": "Save Base Resume",
+        "operationId": "save_base_resume_api_resume_base_put",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BaseResumeStore"
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/resume": {
       "post": {
         "tags": [
@@ -1111,6 +1173,7 @@
           "profile"
         ],
         "summary": "Get Profile",
+        "description": "One aggregation: the account, the personal details, and the four lists.",
         "operationId": "get_profile_api_profile_getProfile_get",
         "parameters": [
           {
@@ -1133,12 +1196,12 @@
       }
     },
     "/api/profile/updateProfile": {
-      "put": {
+      "patch": {
         "tags": [
           "profile"
         ],
-        "summary": "Replace Profile",
-        "operationId": "replace_profile_api_profile_updateProfile_put",
+        "summary": "Update Profile",
+        "operationId": "update_profile_api_profile_updateProfile_patch",
         "parameters": [
           {
             "name": "authorization",
@@ -1162,7 +1225,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ProfileFields"
+                "$ref": "#/components/schemas/ProfileUpdate"
               }
             }
           }
@@ -2012,6 +2075,25 @@
         ],
         "title": "AtsPlatform"
       },
+      "BaseResumeStore": {
+        "properties": {
+          "template_id": {
+            "$ref": "#/components/schemas/PydanticObjectId"
+          },
+          "tex": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Tex"
+          }
+        },
+        "type": "object",
+        "required": [
+          "template_id",
+          "tex"
+        ],
+        "title": "BaseResumeStore",
+        "description": "What the Resume screen submits once the user accepts the render."
+      },
       "Body_upload_template_api_template_upload_post": {
         "properties": {
           "tex": {
@@ -2200,17 +2282,6 @@
               }
             ],
             "title": "End"
-          },
-          "note": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Note"
           }
         },
         "type": "object",
@@ -2553,7 +2624,8 @@
           "source",
           "jd_text"
         ],
-        "title": "JobCreate"
+        "title": "JobCreate",
+        "description": "The posting as discovery found it."
       },
       "JobSource": {
         "type": "string",
@@ -2652,7 +2724,8 @@
           }
         },
         "type": "object",
-        "title": "JobUpdate"
+        "title": "JobUpdate",
+        "description": "Every field optional: a PATCH sends only what changed."
       },
       "KeywordSelection": {
         "properties": {
@@ -2799,7 +2872,7 @@
           "score"
         ],
         "title": "MatchWrite",
-        "description": "What the matching agent posts. The vector goes to Atlas, never here."
+        "description": "What the matching agent posts. The JD vector goes to Atlas, never here."
       },
       "MissingKeyword": {
         "properties": {
@@ -2910,6 +2983,71 @@
         },
         "type": "object",
         "title": "ProfileFields"
+      },
+      "ProfileUpdate": {
+        "properties": {
+          "headline": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Headline"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "links": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Link"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Links"
+          }
+        },
+        "type": "object",
+        "title": "ProfileUpdate",
+        "description": "A PATCH body: only the fields the caller sent are touched. Distinguishing\n\"absent\" from \"null\" is the point \u2014 an explicit null clears the field, which\n`exclude_unset` preserves and `exclude_none` would swallow.\n\n`links` is all-or-nothing: half a list means nothing, so sending it replaces it."
       },
       "Project": {
         "properties": {

@@ -103,10 +103,10 @@ function refreshAccessToken() {
             // Bare axios, not the instance: this call must not re-enter the
             // interceptor that is waiting on it.
             const { data } = await axios.post(`${API_URL}${REFRESH_PATH}`, {
-                refresh_token: refreshToken,
+                refreshToken: refreshToken,
             });
-            writeTokens({ token: data.access_token, refreshToken: data.refresh_token });
-            return data.access_token;
+            writeTokens({ token: data.accessToken, refreshToken: data.refreshToken });
+            return data.accessToken;
         } catch {
             // The refresh token is expired or rejected — sign in again.
             return null;

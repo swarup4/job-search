@@ -45,7 +45,7 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         # NFR-4: the local dashboard and the unpacked extension. Nothing else.
-        allow_origins=[os.environ.get("WEB_ORIGIN", "http://localhost:3000")],
+        allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
         allow_origin_regex=r"^chrome-extension://[a-p]{32}$",
         allow_credentials=False,
         allow_methods=["*"],
