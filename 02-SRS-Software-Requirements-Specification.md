@@ -82,7 +82,11 @@ Single technical user (software engineer) — no requirement for simplified/non-
 - **FR-5.2** The extension shall match detected fields to known answers (profile data + Q&A bank) using label/ARIA/placeholder heuristics, with LLM fallback for ambiguous fields.
 - **FR-5.3** The extension shall fill matched fields automatically but shall NOT submit the form.
 - **FR-5.4** The extension shall visually indicate which fields were auto-filled so the user can review before submitting.
-- **FR-5.5** The extension shall surface the correct tailored resume file's location for manual attach (file inputs cannot be set programmatically).
+- **FR-5.5** The extension shall attach the resume to the application's file input by assigning a
+  `DataTransfer`-built `FileList`, and shall surface the file for manual attach only where the page
+  rejects that. *(Amended 2026-09-17: the original wording assumed file inputs cannot be set
+  programmatically. `input.files` is read-only but assignable from a `DataTransfer`, so the attach
+  is automatic and the manual path is the exception.)*
 
 ### FR-6 — Tracking & Follow-up
 - **FR-6.1** The system shall maintain application status across a defined pipeline (Applied → Viewed → Interview → Offer/Rejected).
