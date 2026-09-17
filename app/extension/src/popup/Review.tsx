@@ -1,32 +1,27 @@
-import { useState } from "react";
+import type { FrameResult } from "@/shared/messages";
 
-import type { FrameResult, UserAnswer } from "@/shared/messages";
-
-/** FR-5.4 in the popup: what was filled, where each value came from, and the
- * questions that got no answer rather than a guessed one. */
+/**
+ * The popup's half of FR-5.4: the counts and the actions. The questions
+ * themselves live in the in-page panel, because answering them means looking at
+ * the form, and a popup closes as soon as you do.
+ */
 export function Review({
     result,
     busy,
-    onAnswer,
+    tracked,
+    onShowPanel,
     onClear,
     onSubmitted,
 }: {
     result: FrameResult;
     busy: boolean;
-    onAnswer: (answers: UserAnswer[]) => void;
+    /** False when the page matches nothing staged, so there is no application to
+     * move to APPLIED and nothing was recorded. */
+    tracked: boolean;
+    onShowPanel: () => void;
     onClear: () => void;
     onSubmitted: () => void;
 }) {
-    const [draft, setDraft] = useState<Record<string, string>>({});
-
-    const answers: UserAnswer[] = result.pending
-        .filter((question) => (draft[question.selector] ?? "").trim() !== "")
-        .map((question) => ({
-            selector: question.selector,
-            question: question.question,
-            value: draft[question.selector] ?? "",
-        }));
-
     return (
         <div className="stack">
             <div className="counts">
@@ -41,86 +36,45 @@ export function Review({
 
             {result.resumeHint ? <p className="hint">{result.resumeHint}</p> : null}
 
-            {result.filled.length > 0 ? (
-                <details open>
-                    <summary>Filled fields</summary>
-                    <ul className="fills">
-                        {result.filled.map((field, index) => (
-                            <li key={`${index}-${field.selector}`}>
-                                <span className="label">{field.label}</span>
-                                <span className="value">{field.value}</span>
-                                <span className="src">
-                                    {field.source === "profile" ? "profile" : "answer bank"}
-                                </span>
-                            </li>
-                        ))}
-                    </ul>
-                </details>
-            ) : null}
-
             {result.pending.length > 0 ? (
-                <details open>
-                    <summary>Unanswered — your words, not ours</summary>
-                    <ul className="pending">
-                        {result.pending.map((question, index) => (
-                            <li key={`${index}-${question.selector}`}>
-                                <label>{question.question}</label>
-                                {question.kind === "select" && question.options.length > 0 ? (
-                                    <select
-                                        value={draft[question.selector] ?? ""}
-                                        onChange={(event) =>
-                                            setDraft({ ...draft, [question.selector]: event.target.value })
-                                        }
-                                    >
-                                        <option value="">Leave blank</option>
-                                        {question.options.map((option) => (
-                                            <option key={option} value={option}>
-                                                {option}
-                                            </option>
-                                        ))}
-                                    </select>
-                                ) : question.kind === "textarea" ? (
-                                    <textarea
-                                        rows={3}
-                                        value={draft[question.selector] ?? ""}
-                                        onChange={(event) =>
-                                            setDraft({ ...draft, [question.selector]: event.target.value })
-                                        }
-                                    />
-                                ) : (
-                                    <input
-                                        value={draft[question.selector] ?? ""}
-                                        onChange={(event) =>
-                                            setDraft({ ...draft, [question.selector]: event.target.value })
-                                        }
-                                    />
-                                )}
-                            </li>
-                        ))}
-                    </ul>
-                    <button
-                        type="button"
-                        className="primary"
-                        disabled={busy || answers.length === 0}
-                        onClick={() => onAnswer(answers)}
-                    >
-                        Fill {answers.length || ""} answer{answers.length === 1 ? "" : "s"}
+                <>
+                    <p className="hint">
+                        {result.pending.length} question
+                        {result.pending.length === 1 ? "" : "s"} could not be answered from what is
+                        stored. Answer them in the panel on the page — it stays open while you work.
+                    </p>
+                    <button type="button" className="primary" onClick={onShowPanel} disabled={busy}>
+                        Show the panel
                     </button>
-                </details>
-            ) : null}
-
-            <p className="hint">
-                Check every highlighted field, attach anything left, then submit the form yourself.
-            </p>
+                </>
+            ) : result.scanned > 0 && result.filled.length === 0 ? (
+                <p className="hint">
+                    Found {result.scanned} field{result.scanned === 1 ? "" : "s"}, all already
+                    answered on the page.
+                </p>
+            ) : (
+                <p className="hint">
+                    Check every highlighted field, then submit the form yourself.
+                </p>
+            )}
 
             <div className="row">
                 <button type="button" onClick={onClear} disabled={busy}>
                     Clear highlights
                 </button>
-                <button type="button" className="confirm" onClick={onSubmitted} disabled={busy}>
-                    I submitted this
-                </button>
+                {tracked ? (
+                    <button type="button" className="confirm" onClick={onSubmitted} disabled={busy}>
+                        I submitted this
+                    </button>
+                ) : null}
             </div>
+
+            {!tracked ? (
+                <p className="hint">
+                    This page matches nothing staged, so the fill was not recorded against an
+                    application.
+                </p>
+            ) : null}
         </div>
     );
 }

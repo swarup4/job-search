@@ -1,6 +1,6 @@
 import { lookup } from "@/features/answerBank";
 import type { ScannedField } from "@/features/fieldFill/scan";
-import type { AnswerBankEntry, UserProfile } from "@/shared/types";
+import type { AnswerBankEntry, ApplicantProfile, UserProfile } from "@/shared/types";
 
 /**
  * The question a field is asking, named. Anything not on this list, and anything
@@ -37,6 +37,12 @@ export type AnswerKey =
     | "startDate"
     | "howHeard"
     | "referral"
+    | "addressLine1"
+    | "addressLine2"
+    | "city"
+    | "state"
+    | "postalCode"
+    | "country"
     | "gender"
     | "race"
     | "veteran"
@@ -76,7 +82,13 @@ const RULES: { key: AnswerKey; patterns: RegExp[] }[] = [
     { key: "race", patterns: [/\b(race|ethnicity|hispanic|latino)\b/] },
     { key: "veteran", patterns: [/\bveteran\b/, /\bmilitary\b/] },
     { key: "disability", patterns: [/\bdisabilit/] },
-    { key: "location", patterns: [/\b(location|city|town|address|based)\b/, /\bwhere are you\b/] },
+    { key: "addressLine2", patterns: [/\b(address line 2|address 2|apt|apartment|suite|unit)\b/] },
+    { key: "addressLine1", patterns: [/\b(address line 1|address 1|street address|street)\b/, /^address$/] },
+    { key: "postalCode", patterns: [/\b(zip|postal)\b/] },
+    { key: "city", patterns: [/^(city|town)$/, /\bcity\b/] },
+    { key: "state", patterns: [/^(state|province|region|county)$/, /\bstate \/ province\b/] },
+    { key: "country", patterns: [/^country$/, /\bcountry\b/] },
+    { key: "location", patterns: [/\b(location|address|based)\b/, /\bwhere are you\b/] },
 ];
 
 export function canonicalKey(fieldKey: string): AnswerKey | null {
@@ -149,6 +161,68 @@ export function fromProfile(key: AnswerKey, profile: UserProfile): string | null
     }
 }
 
+function yesNo(value: boolean | null): string | null {
+    return value === null ? null : value ? "Yes" : "No";
+}
+
+/**
+ * The standing answers, which is where everything a resume does not carry lives:
+ * work authorisation, notice period, salary, EEO. Anything still null here is a
+ * question the user has not answered yet, and stays one.
+ */
+export function fromApplicant(key: AnswerKey, applicant: ApplicantProfile): string | null {
+    const { address, demographics } = applicant;
+
+    switch (key) {
+        case "addressLine1":
+            return address.line1;
+        case "addressLine2":
+            return address.line2;
+        case "city":
+            return address.city;
+        case "state":
+            return address.state;
+        case "postalCode":
+            return address.postalCode;
+        case "country":
+            return address.country;
+        case "location":
+            return [address.city, address.state, address.country].filter(Boolean).join(", ") || null;
+        case "yearsExperience":
+            return applicant.totalExperienceYears === null
+                ? null
+                : String(applicant.totalExperienceYears);
+        case "noticePeriod":
+            return applicant.noticePeriod;
+        case "startDate":
+            return applicant.earliestStartDate;
+        case "currentSalary":
+            return applicant.currentSalary;
+        case "expectedSalary":
+            return applicant.expectedSalary;
+        case "workAuthorization":
+            return applicant.workAuthorization;
+        case "sponsorship":
+            return yesNo(applicant.requiresSponsorship);
+        case "relocate":
+            return yesNo(applicant.willingToRelocate);
+        case "howHeard":
+            return applicant.howHeard;
+        case "referral":
+            return applicant.referredBy;
+        case "gender":
+            return demographics.gender;
+        case "race":
+            return demographics.race;
+        case "veteran":
+            return demographics.veteranStatus;
+        case "disability":
+            return demographics.disabilityStatus;
+        default:
+            return null;
+    }
+}
+
 export interface Resolution {
     value: string;
     source: "profile" | "answer_bank";
@@ -163,6 +237,7 @@ export interface Resolution {
 export function resolve(
     field: ScannedField,
     profile: UserProfile,
+    applicant: ApplicantProfile,
     bank: AnswerBankEntry[],
 ): Resolution | null {
     const key = canonicalKey(field.key);
@@ -171,8 +246,13 @@ export function resolve(
     if (match?.exact) return { value: match.entry.answer, source: "answer_bank", key };
 
     if (key) {
-        const value = fromProfile(key, profile);
-        if (value) return { value, source: "profile", key };
+        // Standing answers first: `city` is a form field, `profile.location` is a
+        // resume line, and only one of them belongs in a box labelled City.
+        const stored = fromApplicant(key, applicant);
+        if (stored) return { value: stored, source: "profile", key };
+
+        const derived = fromProfile(key, profile);
+        if (derived) return { value: derived, source: "profile", key };
     }
 
     if (match) return { value: match.entry.answer, source: "answer_bank", key };

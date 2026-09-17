@@ -5,6 +5,9 @@ from modules.account import CurrentUser
 from modules.application import service
 from modules.application.models import (
     AnswerBank,
+    ApplicantFields,
+    ApplicantProfile,
+    ApplicantRead,
     Application,
     ApplicationFill,
     ApplicationRead,
@@ -14,6 +17,21 @@ from modules.application.models import (
 )
 
 router = APIRouter(tags=["application"])
+
+
+# --- the applicant's standing answers ----------------------------------------
+# Declared before `/{application_id}`: a literal path has to be matched ahead of
+# the parameterised one, or `applicant` is read as an application id.
+
+
+@router.get("/applicant", response_model=ApplicantRead)
+async def get_applicant(user_id: CurrentUser) -> ApplicantProfile:
+    return await service.get_applicant(user_id)
+
+
+@router.put("/applicant", response_model=ApplicantRead)
+async def save_applicant(payload: ApplicantFields, user_id: CurrentUser) -> ApplicantProfile:
+    return await service.save_applicant(user_id, payload)
 
 
 @router.get("/answer-bank", response_model=list[AnswerBank])

@@ -5,7 +5,7 @@ from pymongo import AsyncMongoClient
 from pymongo.asynchronous.database import AsyncDatabase
 
 from modules.account import Account
-from modules.application import AnswerBank, Application
+from modules.application import AnswerBank, ApplicantProfile, Application
 from modules.event import Event
 from modules.job import Job
 from modules.match import Match
@@ -25,6 +25,7 @@ def document_models() -> list[type]:
         BaseResume,
         Application,
         AnswerBank,
+        ApplicantProfile,
         Event,
         Profile,
         Experience,

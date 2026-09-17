@@ -1,18 +1,27 @@
 import { detect } from "@/features/ats";
 import { attachFile, fillField } from "@/features/fieldFill/fill";
-import { clearMarks, markFilled, markPending, showBanner } from "@/features/fieldFill/highlight";
+import { clearMarks, markFilled, markPending, PENDING_CLASS } from "@/features/fieldFill/highlight";
 import { resolve } from "@/features/fieldFill/match";
 import { scan, type FieldKind, type ScannedField } from "@/features/fieldFill/scan";
-import { findBySelector } from "@/features/fieldFill/selector";
-import type {
-    FillData,
-    FrameResult,
-    PendingQuestion,
-    Reply,
-    TabRequest,
-    UserAnswer,
+import { closePanel, renderPanel } from "@/features/panel";
+import {
+    askWorker,
+    type FillData,
+    type FrameResult,
+    type PendingQuestion,
+    type Reply,
+    type TabRequest,
+    type UserAnswer,
 } from "@/shared/messages";
 import type { FieldFill, ScreeningAnswer } from "@/shared/types";
+
+/** The last fill, so the panel can be redrawn after the user answers part of it.
+ * Module state is safe here — a content script lives as long as its page. */
+let lastResult: FrameResult | null = null;
+
+/** Whether this tab's fill was recorded against a staged application. Only then
+ * is there anything for the panel's submit confirmation to move. */
+let tracked = false;
 
 /**
  * Runs in the application page's world, which is why it holds no token and makes
@@ -23,6 +32,7 @@ import type { FieldFill, ScreeningAnswer } from "@/shared/types";
 function emptyResult(platform: FrameResult["platform"], blocked: string | null): FrameResult {
     return {
         platform,
+        scanned: 0,
         filled: [],
         pending: [],
         answered: [],
@@ -47,7 +57,8 @@ function asPending(field: ScannedField): PendingQuestion | null {
     return { selector: field.selector, question: field.label, kind, options: field.options };
 }
 
-async function runFill(data: FillData): Promise<FrameResult> {
+export async function runFill(data: FillData): Promise<FrameResult> {
+    tracked = data.tracked;
     const adapter = detect();
 
     const blocked = adapter.blocked?.(document) ?? null;
@@ -58,11 +69,12 @@ async function runFill(data: FillData): Promise<FrameResult> {
 
     const filled: FieldFill[] = [];
     const pending: PendingQuestion[] = [];
+    const fields = scan(root);
 
-    for (const field of scan(root)) {
+    for (const field of fields) {
         if (field.kind === "file" || field.prefilled) continue;
 
-        const resolution = resolve(field, data.profile, data.answerBank);
+        const resolution = resolve(field, data.profile, data.applicant, data.answerBank);
         if (!resolution) {
             const question = asPending(field);
             if (question) pending.push(question);
@@ -90,12 +102,9 @@ async function runFill(data: FillData): Promise<FrameResult> {
 
     const { resumeAttached, resumeHint } = attachResume(adapter, data);
 
-    if (filled.length > 0 || pending.length > 0) {
-        showBanner(document, filled.length, pending.length);
-    }
-
-    return {
+    const outcome: FrameResult = {
         platform: adapter.platform,
+        scanned: fields.length,
         filled,
         pending,
         answered: [],
@@ -103,6 +112,49 @@ async function runFill(data: FillData): Promise<FrameResult> {
         resumeHint,
         blocked: null,
     };
+
+    if (filled.length > 0 || pending.length > 0) show(outcome);
+    return outcome;
+}
+
+/**
+ * Draws the review panel into the page. The popup cannot do this job: it closes
+ * the moment the user clicks the form, which is precisely when they are working
+ * through the questions it could not answer.
+ */
+function show(result: FrameResult): void {
+    lastResult = result;
+    renderPanel(result, {
+        onAnswer: applyAnswers,
+        onClearHighlights: () => clearMarks(document),
+        // NFR-7 — the user saying they pressed Submit, from the page where they
+        // pressed it. The worker holds the application id, as it does for answers.
+        onSubmitted: tracked
+            ? async () => {
+                  await askWorker({ type: "confirmTabSubmitted" });
+              }
+            : null,
+    });
+}
+
+/** Fills what the user typed in the panel, drops those questions from it, and
+ * tells the worker so the answers reach the application record. */
+async function applyAnswers(answers: UserAnswer[]): Promise<void> {
+    const outcome = await runAnswers(answers);
+    if (outcome.answered.length === 0) return;
+
+    const done = new Set(outcome.answered.map((entry) => entry.question));
+    const merged: FrameResult = {
+        ...(lastResult ?? outcome),
+        filled: [...(lastResult?.filled ?? []), ...outcome.filled],
+        pending: (lastResult?.pending ?? []).filter((question) => !done.has(question.question)),
+    };
+
+    show(merged);
+
+    // Outbound only — the worker holds the token and the application id, and this
+    // side never learns either.
+    await chrome.runtime.sendMessage({ type: "recordAnswers", answered: outcome.answered });
 }
 
 function attachResume(
@@ -131,28 +183,39 @@ function attachResume(
 
 /** The user answered a pending question in the popup. Their answer is recorded as
  * `answeredByUser`, never as something the extension worked out. */
-async function runAnswers(answers: UserAnswer[]): Promise<FrameResult> {
+export async function runAnswers(answers: UserAnswer[]): Promise<FrameResult> {
     const adapter = detect();
+    const root = adapter.root?.(document) ?? document;
+
+    // Scanned once, over the same root the fill used, and indexed by selector.
+    // Rescanning around each element narrowed the scope enough that a control
+    // sharing its wrapper with another lost its label and was silently dropped.
+    const fields = new Map(scan(root).map((field) => [field.selector, field]));
+
     const answered: ScreeningAnswer[] = [];
+    const filled: FieldFill[] = [];
 
     for (const answer of answers) {
-        const el = findBySelector(answer.selector);
-        if (!el) continue;
-
-        const field = scan(el.parentElement ?? document).find(
-            (candidate) => candidate.selector === answer.selector,
-        );
+        const field = fields.get(answer.selector);
         if (!field) continue;
 
-        const ok = await fillField(field, answer.value);
+        const override = await adapter.fill?.(field, answer.value);
+        const ok = override ?? (await fillField(field, answer.value));
         if (!ok) continue;
 
-        el.classList.remove("jobpilot-pending");
-        markFilled(el, "your own answer");
+        field.el.classList.remove(PENDING_CLASS);
+        markFilled(field.el, "your own answer");
         answered.push({ question: answer.question, answer: answer.value, answeredByUser: true });
+        filled.push({
+            selector: field.selector,
+            label: field.label,
+            value: answer.value,
+            source: "answer_bank",
+            highlighted: true,
+        });
     }
 
-    return { ...emptyResult(adapter.platform, null), answered };
+    return { ...emptyResult(adapter.platform, null), filled, answered };
 }
 
 declare global {
@@ -174,12 +237,17 @@ function register(): void {
             switch (request.type) {
                 case "ping":
                     return null;
+                case "panel":
+                    if (lastResult) show(lastResult);
+                    return null;
                 case "fill":
                     return runFill(request.data);
                 case "answer":
                     return runAnswers(request.answers);
                 case "clear":
                     clearMarks(document);
+                    closePanel();
+                    lastResult = null;
                     return null;
             }
         };

@@ -1,5 +1,5 @@
 import { context } from "esbuild";
-import { cp, mkdir, readFile, rm } from "node:fs/promises";
+import { cp, mkdir, readdir, readFile, rm } from "node:fs/promises";
 
 const watch = process.argv.includes("--watch");
 const OUT = "dist";
@@ -18,8 +18,13 @@ async function loadEnv() {
 }
 
 await loadEnv();
-await rm(OUT, { recursive: true, force: true });
+// Empty the directory rather than replace it: Chrome holds an unpacked
+// extension by its folder, and deleting that folder out from under a loaded
+// extension leaves it serving a stale copy until it is removed and re-added.
 await mkdir(OUT, { recursive: true });
+for (const entry of await readdir(OUT)) {
+    await rm(`${OUT}/${entry}`, { recursive: true, force: true });
+}
 
 const shared = {
     bundle: true,

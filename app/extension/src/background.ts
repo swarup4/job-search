@@ -10,7 +10,7 @@ import type {
     WorkerRequest,
 } from "@/shared/messages";
 import { clearSession, readAccount } from "@/shared/session";
-import type { ApplicationRead, FieldFill, JobRead, ScreeningAnswer } from "@/shared/types";
+import type { FieldFill, JobRead, ScreeningAnswer } from "@/shared/types";
 
 /**
  * The only context with the token and the only one that calls the API. It also
@@ -21,7 +21,7 @@ import type { ApplicationRead, FieldFill, JobRead, ScreeningAnswer } from "@/sha
 const FILLABLE = new Set(["http:", "https:"]);
 
 interface TabState {
-    applicationId: string;
+    applicationId: string | null;
     filled: FieldFill[];
     answered: ScreeningAnswer[];
 }
@@ -57,53 +57,99 @@ async function ensureInjected(tabId: number): Promise<void> {
     });
 }
 
+/**
+ * Three outcomes, and they are not the same thing. Most frames on a page have no
+ * content script and that is normal. A frame whose script *ran and threw* is a
+ * bug, and collapsing it into "no answer" is how a broken fill came back looking
+ * like an empty page.
+ */
+type FrameOutcome =
+    | { kind: "result"; value: FrameResult }
+    | { kind: "error"; message: string }
+    | { kind: "absent" };
+
 async function sendToFrame(
     tabId: number,
     frameId: number,
     request: TabRequest,
-): Promise<FrameResult | null> {
+): Promise<FrameOutcome> {
+    let reply: Reply<FrameResult | null> | undefined;
     try {
-        const reply = (await chrome.tabs.sendMessage(tabId, request, { frameId })) as
+        reply = (await chrome.tabs.sendMessage(tabId, request, { frameId })) as
             | Reply<FrameResult | null>
             | undefined;
-        return reply?.ok ? reply.value : null;
     } catch {
-        // A frame with no content script, or one that navigated away mid-fill.
-        return null;
+        // No receiver in this frame, or it navigated away mid-fill.
+        return { kind: "absent" };
     }
+
+    if (!reply) return { kind: "absent" };
+    if (!reply.ok) return { kind: "error", message: reply.error };
+    return reply.value ? { kind: "result", value: reply.value } : { kind: "absent" };
 }
 
-async function broadcast(tabId: number, request: TabRequest): Promise<FrameResult[]> {
+async function broadcast(tabId: number, request: TabRequest): Promise<FrameOutcome[]> {
     await ensureInjected(tabId);
 
     const frames = (await chrome.webNavigation.getAllFrames({ tabId })) ?? [];
-    const results = await Promise.all(
-        frames.map((frame) => sendToFrame(tabId, frame.frameId, request)),
-    );
-
-    return results.filter((result): result is FrameResult => result !== null);
+    return Promise.all(frames.map((frame) => sendToFrame(tabId, frame.frameId, request)));
 }
 
-function merge(results: FrameResult[]): FrameResult {
+/**
+ * Adds the frames up, and — when nothing came back — says why. An empty review
+ * with no explanation is the worst outcome here: the user cannot tell a page with
+ * no form from a content script that never loaded, or from one that crashed.
+ */
+function merge(outcomes: FrameOutcome[]): FrameResult {
+    const results = outcomes.flatMap((outcome) =>
+        outcome.kind === "result" ? [outcome.value] : [],
+    );
+    const errors = outcomes.flatMap((outcome) =>
+        outcome.kind === "error" ? [outcome.message] : [],
+    );
+
     const filled = results.flatMap((result) => result.filled);
     const pending = results.flatMap((result) => result.pending);
     const answered = results.flatMap((result) => result.answered);
-
-    // A frame's "blocked" only matters when no frame managed anything.
-    const blocked =
-        filled.length === 0 && answered.length === 0
-            ? (results.find((result) => result.blocked)?.blocked ?? null)
-            : null;
+    const scanned = results.reduce((total, result) => total + result.scanned, 0);
 
     return {
         platform: results.find((result) => result.platform !== "other")?.platform ?? "other",
+        scanned,
         filled,
         pending,
         answered,
         resumeAttached: results.some((result) => result.resumeAttached),
         resumeHint: results.find((result) => result.resumeHint)?.resumeHint ?? null,
-        blocked,
+        blocked: reasonNothingHappened(results, errors, filled.length + answered.length, scanned),
     };
+}
+
+function reasonNothingHappened(
+    results: FrameResult[],
+    errors: string[],
+    touched: number,
+    scanned: number,
+): string | null {
+    // An adapter knows best why its own page is not ready — a sign-in wall, an
+    // unopened Easy Apply modal.
+    const stated = results.find((result) => result.blocked)?.blocked;
+    if (stated && touched === 0) return stated;
+
+    // A crash inside the page beats every friendlier explanation: it is the truth.
+    if (errors.length > 0 && touched === 0) return `The fill failed: ${errors[0]}`;
+
+    if (touched > 0) return null;
+
+    if (results.length === 0) {
+        return "This page did not respond. Reload the tab and try again — the extension has to be loaded before the page is.";
+    }
+
+    if (scanned === 0) {
+        return "No form fields found on this step. If this is a job description page, open the application form first.";
+    }
+
+    return null;
 }
 
 async function badge(tabId: number, count: number): Promise<void> {
@@ -145,16 +191,23 @@ async function buildContext(tabId: number): Promise<TabContext> {
     };
 }
 
-async function fillData(): Promise<FillData> {
-    const [profile, answerBank] = await Promise.all([api.getProfile(), api.getAnswerBank()]);
+async function fillData(tracked: boolean): Promise<FillData> {
+    const [profile, applicant, answerBank] = await Promise.all([
+        api.getProfile(),
+        api.getApplicant(),
+        api.getAnswerBank(),
+    ]);
     // No base resume, or LaTeX not installed, is a missing attachment — not a
     // reason to abandon the fill.
     const resume = await api.getResumePdf().catch(() => null);
-    return { profile, answerBank, resume };
+    return { profile, applicant, answerBank, resume, tracked };
 }
 
-async function fillTab(tabId: number, applicationId: string): Promise<FrameResult> {
-    const data = await fillData();
+/** `applicationId` is null when the tab matches nothing staged. The fill still
+ * runs — the profile is what answers the form — there is just no application to
+ * record it against. */
+async function fillTab(tabId: number, applicationId: string | null): Promise<FrameResult> {
+    const data = await fillData(applicationId !== null);
     const result = merge(await broadcast(tabId, { type: "fill", data }));
 
     const answered = result.pending.map(
@@ -166,7 +219,7 @@ async function fillTab(tabId: number, applicationId: string): Promise<FrameResul
     );
 
     await writeState(tabId, { applicationId, filled: result.filled, answered });
-    await api.recordFill(applicationId, result.filled, answered);
+    if (applicationId) await api.recordFill(applicationId, result.filled, answered);
     await badge(tabId, result.filled.length);
 
     return result;
@@ -174,7 +227,7 @@ async function fillTab(tabId: number, applicationId: string): Promise<FrameResul
 
 async function answerTab(
     tabId: number,
-    applicationId: string,
+    applicationId: string | null,
     answers: UserAnswer[],
 ): Promise<FrameResult> {
     const result = merge(await broadcast(tabId, { type: "answer", answers }));
@@ -185,7 +238,7 @@ async function answerTab(
 
     const answered = [...byQuestion.values()];
     await writeState(tabId, { applicationId, filled: state.filled, answered });
-    await api.recordFill(applicationId, state.filled, answered);
+    if (applicationId) await api.recordFill(applicationId, state.filled, answered);
     await badge(tabId, state.filled.length + result.answered.length);
 
     return result;
@@ -194,6 +247,7 @@ async function answerTab(
 const handlers: {
     [K in WorkerRequest["type"]]: (
         request: Extract<WorkerRequest, { type: K }>,
+        sender: chrome.runtime.MessageSender,
     ) => Promise<unknown>;
 } = {
     context: (request) => buildContext(request.tabId),
@@ -212,6 +266,11 @@ const handlers: {
 
     answerTab: (request) => answerTab(request.tabId, request.applicationId, request.answers),
 
+    showPanel: async (request) => {
+        await broadcast(request.tabId, { type: "panel" });
+        return null;
+    },
+
     clearHighlights: async (request) => {
         await broadcast(request.tabId, { type: "clear" });
         await badge(request.tabId, 0);
@@ -222,17 +281,53 @@ const handlers: {
     // in this extension can reach APPLIED without it.
     confirmSubmitted: async (request) =>
         api.setStatus(request.applicationId, "applied", "Submitted from the extension", true),
+
+    confirmTabSubmitted: async (_request, sender) => {
+        const tabId = sender.tab?.id;
+        if (tabId === undefined) return null;
+
+        const state = await readState(tabId);
+        if (!state?.applicationId) return null;
+
+        return api.setStatus(
+            state.applicationId,
+            "applied",
+            "Submitted from the extension",
+            true,
+        );
+    },
+
+    recordAnswers: async (request, sender) => {
+        const tabId = sender.tab?.id;
+        if (tabId === undefined) return null;
+
+        const state = await readState(tabId);
+        // Nothing staged matched this tab, so the fill was never recorded and
+        // these answers have no application to belong to either.
+        if (!state?.applicationId) return null;
+
+        const byQuestion = new Map(state.answered.map((entry) => [entry.question, entry]));
+        for (const entry of request.answered) byQuestion.set(entry.question, entry);
+        const answered = [...byQuestion.values()];
+
+        await writeState(tabId, { ...state, answered });
+        await api.recordFill(state.applicationId, state.filled, answered);
+        return null;
+    },
 };
 
 chrome.runtime.onMessage.addListener(
-    (request: WorkerRequest, _sender, respond: (reply: Reply<unknown>) => void) => {
-        const handler = handlers[request.type] as (req: WorkerRequest) => Promise<unknown>;
+    (request: WorkerRequest, sender, respond: (reply: Reply<unknown>) => void) => {
+        const handler = handlers[request.type] as (
+            req: WorkerRequest,
+            from: chrome.runtime.MessageSender,
+        ) => Promise<unknown>;
         if (!handler) {
             respond({ ok: false, error: `Unknown request: ${request.type}` });
             return false;
         }
 
-        handler(request)
+        handler(request, sender)
             .then((value) => respond({ ok: true, value }))
             .catch((error: unknown) => {
                 respond({ ok: false, error: error instanceof Error ? error.message : String(error) });

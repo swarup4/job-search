@@ -21,7 +21,10 @@ export const workday: AtsAdapter = {
     },
 
     blocked(doc) {
-        const signIn = doc.querySelector("[data-automation-id='signInFormo'], [data-automation-id='createAccountLink']");
+        // A password box means the tenant's sign-in wall, not the application.
+        const signIn = doc.querySelector(
+            "[data-automation-id='password'], [data-automation-id='signInSubmitButton']",
+        );
         return signIn ? "Sign in to Workday first — the application form is behind it." : null;
     },
 
