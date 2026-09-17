@@ -1,6 +1,7 @@
 import type {
     AccountRead,
     AnswerBankEntry,
+    ApplicantProfile,
     AtsPlatform,
     FieldFill,
     JobRead,
@@ -14,8 +15,12 @@ import type {
  * boundary and the application page's world only ever sees answers. */
 export interface FillData {
     profile: UserProfile;
+    applicant: ApplicantProfile;
     answerBank: AnswerBankEntry[];
     resume: { name: string; base64: string } | null;
+    /** Whether the tab matches a staged application. The panel offers its submit
+     * confirmation only when there is something to record it against. */
+    tracked: boolean;
 }
 
 /** A field found and understood, but with no answer to put in it. FR-5.2 stops
@@ -35,6 +40,9 @@ export interface UserAnswer {
 
 export interface FrameResult {
     platform: AtsPlatform;
+    /** Controls the scanner saw, answered or not. Zero means the form was not
+     * found, which is a different failure from finding it and having no answers. */
+    scanned: number;
     filled: FieldFill[];
     pending: PendingQuestion[];
     /** Answers the user typed in the popup — `answeredByUser`, not derived. */
@@ -61,13 +69,21 @@ export type WorkerRequest =
     | { type: "context"; tabId: number }
     | { type: "signIn"; email: string; password: string }
     | { type: "signOut" }
-    | { type: "fillTab"; tabId: number; applicationId: string }
-    | { type: "answerTab"; tabId: number; applicationId: string; answers: UserAnswer[] }
+    | { type: "fillTab"; tabId: number; applicationId: string | null }
+    | { type: "answerTab"; tabId: number; applicationId: string | null; answers: UserAnswer[] }
     | { type: "clearHighlights"; tabId: number }
-    | { type: "confirmSubmitted"; applicationId: string };
+    | { type: "showPanel"; tabId: number }
+    | { type: "confirmSubmitted"; applicationId: string }
+    // Sent by the content script after the user answers in the in-page panel. It
+    // carries no application id — the worker already knows which tab is which.
+    | { type: "recordAnswers"; answered: ScreeningAnswer[] }
+    // The same confirmation as `confirmSubmitted`, from the panel rather than the
+    // popup, so it too names no application id.
+    | { type: "confirmTabSubmitted" };
 
 export type TabRequest =
     | { type: "ping" }
+    | { type: "panel" }
     | { type: "fill"; data: FillData }
     | { type: "answer"; answers: UserAnswer[] }
     | { type: "clear" };

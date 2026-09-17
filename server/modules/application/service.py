@@ -5,6 +5,8 @@ from beanie import PydanticObjectId
 from config.errors import Conflict, NotFound
 from modules.application.models import (
     AnswerBank,
+    ApplicantFields,
+    ApplicantProfile,
     Application,
     ApplicationFill,
     ApplicationStage,
@@ -144,3 +146,30 @@ async def upsert_answer(
         entry.updatedAt = datetime.now(UTC)
     await entry.save()
     return entry
+
+
+async def get_applicant(user_id: PydanticObjectId) -> ApplicantProfile:
+    """An unsaved profile reads back empty rather than 404. Nothing is saved until
+    the user fills the form in, and the extension asks for this on every fill —
+    "you have not filled this in yet" is the normal first answer, not an error."""
+    stored = await ApplicantProfile.find_one(ApplicantProfile.userId == user_id)
+    return stored or ApplicantProfile(userId=user_id)
+
+
+async def save_applicant(
+    user_id: PydanticObjectId, payload: ApplicantFields
+) -> ApplicantProfile:
+    """Upsert, and a full replace: one per user, and the Settings form posts the
+    whole thing, so an omitted field means the user cleared it."""
+    stored = await ApplicantProfile.find_one(ApplicantProfile.userId == user_id)
+
+    if stored is None:
+        stored = ApplicantProfile(**payload.model_dump(), userId=user_id)
+        await stored.insert()
+        return stored
+
+    for field, value in payload.model_dump().items():
+        setattr(stored, field, value)
+    stored.updatedAt = datetime.now(UTC)
+    await stored.save()
+    return stored
