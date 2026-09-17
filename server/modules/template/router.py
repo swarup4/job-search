@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from beanie import PydanticObjectId
-from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, Query, Response, UploadFile, status
 from fastapi.responses import FileResponse
 
 from modules.account import CurrentUser, verify_token
@@ -45,6 +45,26 @@ async def render_template(template_id: PydanticObjectId, user_id: CurrentUser) -
         name=template.name,
         filename=service.tex_filename(template.name),
         tex=service.render(template, await get_resume(user_id)),
+    )
+
+
+@router.get(
+    "/download/{template_id}",
+    response_class=Response,
+    responses={200: {"content": {"application/x-tex": {"schema": {"type": "string"}}}}},
+)
+async def download_template(template_id: PydanticObjectId, user_id: CurrentUser) -> Response:
+    """The same render as `/render`, handed over as the .tex itself. `/render` returns
+    it inside JSON, where every newline is an escape the caller has to undo before
+    the source is usable."""
+    template = await service.get_template(template_id)
+    source = service.render(template, await get_resume(user_id))
+    return Response(
+        content=source,
+        media_type="application/x-tex",
+        headers={
+            "Content-Disposition": f'attachment; filename="{service.tex_filename(template.name)}"'
+        },
     )
 
 

@@ -140,6 +140,18 @@ axiosInstance.interceptors.response.use(
         }
 
         handleExpiry(error.response?.status);
+
+        // A `responseType: "blob"` request gets a Blob back even when the server
+        // answered with a JSON error, so the detail has to be read out of it before
+        // `messageFrom` can find it.
+        if (error.response?.data instanceof Blob && error.response.data.type.includes("json")) {
+            try {
+                error.response.data = JSON.parse(await error.response.data.text());
+            } catch {
+                // Not JSON after all — messageFrom falls back to the status.
+            }
+        }
+
         return Promise.reject(
             new ApiError(messageFrom(error), {
                 status: error.response?.status ?? null,
