@@ -21,10 +21,27 @@ const TABS = [
  * Both the Resume screen and the review screen show the same document, so the tabs,
  * the download and the parse live here rather than in each of them.
  */
-export function ResumeView({ tex, filename, busy = false, busyLabel = "Rendering…", error = null }) {
+export function ResumeView({
+    tex,
+    filename,
+    onDownloadPdf,
+    busy = false,
+    busyLabel = "Rendering…",
+    error = null,
+}) {
     const [tab, setTab] = useState("preview");
     const [full, setFull] = useState(false);
+    const [compiling, setCompiling] = useState(false);
     const blocks = useMemo(() => (tex ? texToResume(tex) : []), [tex]);
+
+    async function savePdf() {
+        setCompiling(true);
+        try {
+            await onDownloadPdf();
+        } finally {
+            setCompiling(false);
+        }
+    }
 
     return (
         <Panel className="overflow-hidden">
@@ -68,15 +85,30 @@ export function ResumeView({ tex, filename, busy = false, busyLabel = "Rendering
                                 Fullscreen
                             </Button>
                         ) : null}
-                        {/* A real anchor, not a synthesised click — this codebase never fakes one. */}
-                        <a
-                            href={`data:application/x-tex;charset=utf-8,${encodeURIComponent(tex)}`}
-                            download={filename}
-                            className={buttonVariants({ variant: "outline", size: "sm" })}
-                        >
-                            <Download />
-                            .tex
-                        </a>
+                        {/* Each tab offers the thing it is showing: the page as a PDF,
+                            the source as the .tex it is. */}
+                        {tab === "preview" ? (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={savePdf}
+                                disabled={compiling}
+                                title="Compile and download as PDF"
+                            >
+                                {compiling ? <Loader2 className="animate-spin" /> : <Download />}
+                                .pdf
+                            </Button>
+                        ) : (
+                            /* A real anchor, not a synthesised click — this codebase never fakes one. */
+                            <a
+                                href={`data:application/x-tex;charset=utf-8,${encodeURIComponent(tex)}`}
+                                download={filename}
+                                className={buttonVariants({ variant: "outline", size: "sm" })}
+                            >
+                                <Download />
+                                .tex
+                            </a>
+                        )}
                     </>
                 ) : null}
             </PanelHeader>
