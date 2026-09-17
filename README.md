@@ -35,14 +35,14 @@ JobPilot discovers relevant job openings, analyzes how well they match your resu
 
 ## Current state
 
-*Updated 2026-09-12.*
+*Updated 2026-09-17.*
 
 | Area | Status |
 |---|---|
 | Dashboard UI — 11 screens | **built**. Login and signup run against the live API; My Details persists `role` only; the other eight screens render JSON fixtures from `app/web/src/data/` |
 | `app/web` → `server` wiring | **started** — one axios instance in `src/lib/`, one service per API module in `src/services/`, `ApiError` as the single failure shape |
 | Form validation | **built** — Formik (`useFormik`) with a Yup schema per form in `src/util/schema.js`; the server's own validation still decides |
-| `templates/base_resume.tex` | **written**; Jinja2 render verified — but never compiled by a TeX engine, so its LaTeX validity is unconfirmed |
+| Resume templates → PDF | **verified 2026-09-17.** Templates render through `modules/template/service.render` and compile with **pdflatex** (BasicTeX / TeX Live 2026): **all six** `templates/Template*/` designs produce a PDF. Setup: [docs/07](docs/07-PDF-Setup-macOS.md). `templates/base_resume.tex` is unused — nothing reads it |
 | `server/` — REST API, local MongoDB | **built** — eight modules, thirteen collections, 51 endpoints over 47 paths, Beanie over local MongoDB. **No tests** (removed on request), so no story is Done per Roadmap §10 |
 | Authentication | **built and enforced server-side** — argon2 hashes, JWT on signup and login, route guard, bearer token on every call. Every endpoint but signup, login and refresh needs a token, and no URL carries a user id: `verify_token` reads it from the token, so there is no way to ask for another user's data |
 | Per-user data | **every collection is keyed by `userId`** — jobs, matches, resumes, applications, the answer bank and events, as well as the five profile collections. Queries filter on the owner, and dedup keys are unique per user rather than globally |
@@ -166,7 +166,7 @@ So resume and JD prose **does** reach Voyage's API in flight. What never leaves 
 
 Two-stage retrieval: Voyage embed → `$vectorSearch` (top ~50) → fetch text from `server` → Voyage rerank → top ~5.
 
-> **Notes on the design docs.** Five decisions supersede the planning documents. (1) The dashboard is Next.js, not Streamlit/Gradio. (2) Agents reach structural data through `server`'s REST API rather than the MongoDB MCP Server (SRS FR-8.1) — one validation boundary, and no DB credentials in the agent process. (3) **SRS NFR-3 forbids sending any data to third-party inference APIs; using Voyage narrows that to "all generation is local."** If the original absolute guarantee matters more than retrieval quality, swap `ai/rag/embeddings.py` and `reranking.py` for a local embedding model — the rest of the pipeline is unchanged. (4) **Authentication was built**, which PRD §4 and SRS §42 rule out; accounts are argon2-hashed and sessions are JWTs, so those two documents are now wrong and need amending. (5) **`profile.preferences` and `resume_chunk_text` were removed** on 2026-09-11, and the profile became five collections keyed by `userId`; docs 02, 03 and 06 still describe the earlier single-document shape with a RAG chunk store.
+> **Notes on the design docs.** Five decisions supersede the planning documents. (1) The dashboard is Next.js, not Streamlit/Gradio. (2) Agents reach structural data through `server`'s REST API rather than the MongoDB MCP Server (SRS FR-8.1) — one validation boundary, and no DB credentials in the agent process. (3) **SRS NFR-3 forbids sending any data to third-party inference APIs; using Voyage narrows that to "all generation is local."** If the original absolute guarantee matters more than retrieval quality, swap `ai/rag/embeddings.py` and `reranking.py` for a local embedding model — the rest of the pipeline is unchanged. (4) **Authentication was built**, which PRD §4 and SRS §42 rule out; accounts are argon2-hashed and sessions are JWTs, so those two documents are now wrong and need amending. (5) **`profile.preferences` and `resume_chunk_text` were removed** on 2026-09-11, and the profile became five collections keyed by `userId`; docs 02, 03 and 06 still describe the earlier single-document shape with a RAG chunk store. (6) **PDF compilation was built** on 2026-09-17, which **SRS FR-4.4 and invariant 5 forbid** — they say `.tex` only, and both now need amending. Templating also went to `{{TOKEN}}` substitution rather than Jinja2, so there is no `jinja2` dependency anywhere.
 
 ## Tech Stack
 
@@ -186,7 +186,8 @@ Two-stage retrieval: Voyage embed → `$vectorSearch` (top ~50) → fetch text f
 | Form state + validation | [Formik](https://formik.org/) (`useFormik`) + [Yup](https://github.com/jquense/yup) — one schema per form in `app/web/src/util/schema.js` |
 | Browser automation (discovery only) | [Playwright](https://playwright.dev/) |
 | Application autofill | Custom Chrome Extension (Manifest V3, TypeScript) |
-| Resume templating | [Jinja2](https://jinja.palletsprojects.com/) over a LaTeX template |
+| Resume templating | `{{TOKEN}}` substitution into an uploaded `.tex` — **not** Jinja2, which the docs below still name; see note 6 |
+| PDF compilation | **pdflatex** (BasicTeX / TeX Live), invoked per download — an external prerequisite, not a dependency |
 | Queue / scheduling | Redis + Celery |
 | RAG evaluation | [Ragas](https://docs.ragas.io/) — faithfulness, context precision/recall, with a **local** judge |
 | Observability | [Langfuse](https://langfuse.com/) or [Phoenix](https://phoenix.arize.com/) (self-hosted) |
@@ -213,6 +214,9 @@ Two-stage retrieval: Voyage embed → `$vectorSearch` (top ~50) → fetch text f
 - A free [MongoDB Atlas](https://www.mongodb.com/cloud/atlas/register) account (M0 tier) with a `$vectorSearch` index whose **dimension matches your chosen Voyage embedding model**
 - Redis (`brew install redis` on macOS)
 - Google Chrome, for loading the extension in developer mode
+- A TeX engine, **only** if you want PDF downloads — `brew install --cask basictex` plus a few
+  packages. Full steps and troubleshooting: [docs/07 — PDF Setup (macOS)](docs/07-PDF-Setup-macOS.md).
+  Without it every other feature works and the PDF endpoint answers 503 with the install hint
 
 ### Installation
 
@@ -382,7 +386,8 @@ jobpilot/
 │   └── config/                     #   settings.py · llm.py · mcp.py
 │
 ├── templates/
-│   └── base_resume.tex             # Jinja2 with \VAR{} / \BLOCK{} delimiters
+│   ├── base_resume.tex             # unused — comments describe \VAR{}/\BLOCK{}, nothing reads it
+│   └── Template*/                  # the six live designs, {{TOKEN}} placeholders
 └── 01-PRD…05-Roadmap.md            # planning documents (see below)
 ```
 
@@ -398,6 +403,7 @@ Server modules are named after the **resource** they expose; agents after the **
 | [04 — UI/UX Wireframes & User Flows](04-UIUX-Wireframes-User-Flows.md) | Screens and end-to-end flows |
 | [05 — Roadmap](05-Roadmap-Backlog.md) | Eleven phases, application first then agents — every task checkboxed and split API vs UI |
 | [06 — Data Model / ER](docs/06-Data-Model-ER.md) | ER diagram, every collection's fields and indexes, and where each guardrail is enforced in the schema |
+| [07 — PDF Setup (macOS)](docs/07-PDF-Setup-macOS.md) | Installing pdflatex and the packages the templates need, so the `.pdf` download works |
 
 ## Roadmap
 
@@ -428,18 +434,21 @@ UI box means the screen is built, **not** that it talks to the API — that wiri
   - ✅ My Details screen, with Formik/Yup validation
   - ⬜ Wire My Details to the profile API, only `role` persists today
 
-#### Phase 2 — Resume generation & download 🚧 backend done, no UI
+#### Phase 2 — Resume generation & download 🚧 downloads work, three tasks left
 
 - **API**
   - ✅ `templates` collection, upload with token validation, style inference
   - ✅ Render the signed-in user's profile into a template
-  - ⬜ `.tex` download
-  - ⬜ PDF compilation
+  - ✅ `.tex` download — from the browser, and `GET /template/download/{id}` as a file
+  - ✅ **PDF compilation** — `GET /resume/base/pdf` compiles the *stored* `.tex` with pdflatex,
+    so the PDF is the document on screen rather than a fresh render. 503 with an install hint
+    where no TeX engine exists
 - **UI**
   - ✅ Resume Preview screen — Preview / Diff / Source tabs
-  - ⬜ Wire it to a real render instead of `resume.json`
-  - ⬜ Template picker
-- ⬜ **Prove a rendered `.tex` compiles under a TeX engine** — none ever has
+  - ✅ Template picker, and the Resume screen renders your real profile into it
+  - ✅ Preview tab offers `.pdf`, Source tab offers `.tex`
+  - 🟡 Rectification chat panel — laid out, inert until Phase 5
+- ✅ **A rendered `.tex` compiles under a TeX engine** — verified on BasicTeX / TeX Live 2026
 
 #### Phase 3 — Job scraping, search & shortlist ⬜ API only
 

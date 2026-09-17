@@ -4,8 +4,8 @@
 |---|---|
 | **Product** | JobPilot — Agentic AI Job Search Platform |
 | **Owner** | Swarup Saha |
-| **Status** | v1.4 — eleven phases, application first then agents. Phase 1 done; audited 2026-09-13 |
-| **Updated** | 2026-09-13 |
+| **Status** | v1.5 — eleven phases, application first then agents. Phase 1 done; PDF compilation closed 2026-09-17 |
+| **Updated** | 2026-09-17 |
 
 ---
 
@@ -23,7 +23,7 @@ anything starts reasoning.
 | Phase | Delivers | State |
 |---|---|---|
 | [1](#2-phase-1--authentication--profile) | Sign in, and the profile everything hangs off | ✅ done |
-| [2](#3-phase-2--resume-generation--download) | A resume built from that profile, downloadable | 🚧 default resume done, no PDF |
+| [2](#3-phase-2--resume-generation--download) | A resume built from that profile, downloadable | 🚧 `.tex` and PDF both download; three tasks left |
 | [3](#4-phase-3--job-scraping-search--shortlist) | Real jobs in the system, searchable and shortlistable | ⬜ API only, no sources |
 | [4](#5-phase-4--applications--settings) | Tracking what you applied to, and the preferences driving it | ⬜ API only |
 | [5](#6-phase-5--llm-integration--resume-rectification) | A resume rectified against a specific job | ⬜ not started |
@@ -112,8 +112,8 @@ the product is keyed by `userId`, so this comes first.
 ---
 
 ## 3. Phase 2 — Resume generation & download
-🚧 **default resume done, no PDF.** Turn the profile into a document you can send. No LLM in this
-phase — it is templating, not intelligence.
+🚧 **downloads work, three tasks left.** Turn the profile into a document you can send. No LLM in
+this phase — it is templating, not intelligence.
 
 **API**
 - ✅ `P2-01` `templates` collection: `.tex` source, token list, preview path, archive flag
@@ -125,9 +125,16 @@ phase — it is templating, not intelligence.
   delimiters). *Superseded: the `template` module renders `{{TOKEN}}` placeholders out of
   uploaded `.tex` files instead. There is no `jinja2` dependency, `base_resume.tex` carries
   no `\VAR{}` or `\BLOCK{}` markers — only comments describing them — and nothing reads it*
-- ✅ `P2-07` Download the generated `.tex` — the Resume screen offers it straight from the
-  render, so there is no server endpoint for it
-- ⬜ `P2-08` PDF compilation and download
+- ✅ `P2-07` Download the generated `.tex`. The Resume screen offers it straight from the render;
+  `GET /template/download/{templateId}` serves the same source as a file, so a caller outside the
+  browser does not have to unescape it out of JSON
+- ✅ `P2-08` **PDF compilation and download.** `GET /resume/base/pdf` compiles the *stored* `.tex`
+  with pdflatex and returns `application/pdf` — stored rather than re-rendered, so the PDF is the
+  document on screen. `modules/resume/compile.py` runs it in a temp dir with `-no-shell-escape`
+  (an uploaded template is uploaded LaTeX), `-halt-on-error` and a 30s timeout, surfaces the real
+  LaTeX error on failure, and answers 503 with an install hint where no TeX engine exists. Setup:
+  `docs/07-PDF-Setup-macOS.md`. **This contradicts FR-4.4 and invariant 5, which still say `.tex`
+  only — both now need amending**
 - ✅ `P2-13` `base_resumes` collection — one default resume per user: the chosen template and
   the `.tex` it produced, stored verbatim. `GET`/`PUT /resume/base`
 
@@ -149,12 +156,17 @@ phase — it is templating, not intelligence.
   footer; wiring it is adding the call, not rebuilding the panel. Needs the `ai` tier (Phase 5)
 
 **Verification**
-- ⬜ `P2-12` **Prove a rendered `.tex` compiles under a TeX engine.** No output of this
-  pipeline has ever been through one, so its LaTeX validity is unconfirmed — the Resume
-  screen's preview is an HTML approximation and proves nothing about LaTeX
+- ✅ `P2-12` **A rendered `.tex` compiles under a TeX engine.** Verified 2026-09-17 on BasicTeX /
+  TeX Live 2026: **all six** templates rendered from a real `getProfile` payload through
+  `service.render` and compiled with pdflatex, 70–78 KB each. Setup and the package list:
+  `docs/07-PDF-Setup-macOS.md`. The unfilled `templates/Template*/` files still cannot compile
+  directly, and never could: the `_` in `{{FULL_NAME}}` is math-mode-only, so `render` has to
+  run first
 
-**PDF compilation was promoted** from the v1 stretch list: "generate and download" is hollow if the output
-is a `.tex` the reader cannot open. It needs a TeX engine and an amendment to invariant 5 / FR-4.4.
+**PDF compilation was promoted** from the v1 stretch list: "generate and download" is hollow if the
+output is a `.tex` the reader cannot open. Closed 2026-09-17 with pdflatex. The TeX engine is an
+external prerequisite rather than a dependency — absent, the endpoint answers 503 with an install
+hint. **Invariant 5 and FR-4.4 still forbid this and need amending.**
 
 ---
 
@@ -379,8 +391,9 @@ against it end to end and hold real data; **the other eight screens still render
 fixture** in `app/web/src/data/`. No story meets the §10 Definition of Done, because the §15
 test-case requirement is unmet everywhere: `server/` has no tests and there is no CI.
 
-Audited against the codebase on 2026-09-13; Phase 2 re-audited 2026-09-14. Counts predate the
-Phase 2 additions (`P2-13`…`P2-17`) and are due a recount.
+Audited against the codebase on 2026-09-13; Phase 2 re-audited 2026-09-14, and again on
+2026-09-17 for `P2-07`, `P2-08` and `P2-12`. Counts predate the Phase 2 additions
+(`P2-13`…`P2-17`) and the two download endpoints, and are due a recount.
 
 `ai/` and the Chrome extension do not exist yet, so nothing agentic runs.
 
@@ -392,7 +405,7 @@ Phase 2 additions (`P2-13`…`P2-17`) and are due a recount.
 | **Login · Signup · sign-out · route guard** | **live — `POST /api/account/{signup,login}`, JWT in `sessionStorage`, mirrored into Redux** |
 | **My Details — identity, experience, education, skills, certifications** | **live — `getAccount` + the five profile endpoints on load, one Save writes them all back. Only the "Indexed for retrieval" panel still reads `profile.json`; chunking is Phase 6** |
 | **Resume — template picker, render, submit as default** | **live — `GET /api/template`, `GET /api/template/render/{id}`, `PUT /api/resume/base`** |
-| **Resume review — stored resume, Regenerate** | **live — `GET /api/resume/base`. The chat panel beside it is layout only** |
+| **Resume review — stored resume, Regenerate, `.tex` and PDF download** | **live — `GET /api/resume/base`, `GET /api/resume/base/pdf` (pdflatex). The chat panel beside it is layout only** |
 
 **Five deviations from this document, recorded deliberately:**
 
@@ -405,9 +418,9 @@ Phase 2 additions (`P2-13`…`P2-17`) and are due a recount.
    `modules/template/service.render`. There is no `jinja2` dependency, and `templates/base_resume.tex`
    now carries only *comments* describing `\VAR{}`/`\BLOCK{}`, with no such markers in it and nothing
    reading the file. The six `templates/Template*/` designs use `{{TOKEN}}` and are what the module
-   expects. **No output of this pipeline has been compiled by a TeX engine** — its LaTeX validity is
-   still unverified. The six designs were imported into the `templates` collection on 2026-09-14 via
-   `import_templates.py`, and the Resume screen renders and stores them.
+   expects. Rendered output **is** now compiled by a TeX engine — see `P2-12` and
+   `docs/07-PDF-Setup-macOS.md`. The six designs were imported into the `templates` collection on
+   2026-09-14 via `import_templates.py`, and the Resume screen renders and stores them.
 3. **Authentication was built**, which PRD §4, SRS §42 and `.claude/rules/server-api.md` all rule out
    on single-user grounds. As of 2026-09-11 the screens are no longer interface-only: accounts are
    stored with argon2 hashes, login and signup both issue a JWT, and every dashboard route redirects
@@ -443,8 +456,9 @@ removed all auth overhead; that assumption no longer holds — see deviation 3.
 
 ## 16. Stretch — candidates beyond Phase 11
 
-- ~~PDF compilation of tailored `.tex` resumes~~ — **promoted into Phase 2.** "Generate and
-  download" is hollow without it; still needs a TeX engine and an amendment to invariant 5 / FR-4.4
+- ~~PDF compilation of tailored `.tex` resumes~~ — **promoted into Phase 2 and closed there**
+  (`P2-08`, 2026-09-17). Base resume only; tailored `.tex` gets the same treatment when Phase 5
+  produces one
 - Cover letter generation — carried in Phase 11
 - LinkedIn Easy Apply full support — carried in Phase 9 rather than dropped
 - A2A-based Application Agent as an independently scalable service

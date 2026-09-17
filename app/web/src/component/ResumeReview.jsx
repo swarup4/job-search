@@ -4,7 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, LayoutTemplate, Loader2, RefreshCw, RotateCw } from "lucide-react";
 
-import { ApiError, getBaseResume, renderTemplate, saveBaseResume } from "@/services";
+import {
+    ApiError,
+    getBaseResume,
+    getBaseResumePdf,
+    renderTemplate,
+    saveBaseResume,
+} from "@/services";
 import { Button, buttonVariants } from "@/component/ui/button";
 import { Panel, PanelBody } from "@/component/ui/panel";
 import { ResumeChat } from "@/component/ResumeChat";
@@ -61,6 +67,16 @@ export function ResumeReview() {
             );
         } finally {
             setBusy(false);
+        }
+    }
+
+    async function downloadPdf() {
+        try {
+            save(await getBaseResumePdf(), filenameFor(resume.templateName, "pdf"));
+        } catch (failure) {
+            toast.error(
+                failure instanceof ApiError ? failure.message : "Could not compile the PDF."
+            );
         }
     }
 
@@ -141,6 +157,7 @@ export function ResumeReview() {
                 <ResumeView
                     tex={resume.tex}
                     filename={filenameFor(resume.templateName)}
+                    onDownloadPdf={downloadPdf}
                     busy={busy}
                     busyLabel="Regenerating from your details…"
                 />
@@ -163,8 +180,23 @@ function Problem({ children }) {
 }
 
 /** Mirrors `service.tex_filename` — a download name, not an identifier. */
-function filenameFor(name) {
-    return `${name.replace(/[^A-Za-z0-9]+/g, "_").replace(/^_|_$/g, "") || "resume"}.tex`;
+function filenameFor(name, extension = "tex") {
+    const safe = name.replace(/[^A-Za-z0-9]+/g, "_").replace(/^_|_$/g, "") || "resume";
+    return `${safe}.${extension}`;
+}
+
+/**
+ * The PDF arrives as bytes, not as a URL: the request carries a bearer token, so it
+ * cannot be an `<a href>` the browser fetches by itself. Hence the one synthesised
+ * click in this codebase — there is no anchor the user could have clicked instead.
+ */
+function save(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.click();
+    URL.revokeObjectURL(url);
 }
 
 function when(timestamp) {

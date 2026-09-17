@@ -24,6 +24,8 @@ from modules.template.latex import (
 from modules.template.latex import (
     tex as escape,
 )
+from modules.template.loops import BlockError, has_blocks, render_blocks
+from modules.template.loops import validate as validate_blocks
 from modules.template.models import (
     ContactStyle,
     ExperienceStyle,
@@ -51,6 +53,10 @@ MAX_PREVIEW_BYTES = 5_000_000
 
 # Uppercase-only, so it cannot collide with the LaTeX braces the builders emit.
 _TOKEN_RE = re.compile(r"\{\{[A-Z_]+\}\}")
+# Anything of ours still standing after a render: a token, a block, or a field. Spelled
+# out rather than a loose `{{...}}`, so a rendered value that lands between LaTeX groups
+# is not mistaken for one.
+_LEFTOVER_RE = re.compile(r"\{\{(?:[A-Z_]+|[#/?]\.?[A-Za-z_]+|\.[A-Za-z_]*)\}\}")
 
 
 class TemplateNotFound(NotFound):
@@ -129,10 +135,15 @@ def infer_style(source: str) -> TemplateStyle:
 
 
 def validate_source(source: str) -> list[str]:
-    """A template with no tokens renders as a fixed document — almost certainly a
-    finished resume uploaded by mistake rather than a template."""
+    """A template with neither tokens nor loop blocks renders as a fixed document —
+    almost certainly a finished resume uploaded by mistake rather than a template."""
+    try:
+        validate_blocks(source)
+    except BlockError as exc:
+        raise TemplateRejected(str(exc)) from exc
+
     found = sorted({token[2:-2] for token in _TOKEN_RE.findall(source)})
-    if not found:
+    if not found and not has_blocks(source):
         raise TemplateRejected(
             "no {{TOKEN}} placeholders found — supported: " + ", ".join(sorted(SUPPORTED_TOKENS))
         )
@@ -217,6 +228,8 @@ def _skills(resume: UserProfile, style: TemplateStyle) -> str:
 def render(template: Template, resume: UserProfile) -> str:
     style = template.style
     personal = resume.profile
+    # Loop blocks first: they emit the commands, which the tokens below never touch.
+    source = render_blocks(template.tex, resume, style)
     blocks = {
         "{{FULL_NAME}}": escape(resume.name),
         "{{HEADLINE}}": escape(personal.headline or ""),
@@ -228,11 +241,10 @@ def render(template: Template, resume: UserProfile) -> str:
         "{{CERTIFICATIONS}}": certifications_block(resume.certification),
     }
 
-    source = template.tex
     for token, value in blocks.items():
         source = source.replace(token, value)
 
-    leftover = sorted(set(_TOKEN_RE.findall(source)))
+    leftover = sorted(set(_LEFTOVER_RE.findall(source)))
     if leftover:
         raise TemplateRejected(
             f"{template.name} has placeholders nothing fills: {', '.join(leftover)}"

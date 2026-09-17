@@ -1,7 +1,10 @@
 %% ============================================================
-%%  SWARUP SAHA — Resume (Original Content, v5 Template)
-%%  Design: accent blue #1F5C99, borderless striped table, FA5 icons
-%%  Overleaf: pdflatex (default engine)
+%%  Resume template — accent blue #1F5C99, borderless striped table, FA5 icons
+%%  Placeholders are filled by modules/template/service.render -- the set it
+%%  supports is SUPPORTED_TOKENS. A name written here in braces would be read
+%%  as one, comment or not, so this line names none.
+%%  Overleaf: pdflatex (default engine). Render first — the raw file does not compile,
+%%  the `_` in a token name being math-mode-only.
 %% ============================================================
 %% !TEX program = pdflatex
 
@@ -69,7 +72,10 @@
 }
 
 %% ── Borderless striped table column ─────────────────────────
-\newcolumntype{V}{>{\raggedright\arraybackslash}X}
+%% The strut sets the striped row height. It used to be typed into each row's first
+%% cell; generated rows carry no such thing, so the column supplies it. Zero width,
+%% so having it in all four cells costs nothing.
+\newcolumntype{V}{>{\raggedright\arraybackslash\rule[-10pt]{0pt}{26pt}}X}
 
 %% ── Skills label+value row ───────────────────────────────────
 \newcolumntype{L}{>{\vspace{2pt}\raggedright\bfseries\color{textmain}\arraybackslash}p{2.6cm}<{\vspace{2pt}}}
@@ -122,14 +128,9 @@
 
 %% ── NAME & CONTACT ───────────────────────────────────────────
 \begin{center}
-  {\fontsize{24}{28}\bfseries\color{accent} SWARUP SAHA}\\[4pt]
-  {\fontsize{11}{13}\color{textmuted} Technical Lead \& Full Stack / GenAI Engineer}\\[6pt]
-  \contactitem{\faPhone}{+91-90358-45781}\enspace
-  \contactitem{\faEnvelope}{\href{mailto:swarup.saha004@hotmail.com}{swarup.saha004@hotmail.com}}\enspace
-  \contactitem{\faMapMarker*}{Bengaluru, India}\enspace
-  \contactitem{\faLinkedin}{\href{https://linkedin.com/in/swarup-saha-d7}{linkedin.com/in/swarup-saha-d7}}\enspace
-  
-  \contactitem{\faGithub}{\href{https://github.com/swarup4}{github.com/swarup4}}
+  {\fontsize{24}{28}\bfseries\color{accent} \MakeUppercase{{{FULL_NAME}}}}\\[4pt]
+  {\fontsize{11}{13}\color{textmuted} {{HEADLINE}}}\\[6pt]
+  {{CONTACT}}
 \end{center}
 
 \vspace{-2pt}
@@ -140,11 +141,7 @@
 \section{\faUser\ Professional Summary}
 
 {\fontsize{9}{13}\color{textmain}
-  Technical Lead and Full Stack / GenAI Engineer with 12.4 years of experience building scalable
-  web applications and AI-powered systems. Deep expertise in MERN/MEAN stack, LangChain,
-  LangGraph, Azure OpenAI, and Agentic AI/RAG pipelines. Proven track record delivering
-  multi-tenant SaaS platforms, ML models, and LLM-based products at enterprise scale. Skilled
-  at leading cross-functional agile teams and owning full SDLC from design to deployment.
+{{SUMMARY}}
 }
 
 %% ── TECHNICAL SKILLS ─────────────────────────────────────────
@@ -155,99 +152,37 @@
 \renewcommand{\arraystretch}{1.4}%
 \rowcolors{1}{rowshade}{white}%
 \begin{tabularx}{\linewidth}{VVVV}
-  \rule[-10pt]{0pt}{26pt}JavaScript, TypeScript         & React.js, Redux, Next.js         & Angular, Angular.js              & Tailwind CSS, Material UI \\
-  \rule[-10pt]{0pt}{26pt}Node.js, Express.js            & Python, FastAPI, Flask           & HTML5, CSS3/SCSS                 & MongoDB, PostgreSQL, MySQL \\
-  \rule[-10pt]{0pt}{26pt}Agentic AI, Multi-Agent, RASA & Redis, MongoDB Atlas, PGVector & LangChain, LangGraph, LangSmith, Azure OpenAI & MCP, A2A, CrewAI, N8N, Tableau \\
-  \rule[-10pt]{0pt}{26pt}AWS, Azure                     & Azure Service Bus, RabbitMQ      & Docker, Nginx, Git               & CI/CD, Jenkins, Azure DevOps \\
-  \rule[-10pt]{0pt}{26pt}Jest, Sinon, Supertest, Mocha  & XSS/CSRF, SQL Injection, RBAC/ABAC & Agile/Scrum                   & Microservices, Event-Driven \\
+{{SKILLS}}
 \end{tabularx}}
 \vspace{1pt}
 
 %% ── WORK EXPERIENCE ──────────────────────────────────────────
 \section{\faBriefcase\ Work Experience}
 
-%% ---- Trigent ----
-\jobtitle{Technical Lead}{Trigent Software Pvt. Ltd.}{Jul 2023 -- Present}{Bengaluru, India}
-
-\projectlabel{Zeltri (Multi-Tenant Elder Care Management Platform)}
-\begin{itemize}
-  \item Architected a multi-tenant, cloud-native SaaS platform for care homes and assisted-living providers using MERN stack, FastAPI, MongoDB Atlas, Redis, and Azure; enforced strict tenant isolation, RBAC/ABAC security, and scalable REST APIs across 10+ facilities.
-  \item Integrated Agentic AI, Multi-Agent Orchestration \& RAG pipelines using LangChain, LangGraph, MCP, LangSmith, and Azure OpenAI with MongoDB Atlas as vector stores to enable semantic document search, email intelligence, conversational assistance, and automated task workflows.
-\end{itemize}
-
-\projectlabel{CV (AI-Powered Social Media Reels Generation)}
-\begin{itemize}
-  \item Developed an end-to-end AI-powered content pipeline for automated Reels creation across YouTube, Instagram, and Facebook; integrated Azure OpenAI (script generation), multilingual translation, Whisper (TTS), Midjourney (image gen), and RunwayML (video render), reducing production cycles by 60\%.
-\end{itemize}
-
-\projectlabel{PlanITRoI (Refurbished Laptop Price Prediction \& Specification Extraction)}
-\begin{itemize}
-  \item Designed microservices-based data pipelines using Node.js, Python, and PostgreSQL with event-driven processing for large-scale web scraping and data normalization.
-  \item Developed ML models for spec extraction and price prediction using KNN with fuzzy logic, Random Forest, and LLM-assisted enrichment, improving pricing accuracy and catalog quality.
-\end{itemize}
-
-\projectlabel{Sizeright (Shoe Measurement \& Sizing Solution)}
-\begin{itemize}
-  \item Built a cloud-native Flask web widget on AWS for real-time shoe sizing; developed scalable RESTful APIs with predictive ML models (Random Forest, KNN) for accurate measurement recommendations.
-\end{itemize}
-
-%% ---- Encora ----
-\jobtitle{Technical Lead}{Encora Inc.}{Aug 2022 -- Jun 2023}{Bengaluru, India}
-\begin{itemize}
-  \item Developed an ML model (Random Forest + XGBoost) for Brightside to predict loan eligibility and detect fraud by analyzing credit scores, employment, and financial history.
-  \item Built a serverless, cloud-native backend on AWS Lambda, Node.js, and MySQL for scalable loan evaluation services; implemented CI/CD pipelines using Azure DevOps and enforced security best practices including SQL injection prevention, XSS protection, and rate limiting.
-  \item Authored unit tests and integration tests using Jest, Chai, and Mocha to ensure code coverage and vulnerability remediation across critical loan processing modules.
-  \item Designed and implemented ETL pipelines using Python and AWS Glue for automated data extraction and transformation, streamlining ML model training workflows.
-\end{itemize}
-
-%% ---- LTI ----
-\jobtitle{Senior Software Engineer}{Larsen \& Toubro Infotech (LTI)}{May 2019 -- Jul 2022}{Bengaluru, India}
-\begin{itemize}
-  \item Built an AI-powered Virtual Assistant chatbot for Travelers (insurance domain) using RASA, Python, and MongoDB, significantly improving automated query resolution; used Azure Service Bus \& RabbitMQ for event-driven message processing and Tableau for reporting and visualization.
-  \item Developed full-stack features with React, Redux, Node.js, and integrated AWS Lambda, Amplify, S3, API Gateway, and EC2 for scalable policy data access; managed deployments via Jenkins CI/CD pipelines and wrote unit tests using Sinon, Supertest, and Mocha.
-\end{itemize}
-
-%% ---- Mphasis ----
-\jobtitle{Senior Software Engineer}{Mphasis Ltd.}{Jun 2017 -- May 2019}{Bengaluru, India}
-\begin{itemize}
-  \item Collaborated with Schneider Electric to build EcoReach, an IoT commissioning tool for Automatic Circuit Breakers using Angular.js, Node.js, and Socket.IO for real-time device data retrieval and cloud-based analysis.
-\end{itemize}
-
-%% ---- Harman ----
-\jobtitle{UI Developer}{Harman Connected Services}{Aug 2015 -- Jun 2017}{Bengaluru, India}
-\begin{itemize}
-  \item Engineered the I2E retail store management and supply chain optimization tool for EYC using Angular Material, Angular.js, Node.js, and MySQL.
-\end{itemize}
-
-%% ---- SMACera ----
-\jobtitle{UI Developer}{SMACera Technologies (Mindtree Ltd.)}{Dec 2014 -- Aug 2015}{Bengaluru, India}
-\begin{itemize}
-  \item Contributed to E-commerce CMS development for client P\&G using Angular.js and HTML \& CSS, working on various product websites.
-\end{itemize}
-
-%% ---- Gowyn ----
-\jobtitle{Web Developer}{Gowyn Technologies Pvt. Ltd.}{Apr 2014 -- Nov 2014}{Delhi, India}
-\begin{itemize}
-  \item Built and maintained LIMOUSINE GROUP, a PHP-based car booking site for Canada, using HTML, CSS, \& Bootstrap to deliver premium car services.
-\end{itemize}
+{{#WORK}}
+\jobtitle{{{.title}}}{{{.company}}}{{{.dates}}}{{{.location}}}
+{{?.bullets}}\begin{itemize}
+{{#.bullets}}  \item {{.}}
+{{/.bullets}}\end{itemize}
+{{/.bullets}}{{#.projects}}\projectlabel{{{.name}}}
+{{?.bullets}}\begin{itemize}
+{{#.bullets}}  \item {{.}}
+{{/.bullets}}\end{itemize}
+{{/.bullets}}{{/.projects}}
+{{/WORK}}
 
 \vspace{3pt}
 %% ── EDUCATION ────────────────────────────────────────────────
 \section{\faGraduationCap\ Education}
-\educrow{MCA --- Machine Learning \& Artificial Intelligence}{Amity University, Delhi}{Jul 2022 -- Aug 2024}
-
-\educrow{BSc. IT --- Information Technology}{Kuvempu University, Delhi}{Jun 2010 -- May 2013}
-
-\educrow{GNIIT --- Diploma in Information Technology}{NIIT University, Delhi}{Jun 2009 -- May 2012}
+{{#EDUCATION}}\educrow{{{.degree}}}{{{.where}}}{{{.dates}}}
+{{/EDUCATION}}
 
 \vspace{3pt}
 %% ── CERTIFICATIONS ───────────────────────────────────────────
 \section{\faCertificate\ Certifications}
 
-\certrow{Azure Ai Cloud Developer Associate}{Microsoft Azure}{July 2026}
-\certrow{Azure AI Apps and Agents Developer Associate}{Microsoft Azure}{Jun 2026}
-\certrow{AWS Certified Developer Associate}{AWS}{Jun 2026}
-\certrow{Building AI Agents with MongoDB}{MongoDB}{May 2026}
+{{#CERTIFICATIONS}}\certrow{{{.name}}}{{{.issuer}}}{{{.year}}}
+{{/CERTIFICATIONS}}
 
 \end{document}
 %% ════════════════════════════════════════════════════════════
