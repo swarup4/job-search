@@ -47,7 +47,7 @@ JobPilot discovers relevant job openings, analyzes how well they match your resu
 | Authentication | **built and enforced server-side** — argon2 hashes, JWT on signup and login, route guard, bearer token on every call. Every endpoint but signup, login and refresh needs a token, and no URL carries a user id: `verify_token` reads it from the token, so there is no way to ask for another user's data |
 | Per-user data | **every collection is keyed by `userId`** — jobs, matches, resumes, applications, the answer bank and events, as well as the five profile collections. Queries filter on the owner, and dedup keys are unique per user rather than globally |
 | `ai/` — agents, RAG, MCP, eval | not started (empty directory) |
-| `app/extension/` — Chrome MV3 | not started |
+| `app/extension/` — Chrome MV3 | **built** — TypeScript + esbuild, MV3. Generic label/ARIA field engine plus Lever, Greenhouse, Workday and LinkedIn adapters; fills, highlights, attaches the base resume, reports back to `/application/fill`. No LLM fallback — that waits on `ai/` |
 
 ### What you can run today
 
@@ -58,13 +58,16 @@ cd server && uv venv && uv pip install -e . && .venv/bin/python main.py
 
 # dashboard
 cd app/web && npm install && npm run dev
+
+# chrome extension — build, then load app/extension/dist unpacked
+cd app/extension && npm install && npm run build
 ```
 
 Open http://localhost:3000 for the dashboard, http://localhost:8000/docs for the API. You will be
 redirected to `/login` — create an account, and signup signs you straight in. Every screen then
 navigates and the Resume Preview renders a real tailored `.tex` from a fixture. The
 [Getting Started](#getting-started) commands below target the full system and will still fail on the
-`ai/` and extension steps.
+`ai/` step.
 
 Screens that exist: pipeline board, job search, shortlist, job details, keyword selection, resume
 preview, staged applications, my details, settings, login, signup.
@@ -196,8 +199,8 @@ Two-stage retrieval: Voyage embed → `$vectorSearch` (top ~50) → fetch text f
 
 > **These instructions describe the finished system and do not all work yet.** Missing today:
 > no root `pyproject.toml` (so `uv sync` fails), no root `package.json` (so a root `npm install`
-> fails), no `ai/.env.example` to copy, no `ai/orchestration/worker.py`, and no `app/extension/`.
-> `server/` and `app/web/` both run today — see
+> fails), no `ai/.env.example` to copy, and no `ai/orchestration/worker.py`.
+> `server/`, `app/web/` and `app/extension/` all run today — see
 > [What you can run today](#what-you-can-run-today) for the commands that work.
 
 ### Prerequisites
@@ -263,9 +266,17 @@ The dashboard works with `server` alone; the `ai` worker is what makes discovery
 ### Loading the Chrome Extension
 
 1. Build it: `cd app/extension && npm install && npm run build`
+   (`npm run watch` rebuilds on save; reload the extension in Chrome to pick it up.)
 2. Open `chrome://extensions`
 3. Enable **Developer mode** (top right)
 4. Click **Load unpacked** and select `app/extension/dist`
+5. Open the popup and sign in with your JobPilot account — the extension talks to
+   `server` on `127.0.0.1:8000`, so start that first.
+
+It fills the four supported boards automatically and any other career page on demand.
+Every field it touches is outlined green, anything it could not answer is outlined
+amber and listed in the popup for you to answer, and **it has no code path that
+submits a form** — the Submit button stays yours.
 
 ## Configuration
 
@@ -335,8 +346,8 @@ verbatim and appends no prefix of its own.
 
 Organized by **capability**, not by technical layer. Each module is a vertical slice.
 
-**This is the target layout.** Today `app/web/`, `server/` and `templates/` exist; `ai/` and
-`app/extension/` are empty or absent. See [Current state](#current-state).
+**This is the target layout.** Today `app/web/`, `app/extension/`, `server/` and `templates/`
+exist; `ai/` is empty. See [Current state](#current-state).
 
 ```
 jobpilot/
@@ -510,14 +521,16 @@ UI box means the screen is built, **not** that it talks to the API — that wiri
 - **UI**
   - ⬜ Surface an interrupt in the dashboard — the approval gate needs somewhere to happen
 
-#### Phase 9 — Application agent & Chrome extension ⬜ not started
+#### Phase 9 — Application agent & Chrome extension 🚧 the extension fills forms
 
 - **Extension**
-  - ⬜ MV3 scaffold, field detection, LLM fallback
-  - ⬜ Highlight filled fields, manual resume attach
-  - ⬜ Workday / Greenhouse / Lever, then LinkedIn Easy Apply
+  - ✅ MV3 scaffold, field detection by label / ARIA / placeholder
+  - ✅ Highlight every filled field, automatic resume attach
+  - ✅ Lever / Greenhouse / Workday adapters; LinkedIn Easy Apply fills the open step
+  - ✅ Unanswered questions come back to you instead of being guessed
+  - ⬜ LLM fallback for ambiguous fields — blocked on `ai/`
 - **API**
-  - ⬜ Serve job context and the Q&A answer bank
+  - ✅ Serve job context and the Q&A answer bank
   - ⬜ Application agent coordinating the fill
 
 #### Phase 10 — Eval, guardrails & observability ⬜ not started

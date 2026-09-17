@@ -30,7 +30,7 @@ anything starts reasoning.
 | [6](#7-phase-6--rag--retrieval) | Retrieval over your own resume, with the split vector store | ⬜ not started |
 | [7](#8-phase-7--mcp-tool-servers) | The tool servers agents reach the world through | ⬜ not started |
 | [8](#9-phase-8--agents--orchestration) | LangGraph agents under a supervisor, with approval interrupts | ⬜ not started |
-| [9](#10-phase-9--application-agent--chrome-extension) | Form autofill in your own browser session | ⬜ not started |
+| [9](#10-phase-9--application-agent--chrome-extension) | Form autofill in your own browser session | 🚧 extension works; the two LLM tasks wait on `ai/` |
 | [10](#11-phase-10--eval-guardrails--observability) | Ragas faithfulness, guardrail tests, tracing | ⬜ not started |
 | [11](#12-phase-11--daily-use--polish) | What only real daily use reveals | ⬜ not started |
 
@@ -317,23 +317,36 @@ two interrupts; see the Design Principles in the README.
 ---
 
 ## 10. Phase 9 — Application agent & Chrome extension
-⬜ **not started.** The last manual step: filling the form. Fills, never submits.
+🚧 **the extension fills forms.** The last manual step, now automated up to the Submit button.
+Both remaining tasks need an LLM, so they wait on Phases 6–8.
 
 **Extension**
-- ⬜ `P9-01` Scaffold (Manifest V3, content script, background worker, popup)
-- ⬜ `P9-02` Field detection by label / ARIA / placeholder heuristics
-- ⬜ `P9-03` LLM fallback for ambiguous fields
-- ⬜ `P9-04` Highlight every filled field for review
-- ⬜ `P9-05` Manual resume-attach flow
-- ⬜ `P9-06` Workday / Greenhouse / Lever field patterns
-- ⬜ `P9-07` LinkedIn Easy Apply
+- ✅ `P9-01` Scaffold (Manifest V3, content script, background worker, popup)
+- ✅ `P9-02` Field detection by label / ARIA / placeholder heuristics
+- ⬜ `P9-03` LLM fallback for ambiguous fields — **blocked on `ai/`**
+- ✅ `P9-04` Highlight every filled field for review
+- ✅ `P9-05` Resume attach — automatic, with the manual fallback as the exception
+- ✅ `P9-06` Workday / Greenhouse / Lever field patterns
+- 🟡 `P9-07` LinkedIn Easy Apply — fills the open step; does not click **Next**
+- ✅ `P9-10` Report the fill back: `fieldsFilled`, `screeningAnswers`, and the user's own answers
 
 **API**
-- ⬜ `P9-08` Serve job context and the Q&A answer bank to the extension
-- ⬜ `P9-09` Application agent coordinating the fill from the `ai` tier
+- ✅ `P9-08` Serve job context and the Q&A answer bank to the extension
+- ⬜ `P9-09` Application agent coordinating the fill from the `ai` tier — **blocked on `ai/`**
 
 **Runs in your real browser session**, not an automated one — more reliable against ATS platforms,
 and it keeps you in the loop by construction.
+
+**No answer is ever invented.** A field the profile cannot answer and the answer bank has not seen
+comes back as a pending question in the popup, outlined amber on the page, for you to answer in your
+own words. That is what `P9-03` will soften — not replace: an LLM suggestion still has to be a
+suggestion. The profile deliberately holds no cover letter, work-authorisation or EEO data, so those
+questions always come to you.
+
+**Two known limits, both deliberate.** Workday and LinkedIn are multi-step wizards, and one pass
+fills the step on screen only — nothing here navigates a form. And the answer bank is read-only
+over HTTP (`upsert_answer` exists in `application/service.py` with no route), so an answer you type
+in the popup fills the field and is recorded on the application, but is not saved for next time.
 
 ---
 
@@ -460,6 +473,6 @@ removed all auth overhead; that assumption no longer holds — see deviation 3.
   (`P2-08`, 2026-09-17). Base resume only; tailored `.tex` gets the same treatment when Phase 5
   produces one
 - Cover letter generation — carried in Phase 11
-- LinkedIn Easy Apply full support — carried in Phase 9 rather than dropped
+- LinkedIn Easy Apply full support — Phase 9 fills the open step; multi-step navigation still open
 - A2A-based Application Agent as an independently scalable service
 - Multi-device sync (if ever needed — would require revisiting the single-user Atlas-only vector store decision)
