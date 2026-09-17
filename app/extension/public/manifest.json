@@ -27,6 +27,7 @@
         "https://boards.greenhouse.io/*",
         "https://job-boards.greenhouse.io/*",
         "https://*.myworkdayjobs.com/*",
+        "https://*.myworkdaysite.com/*",
         "https://www.linkedin.com/jobs/*"
       ],
       "js": ["content.js"],

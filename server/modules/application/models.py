@@ -114,6 +114,91 @@ class AnswerBank(Document):
         ]
 
 
+# --- the applicant's standing answers ----------------------------------------
+
+
+class Address(BaseModel):
+    """ATS forms want the parts separately; `profile.location` is one free-text
+    line, which is right for a resume header and useless for a form."""
+
+    line1: str | None = None
+    line2: str | None = None
+    city: str | None = None
+    state: str | None = None
+    postalCode: str | None = None
+    country: str | None = None
+
+
+class Demographics(BaseModel):
+    """US-style EEO questions. Every field is free text and every one is optional —
+    "Prefer not to say" is a real answer and the default is to answer nothing."""
+
+    gender: str | None = None
+    race: str | None = None
+    veteranStatus: str | None = None
+    disabilityStatus: str | None = None
+
+
+class ApplicantFields(BaseModel):
+    """The facts every application form asks for and no resume carries, so the
+    profile has nowhere to put them. Stored once, answered everywhere.
+
+    This is not `P4-02`: those are discovery preferences (which jobs to look for).
+    These are answers about you, used only when filling a form."""
+
+    address: Address = Field(default_factory=Address)
+    demographics: Demographics = Field(default_factory=Demographics)
+
+    totalExperienceYears: float | None = Field(default=None, ge=0, le=70)
+    noticePeriod: str | None = None
+    earliestStartDate: str | None = None
+
+    currentSalary: str | None = None
+    expectedSalary: str | None = None
+
+    workAuthorization: str | None = None
+    requiresSponsorship: bool | None = None
+    willingToRelocate: bool | None = None
+
+    howHeard: str | None = None
+    referredBy: str | None = None
+
+
+class ApplicantProfile(Document):
+    userId: PydanticObjectId
+
+    address: Address = Field(default_factory=Address)
+    demographics: Demographics = Field(default_factory=Demographics)
+
+    totalExperienceYears: float | None = None
+    noticePeriod: str | None = None
+    earliestStartDate: str | None = None
+
+    currentSalary: str | None = None
+    expectedSalary: str | None = None
+
+    workAuthorization: str | None = None
+    requiresSponsorship: bool | None = None
+    willingToRelocate: bool | None = None
+
+    howHeard: str | None = None
+    referredBy: str | None = None
+
+    createdAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updatedAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+    class Settings:
+        name = "applicant_profile"
+        indexes = [pymongo.IndexModel([("userId", pymongo.ASCENDING)], unique=True)]
+
+
+class ApplicantRead(ApplicantFields):
+    """Deliberately has no `id`: there is one per user and nothing addresses it by
+    id. An unsaved one reads back as this shape with every field empty."""
+
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
+
 class ApplicationFill(BaseModel):
     """The extension reporting what it filled. Reporting only — it submits nothing."""
 

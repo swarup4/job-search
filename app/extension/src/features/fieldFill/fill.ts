@@ -127,19 +127,36 @@ function fillCheckbox(el: HTMLInputElement, value: string): boolean {
     return el.checked === shouldCheck;
 }
 
-/** The listbox a combobox drives, whether it names it or just opens one. */
-function listboxFor(el: HTMLElement): HTMLElement | null {
-    const id = el.getAttribute("aria-controls") ?? el.getAttribute("aria-owns");
-    const named = id ? el.ownerDocument.getElementById(id) : null;
-    if (named?.querySelector("[role='option']")) return named;
+/** Workday calls its options `promptOption`; everyone else uses the ARIA role. */
+const OPTION = "[role='option'], [data-automation-id='promptOption']";
 
-    const open = el.ownerDocument.querySelectorAll<HTMLElement>("[role='listbox']");
-    for (const candidate of open) {
-        if (candidate.offsetParent !== null && candidate.querySelector("[role='option']")) {
-            return candidate;
-        }
-    }
-    return null;
+/**
+ * Deliberately not `offsetParent`, which is null for any `position: fixed`
+ * element — and an ATS dropdown is a fixed-position popup. Testing offsetParent
+ * rejected every real listbox on Workday and Greenhouse.
+ */
+function onScreen(el: HTMLElement): boolean {
+    if (el.getClientRects().length > 0) return true;
+    const style = getComputedStyle(el);
+    return style.display !== "none" && style.visibility !== "hidden";
+}
+
+/**
+ * The options an open combobox is offering. `aria-controls` names them when the
+ * widget bothers to set it; when it does not, they are looked up document-wide,
+ * because Workday and Greenhouse both render the popup at the end of `<body>`
+ * rather than inside the control that owns it.
+ */
+function openOptions(el: HTMLElement): HTMLElement[] {
+    const doc = el.ownerDocument;
+    const id = el.getAttribute("aria-controls") ?? el.getAttribute("aria-owns");
+    const named = id ? doc.getElementById(id) : null;
+
+    const scoped = named ? Array.from(named.querySelectorAll<HTMLElement>(OPTION)) : [];
+    const visible = scoped.filter(onScreen);
+    if (visible.length > 0) return visible;
+
+    return Array.from(doc.querySelectorAll<HTMLElement>(OPTION)).filter(onScreen);
 }
 
 /**
@@ -156,13 +173,16 @@ async function fillCombobox(el: HTMLElement, value: string): Promise<boolean> {
         dispatch(el, "input");
     }
 
-    const listbox = await waitFor(() => listboxFor(el));
-    if (!listbox) return false;
+    const options = await waitFor(() => {
+        const found = openOptions(el);
+        return found.length > 0 ? found : null;
+    });
+    if (!options) return false;
 
-    const options = Array.from(listbox.querySelectorAll<HTMLElement>("[role='option']"));
-    const texts = options.map((option) => (option.textContent ?? "").trim());
-    const index = bestOption(texts, value);
-
+    const index = bestOption(
+        options.map((option) => (option.textContent ?? "").trim()),
+        value,
+    );
     if (index === null) {
         el.blur();
         return false;

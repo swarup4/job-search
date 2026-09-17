@@ -324,11 +324,18 @@ Both remaining tasks need an LLM, so they wait on Phases 6–8.
 - ✅ `P9-01` Scaffold (Manifest V3, content script, background worker, popup)
 - ✅ `P9-02` Field detection by label / ARIA / placeholder heuristics
 - ⬜ `P9-03` LLM fallback for ambiguous fields — **blocked on `ai/`**
-- ✅ `P9-04` Highlight every filled field for review
+- ✅ `P9-04` Highlight every filled field for review, and an **in-page review panel** for the rest —
+  docked into the application page, not the popup, because a popup closes the moment you click the
+  form and that is exactly when the unanswered questions have to be readable
 - ✅ `P9-05` Resume attach — automatic, with the manual fallback as the exception
 - ✅ `P9-06` Workday / Greenhouse / Lever field patterns
 - 🟡 `P9-07` LinkedIn Easy Apply — fills the open step; does not click **Next**
 - ✅ `P9-10` Report the fill back: `fieldsFilled`, `screeningAnswers`, and the user's own answers
+- ✅ `P9-11` **`applicant_profile` collection** — the standing answers a form asks for and a resume
+  never carries: structured address, notice period, salary, work authorisation, sponsorship,
+  relocation, total experience, EEO. `GET`/`PUT /application/applicant`, one per user, upsert.
+  The extension reads it on every fill and prefers it over `profile` for form fields — `city` is a
+  form box, `profile.location` is a resume line, and only one of them belongs in each
 
 **API**
 - ✅ `P9-08` Serve job context and the Q&A answer bank to the extension
@@ -343,10 +350,16 @@ own words. That is what `P9-03` will soften — not replace: an LLM suggestion s
 suggestion. The profile deliberately holds no cover letter, work-authorisation or EEO data, so those
 questions always come to you.
 
-**Two known limits, both deliberate.** Workday and LinkedIn are multi-step wizards, and one pass
-fills the step on screen only — nothing here navigates a form. And the answer bank is read-only
-over HTTP (`upsert_answer` exists in `application/service.py` with no route), so an answer you type
-in the popup fills the field and is recorded on the application, but is not saved for next time.
+**Three known limits.** Workday and LinkedIn are multi-step wizards, and one pass fills the step on
+screen only — nothing here navigates a form. The answer bank is still read-only over HTTP
+(`upsert_answer` exists in `application/service.py` with no route), so a one-off answer typed in the
+popup fills the field and is recorded on the application, but is not saved for next time. And
+`applicant_profile` has **no UI** — it is populated through `/docs` or curl until a Settings screen
+reaches it, which is `P4-10`'s neighbour rather than part of this phase.
+
+**`applicant_profile` is not `P4-02`.** Those are discovery preferences — which jobs to go looking
+for. These are answers about you, read only when filling a form. Two stores, two purposes; merging
+them would put "target salary band for search" and "what I told Wells Fargo I earn" in one field.
 
 ---
 

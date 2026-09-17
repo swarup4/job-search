@@ -2,6 +2,7 @@ import { API_URL } from "@/shared/config";
 import { clearSession, readAccessToken, readPersisted, writeSession } from "@/shared/session";
 import type {
     AnswerBankEntry,
+    ApplicantProfile,
     ApplicationRead,
     ApplicationStatus,
     FieldFill,
@@ -21,8 +22,11 @@ export class ApiError extends Error {
     constructor(
         message: string,
         readonly status: number | null = null,
+        /** Which call failed. Without it a 422 names a field and leaves you to
+         * guess which of a dozen requests carried it. */
+        readonly path: string | null = null,
     ) {
-        super(message);
+        super(path ? `${message} (${path})` : message);
         this.name = "ApiError";
     }
 }
@@ -50,7 +54,7 @@ async function send(path: string, init: RequestInit, token: string | null): Prom
     try {
         return await fetch(`${API_URL}${path}`, { ...init, headers });
     } catch {
-        throw new ApiError(`Cannot reach the API at ${API_URL}. Is the server running?`);
+        throw new ApiError(`Cannot reach the API at ${API_URL}. Is the server running?`, null, path);
     }
 }
 
@@ -80,13 +84,21 @@ async function request<T>(path: string, init: RequestInit = {}, authed = true): 
 
     if (response.status === 401 && authed) {
         token = await refreshed();
-        if (!token) throw new ApiError("Sign in again.", 401);
+        if (!token) throw new ApiError("Sign in again.", 401, path);
         response = await send(path, init, token);
     }
 
     if (!response.ok) {
         const body = await response.json().catch(() => null);
-        throw new ApiError(messageFrom(body, response.status), response.status);
+        const method = init.method ?? "GET";
+        // Shows up in the service worker console, which is the only place a
+        // failing call is visible when the popup has already closed.
+        console.error(`JobPilot API ${method} ${path} -> ${response.status}`, body);
+        throw new ApiError(
+            messageFrom(body, response.status),
+            response.status,
+            `${method} ${path}`,
+        );
     }
 
     if (response.status === 204) return undefined as T;
@@ -105,6 +117,10 @@ export async function login(email: string, password: string): Promise<LoginResul
 
 export function getProfile(): Promise<UserProfile> {
     return request<UserProfile>("/profile/getProfile");
+}
+
+export function getApplicant(): Promise<ApplicantProfile> {
+    return request<ApplicantProfile>("/application/applicant");
 }
 
 export function getAnswerBank(): Promise<AnswerBankEntry[]> {
@@ -150,7 +166,9 @@ export function setStatus(
 export async function getResumePdf(): Promise<{ name: string; base64: string }> {
     const token = await readAccessToken();
     const response = await send("/resume/base/pdf", {}, token);
-    if (!response.ok) throw new ApiError("No base resume to attach yet.", response.status);
+    if (!response.ok) {
+        throw new ApiError("No base resume to attach yet.", response.status, "GET /resume/base/pdf");
+    }
 
     const disposition = response.headers.get("Content-Disposition") ?? "";
     const name = /filename="([^"]+)"/.exec(disposition)?.[1] ?? "resume.pdf";

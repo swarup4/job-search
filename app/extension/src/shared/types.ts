@@ -140,3 +140,36 @@ export interface JobRead {
     salaryText: string | null;
     status: string;
 }
+
+export interface Address {
+    line1: string | null;
+    line2: string | null;
+    city: string | null;
+    state: string | null;
+    postalCode: string | null;
+    country: string | null;
+}
+
+export interface Demographics {
+    gender: string | null;
+    race: string | null;
+    veteranStatus: string | null;
+    disabilityStatus: string | null;
+}
+
+/** The standing answers a form asks for and a resume never carries. Reads back
+ * with every field null until the user saves it. */
+export interface ApplicantProfile {
+    address: Address;
+    demographics: Demographics;
+    totalExperienceYears: number | null;
+    noticePeriod: string | null;
+    earliestStartDate: string | null;
+    currentSalary: string | null;
+    expectedSalary: string | null;
+    workAuthorization: string | null;
+    requiresSponsorship: boolean | null;
+    willingToRelocate: boolean | null;
+    howHeard: string | null;
+    referredBy: string | null;
+}

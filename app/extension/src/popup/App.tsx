@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { Review } from "@/popup/Review";
 import { SignIn } from "@/popup/SignIn";
-import { askWorker, type FrameResult, type TabContext, type UserAnswer } from "@/shared/messages";
+import { askWorker, type FrameResult, type TabContext } from "@/shared/messages";
 
 const PLATFORM_NAMES: Record<string, string> = {
     lever: "Lever",
@@ -53,32 +53,18 @@ export function App() {
     }
 
     function fill() {
-        if (tabId === null || !applicationId) return;
+        if (tabId === null) return;
         void run(async () => {
-            setResult(await askWorker<FrameResult>({ type: "fillTab", tabId, applicationId }));
-        });
-    }
-
-    function answer(answers: UserAnswer[]) {
-        if (tabId === null || !applicationId) return;
-        void run(async () => {
-            const outcome = await askWorker<FrameResult>({
-                type: "answerTab",
-                tabId,
-                applicationId,
-                answers,
-            });
-            // Drop the ones now answered; whatever stayed pending stays listed.
-            const done = new Set(outcome.answered.map((entry) => entry.question));
-            setResult((current) =>
-                current
-                    ? {
-                          ...current,
-                          filled: current.filled,
-                          pending: current.pending.filter((question) => !done.has(question.question)),
-                      }
-                    : current,
-            );
+            const outcome = await askWorker<FrameResult>({ type: "fillTab", tabId, applicationId });
+            // The in-page panel opens itself whenever there is something to review,
+            // and it is the better surface for it — it stays open while the user
+            // works through the form. Keeping the same counts and buttons in the
+            // popup as well is two of everything.
+            if (outcome.filled.length > 0 || outcome.pending.length > 0) {
+                window.close();
+                return;
+            }
+            setResult(outcome);
         });
     }
 
@@ -118,11 +104,6 @@ export function App() {
 
             {!context.fillable ? (
                 <p className="muted">Open a job application page to fill it.</p>
-            ) : context.staged.length === 0 ? (
-                <p className="muted">
-                    Nothing staged yet. Tailor a resume for a job in the dashboard, and it shows up
-                    here.
-                </p>
             ) : (
                 <div className="stack">
                     <div className="job">
@@ -135,24 +116,28 @@ export function App() {
                                 </span>
                             </>
                         ) : (
-                            <span className="muted">Pick the job you are applying to.</span>
+                            <span className="muted">
+                                Filling from your profile and answer bank.
+                            </span>
                         )}
                     </div>
 
-                    <select
-                        value={applicationId ?? ""}
-                        onChange={(event) => {
-                            setChosenId(event.target.value || null);
-                            setResult(null);
-                        }}
-                    >
-                        <option value="">Choose a staged application…</option>
-                        {context.staged.map(({ application, job: staged }) => (
-                            <option key={application.id} value={application.id}>
-                                {staged ? `${staged.title} — ${staged.company.name}` : application.id}
-                            </option>
-                        ))}
-                    </select>
+                    {context.staged.length > 0 ? (
+                        <select
+                            value={applicationId ?? ""}
+                            onChange={(event) => {
+                                setChosenId(event.target.value || null);
+                                setResult(null);
+                            }}
+                        >
+                            <option value="">Not tracking this one</option>
+                            {context.staged.map(({ application, job: staged }) => (
+                                <option key={application.id} value={application.id}>
+                                    {staged ? `${staged.title} — ${staged.company.name}` : application.id}
+                                </option>
+                            ))}
+                        </select>
+                    ) : null}
 
                     {result?.blocked ? <p className="hint">{result.blocked}</p> : null}
                     {error ? <p className="error">{error}</p> : null}
@@ -161,7 +146,13 @@ export function App() {
                         <Review
                             result={result}
                             busy={busy}
-                            onAnswer={answer}
+                            tracked={applicationId !== null}
+                            onShowPanel={() =>
+                                void run(async () => {
+                                    if (tabId !== null) await askWorker({ type: "showPanel", tabId });
+                                    window.close();
+                                })
+                            }
                             onClear={() =>
                                 void run(async () => {
                                     if (tabId !== null) {
@@ -180,12 +171,7 @@ export function App() {
                             }
                         />
                     ) : (
-                        <button
-                            type="button"
-                            className="primary"
-                            onClick={fill}
-                            disabled={busy || !applicationId}
-                        >
+                        <button type="button" className="primary" onClick={fill} disabled={busy}>
                             {busy ? "Filling…" : "Fill this form"}
                         </button>
                     )}
