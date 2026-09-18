@@ -6,6 +6,7 @@ from pymongo.asynchronous.database import AsyncDatabase
 
 from modules.account import Account
 from modules.application import AnswerBank, ApplicantProfile, Application
+from modules.capture import Capture
 from modules.event import Event
 from modules.job import Job
 from modules.match import Match
@@ -26,6 +27,7 @@ def document_models() -> list[type]:
         Application,
         AnswerBank,
         ApplicantProfile,
+        Capture,
         Event,
         Profile,
         Experience,

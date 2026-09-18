@@ -3,6 +3,7 @@ import type {
     AnswerBankEntry,
     ApplicantProfile,
     AtsPlatform,
+    CaptureRegion,
     FieldFill,
     JobRead,
     ScreeningAnswer,
@@ -65,6 +66,17 @@ export interface TabContext {
     fillable: boolean;
 }
 
+/** What the popup shows after a capture. `duplicate` is the server saying this
+ * exact page is already stored, which is a success and not an error. */
+export interface CaptureOutcome {
+    id: string;
+    duplicate: boolean;
+    pageTitle: string;
+    region: CaptureRegion;
+    characters: number;
+    links: number;
+}
+
 export type WorkerRequest =
     | { type: "context"; tabId: number }
     | { type: "signIn"; email: string; password: string }
@@ -74,6 +86,7 @@ export type WorkerRequest =
     | { type: "clearHighlights"; tabId: number }
     | { type: "showPanel"; tabId: number }
     | { type: "confirmSubmitted"; applicationId: string }
+    | { type: "captureTab"; tabId: number }
     // Sent by the content script after the user answers in the in-page panel. It
     // carries no application id — the worker already knows which tab is which.
     | { type: "recordAnswers"; answered: ScreeningAnswer[] }
@@ -83,6 +96,7 @@ export type WorkerRequest =
 
 export type TabRequest =
     | { type: "ping" }
+    | { type: "capture" }
     | { type: "panel" }
     | { type: "fill"; data: FillData }
     | { type: "answer"; answers: UserAnswer[] }
