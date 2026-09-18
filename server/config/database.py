@@ -37,8 +37,11 @@ def document_models() -> list[type]:
     ]
 
 
-async def connect() -> AsyncDatabase:
-    """The only place a Mongo client is opened."""
+async def connect(db_name: str | None = None) -> AsyncDatabase:
+    """The only place a Mongo client is opened.
+
+    `db_name` exists for the test suite, which points the same app at a throwaway
+    database rather than mocking the driver — see server-api.md."""
     global _client
 
     # uri = os.environ.get("MONGODB_LOCAL_URI", "mongodb://127.0.0.1:27017")
@@ -48,7 +51,7 @@ async def connect() -> AsyncDatabase:
     #     raise RuntimeError("server may only connect to the local MongoDB, never Atlas")
 
     _client = AsyncMongoClient(uri)
-    database = _client[os.environ.get("MONGODB_DB_NAME", "jobpilot")]
+    database = _client[db_name or os.environ.get("MONGODB_DB_NAME", "jobpilot")]
     await init_beanie(database=database, document_models=document_models())
     return database
 

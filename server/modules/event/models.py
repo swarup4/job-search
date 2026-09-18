@@ -62,9 +62,7 @@ class Event(Document):
                 ]
             ),
             pymongo.IndexModel([("userId", pymongo.ASCENDING), ("eventType", pymongo.ASCENDING)]),
-            pymongo.IndexModel(
-                [("userId", pymongo.ASCENDING), ("occurredAt", pymongo.DESCENDING)]
-            ),
+            pymongo.IndexModel([("userId", pymongo.ASCENDING), ("occurredAt", pymongo.DESCENDING)]),
         ]
 
 

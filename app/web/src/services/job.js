@@ -5,14 +5,14 @@ export function listJobs({ status, shortlisted, company, limit = 50, skip = 0 } 
     return axiosInstance.get("/job", { params: { status, shortlisted, company, limit, skip } });
 }
 
-/** GET /api/job/{id} — null when the job is gone, which a stale link makes normal. */
+/** GET /api/job/getJob/{id} — null when the job is gone, which a stale link makes normal. */
 export function getJob(jobId) {
-    return orNull(axiosInstance.get(`/job/${jobId}`));
+    return orNull(axiosInstance.get(`/job/getJob/${jobId}`));
 }
 
-/** PATCH /api/job/{id} — the shortlist toggle and pipeline moves. */
+/** PATCH /api/job/updateJob/{id} — the shortlist toggle and pipeline moves. */
 export function updateJob(jobId, changes) {
-    return axiosInstance.patch(`/job/${jobId}`, changes);
+    return axiosInstance.patch(`/job/updateJob/${jobId}`, changes);
 }
 
 export function setShortlisted(jobId, shortlisted) {

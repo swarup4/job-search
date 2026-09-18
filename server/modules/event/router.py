@@ -19,6 +19,6 @@ async def list_events(
     return await service.list_events(user_id, job_id, event_type, limit)
 
 
-@router.post("", response_model=EventRead, status_code=status.HTTP_201_CREATED)
+@router.post("/appendEvent", response_model=EventRead, status_code=status.HTTP_201_CREATED)
 async def append_event(payload: EventAppend, user_id: CurrentUser) -> Event:
     return await service.append_event(user_id, payload)

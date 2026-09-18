@@ -1,0 +1,6 @@
+{
+  "$schema": "https://assets.requestly.com/local/v1.15.0/body.json",
+  "contentType": "json",
+  "raw": "{\n  \"address\": {\n    \"line1\": \"string\",\n    \"line2\": \"string\",\n    \"city\": \"string\",\n    \"state\": \"string\",\n    \"postalCode\": \"string\",\n    \"country\": \"string\"\n  },\n  \"demographics\": {\n    \"gender\": \"string\",\n    \"race\": \"string\",\n    \"veteranStatus\": \"string\",\n    \"disabilityStatus\": \"string\"\n  },\n  \"totalExperienceYears\": 0,\n  \"noticePeriod\": \"string\",\n  \"earliestStartDate\": \"string\",\n  \"currentSalary\": \"string\",\n  \"expectedSalary\": \"string\",\n  \"workAuthorization\": \"string\",\n  \"requiresSponsorship\": false,\n  \"willingToRelocate\": false,\n  \"howHeard\": \"string\",\n  \"referredBy\": \"string\"\n}",
+  "rawContentType": "application/json"
+}

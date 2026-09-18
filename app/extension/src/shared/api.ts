@@ -132,7 +132,7 @@ export function listStaged(): Promise<ApplicationRead[]> {
 }
 
 export function getJob(jobId: string): Promise<JobRead> {
-    return request<JobRead>(`/job/${jobId}`);
+    return request<JobRead>(`/job/getJob/${jobId}`);
 }
 
 export function recordFill(

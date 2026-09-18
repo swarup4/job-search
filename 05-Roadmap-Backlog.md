@@ -5,7 +5,7 @@
 | **Product** | JobPilot — Agentic AI Job Search Platform |
 | **Owner** | Swarup Saha |
 | **Status** | v1.5 — eleven phases, application first then agents. Phase 1 done; PDF compilation closed 2026-09-17 |
-| **Updated** | 2026-09-17 |
+| **Updated** | 2026-09-18 |
 
 ---
 
@@ -26,7 +26,7 @@ anything starts reasoning.
 | [2](#3-phase-2--resume-generation--download) | A resume built from that profile, downloadable | 🚧 `.tex` and PDF both download; three tasks left |
 | [3](#4-phase-3--job-scraping-search--shortlist) | Real jobs in the system, searchable and shortlistable | ⬜ API only, no sources |
 | [4](#5-phase-4--applications--settings) | Tracking what you applied to, and the preferences driving it | ⬜ API only |
-| [5](#6-phase-5--llm-integration--resume-rectification) | A resume rectified against a specific job | ⬜ not started |
+| [5](#6-phase-5--llm-integration--resume-rectification) | A resume rectified against a specific job | 🚧 runs end to end; the vector score and the production model do not |
 | [6](#7-phase-6--rag--retrieval) | Retrieval over your own resume, with the split vector store | ⬜ not started |
 | [7](#8-phase-7--mcp-tool-servers) | The tool servers agents reach the world through | ⬜ not started |
 | [8](#9-phase-8--agents--orchestration) | LangGraph agents under a supervisor, with approval interrupts | ⬜ not started |
@@ -223,32 +223,148 @@ discovery.
 ---
 
 ## 6. Phase 5 — LLM integration & resume rectification
-⬜ **not started.** The first intelligence in the product, called directly from the API. Still no
-agents and no orchestration — deliberately, so a wrong answer stays debuggable.
+🚧 **the pipeline runs end to end.** The first intelligence in the product, driven by hand from the
+AI tier. Still no agents and no orchestration — deliberately, so a wrong answer stays debuggable.
+
+`ai/` now exists: `config/` (settings and the one LLM client), `agents/matching.py`,
+`agents/tailoring.py`, `mcp_servers/jobpilot_api/` (an HTTP client for `server`, which P7-01 wraps
+as MCP tools) and `tests/`. It holds no database URI and imports nothing from `server`.
 
 **API**
 - ✅ `P5-01` `match` module: write score and keywords, record the user's selection
 - ✅ `P5-02` `resume` module: versioned `.tex` + selection set, rejects unselected keywords
-- ⬜ `P5-03` Structured keyword extraction from a JD
-- ⬜ `P5-04` Present / Missing keyword diff against the profile
-- ⬜ `P5-05` Risk-flag detection (seniority mismatch and similar)
-- ⬜ `P5-06` Embed the JD, `$vectorSearch`, compute a match score *(needs Atlas, below)*
-- ⬜ `P5-07` Incorporate **only** the keywords the user ticked
+- ✅ `P5-03` Structured keyword extraction from a JD. `ai/agents/matching.py`, schema-constrained
+  through `ai/config/llm.py`. A requirement whose quote cannot be found in the JD is dropped rather
+  than shown to the user with an invented one, and `mentions` is counted from the text rather than
+  taken from the model. Needed one new endpoint, `GET /api/job/getJobDescription/{id}` — `JobRead` withholds
+  `jdText` because no screen renders it
+- ✅ `P5-04` Present / Missing keyword diff against the profile. Sees every role, per the context
+  discipline below. A label sitting verbatim in the profile never reaches the model at all; an
+  "already have it" verdict whose evidence is not in the profile falls back to Missing, which is
+  the safe direction to be wrong in
+- ✅ `P5-05` Risk-flag detection (seniority mismatch and similar) — the JD plus a profile digest.
+  Surfaced, never selectable
+- ⬜ `P5-06` Embed the JD, `$vectorSearch`, compute a match score *(needs Atlas, below)*.
+  **Interim:** the score is keyword coverage weighted by how often the JD asks for each requirement
+  — arithmetic over the diff rather than a number the model invents. `coverage_score` in
+  `ai/agents/matching.py` is the function P5-06 replaces
+- ✅ `P5-07` Incorporate **only** the keywords the user ticked. The `.tex` never reaches the model:
+  it is given the current role and the skill groups as data and answers with *placement* — a skill
+  group, or one existing bullet and the smallest edit of it — which `ai/agents/tailoring.py` folds
+  into the stored base resume line by line. A rewrite may introduce no word that is not the keyword
+  itself or a plain connective, so a new metric, employer, date or tool is refused. A keyword with
+  no honest home is declined and reported, not smoothed over
 - ✅ `P5-08` Version each `.tex` per job id: `version` on `resumes`, unique per
   `(job_id, version)`, incremented from the latest on every store
 
 **UI**
 - ✅ `P5-09` Keyword Selection screen built, starting with nothing checked (FR-2.5)
-- ⬜ `P5-10` Wire it onto real match data instead of `matches.json`
+- ✅ `P5-10` Wired onto real match data instead of `matches.json` — `getJob` + `getMatch` +
+  `getShellCounts`, and the two buttons are the interrupt actually resolving
+  (`POST /api/match/selection/{job_id}`). A job that has not been scored says so rather than
+  showing keywords, and re-opening an answered match starts from nothing checked again
 
 **Infrastructure**
-- ⬜ `P5-11` Pick and validate a local LLM; confirm tool-calling reliability
+- 🟡 `P5-11` Validate the model pair decided below — `qwen3:14b` on Ollama for development,
+  `Qwen/Qwen3-32B` on HF Inference for real use. Confirm schema adherence (`strict: true`) on
+  both, and on whichever HF provider is pinned.
+  **The code path is validated, the pair is not.** Ollama's `/v1/chat/completions` honours
+  `response_format: {type: json_schema, strict: true}` — confirmed against the local install, and
+  every generation in `ai/` goes through it. The whole pipeline was exercised end to end on
+  2026-09-18 against a throwaway database on `llama3.2:latest`, the only model installed:
+  extraction, diff, risk flags, the selection gate and tailoring all landed, and the tailored
+  `.tex` differed from the base by exactly the one line carrying the two approved keywords.
+  Neither Qwen3 model has been run, and no HF provider has been pinned — switching is the three
+  environment values below and nothing else
 - ⬜ `P5-12` Atlas free tier + `$vectorSearch` index. *Not partial any more: the local
   chunk store this counted as half-done was removed on 2026-09-11, so nothing vector
   exists on either side*
 
 **Guardrail**
-- ⬜ `P5-13` No-fabrication test cases
+- ✅ `P5-13` No-fabrication test cases. 12 in `server/tests/`, driving the real endpoints against
+  a throwaway `jobpilot_test` database: a resume cannot be stored before the gate is answered, a
+  skip is not a selection, a re-score reopens the gate, a keyword the match never offered cannot be
+  selected, and a resume naming a keyword the user did not tick is refused with nothing stored.
+  32 in `ai/tests/` covering the side the server cannot see: a rewrite that invents a metric or an
+  employer is declined, a bullet that is not in the current role is declined, a skill group that
+  does not exist is declined, and a placement whose line is missing from the `.tex` is dropped
+  rather than guessed at.
+  This is the first test suite in the repo since they were removed on 2026-08-24; §15 remains
+  unmet everywhere else
+
+### Decisions — model source and context discipline (2026-09-18)
+
+**One OpenAI-compatible code path, two sources.** Ollama's `/v1/chat/completions` accepts
+`response_format: {type: json_schema, strict: true}` — verified against the local install — and so
+does HF's router. So `config/llm.py` holds a single `generate(prompt, schema)` over `httpx`, and
+moving from development to real use is three environment values, not a provider abstraction:
+
+| | development | real use |
+|---|---|---|
+| `LLM_BASE_URL` | `http://127.0.0.1:11434/v1` | `https://router.huggingface.co/v1` |
+| `LLM_API_KEY` | `ollama` (ignored locally) | `${HF_TOKEN}` |
+| `LLM_MODEL` | `qwen3:14b` | `Qwen/Qwen3-32B` |
+
+**Qwen3 on both sides.** Developing against the 14B is deliberate: a schema a 14B holds, a 32B
+holds. Staying inside one generation means parameter count is the only variable that moves at
+switchover — Qwen2.5 would have added a generation change and the absence of thinking mode to the
+same diff. Disable thinking mode on both. Pin the HF provider explicitly (`nscale`,
+`featherless-ai` and `deepinfra` all serve Qwen3-32B): `strict: true` support varies by provider,
+and an unpinned router can silently drop it, which surfaces as intermittent parse failures rather
+than as a configuration error.
+
+**Hosted for real use, local for development.** The 16 GB desktop tops out near a 14B and the
+laptop runs nothing, so the production model is deliberately one that neither machine can host.
+Ollama stays installed as the offline fallback.
+
+**Context discipline — what each step may see.** Measured against the real `base_resume.tex`
+(3,512 tokens, 1,194 of them preamble) and the real profile (2,014 tokens):
+
+| Step | Sees | Tokens in |
+|---|---|---|
+| `P5-03` extraction | JD + schema | ~1,200 |
+| `P5-04` diff | **the whole profile — all seven roles** | ~2,600 |
+| `P5-05` risk flags | JD + profile summary | ~1,500 |
+| `P5-07` tailoring | **current role + skills only, and no LaTeX** | ~1,300 |
+
+`base_resume.tex` itself divides cleanly into what a tailoring run may change and what it may not —
+measured section by section, and the reason only the current role and the skills table are in play:
+
+| Section | Tokens | |
+|---|---|---|
+| preamble (macros, colors, styles) | 1,194 | never send |
+| header / contact | 262 | static |
+| professional summary | 144 | static — and LLM prose here is forbidden by invariant 1 |
+| **Technical Skills table** | **350** | **mutable** |
+| **Trigent block (current role)** | **447** | **mutable** |
+| Encora → Gowyn (6 closed-out roles) | 734 | static |
+| education + certifications | 232 | static |
+
+797 mutable tokens out of a 2,284-token body. Education, certifications and the six closed-out roles
+change per job only in the sense that they do not — they are rendered verbatim every time.
+
+The `.tex` never reaches the model. Jinja2 renders it from profile data, so the model works on the
+data and returns placement rather than LaTeX: it cannot touch the preamble macros, and it cannot
+alter education, certifications or the six closed-out roles because it never sees them. That is a
+guardrail as much as an economy.
+
+**`P5-04` is the exception and stays wide.** RASA sits in the LTI role, Angular.js in Mphasis and
+Harman. A diff seeing only the current role would mark those **Missing** and invite the user to add
+what they already have — fabrication pressure pointed the wrong way.
+
+**Cost, measured.** About `$0.00096` per job end to end, roughly `$0.10` per hundred jobs. HF passes
+provider rates through with no markup; free accounts get `$0.10` of credit a month (~100 jobs), PRO
+`$2.00`. A custom provider key bills DeepInfra directly and sidesteps the credit ceiling entirely.
+Qwen3-32B is ~17% cheaper than Qwen3-14B here, because the pipeline is input-heavy and the larger
+model's input rate is lower.
+
+**Provenance.** `Match.modelName` records source and model — `ollama/qwen3:14b` or
+`huggingface/Qwen3-32B`. A score from one is not comparable to a score from the other.
+
+**Still open.** Hosted inference contradicts invariant 3 as written, and the guardrail hook's
+hosted-provider pattern does not match HuggingFace today. Both are deferred, not resolved — and the
+code shipped pointing at Ollama, so nothing has actually left the machine yet. The contradiction
+becomes real the day `LLM_BASE_URL` changes.
 
 **The guardrail is the point of this phase.** Tailoring from ticked keywords only, and the tests
 proving it, are what make "no fabrication" real rather than aspirational — and neither can be
@@ -421,7 +537,8 @@ Audited against the codebase on 2026-09-13; Phase 2 re-audited 2026-09-14, and a
 2026-09-17 for `P2-07`, `P2-08` and `P2-12`. Counts predate the Phase 2 additions
 (`P2-13`…`P2-17`) and the two download endpoints, and are due a recount.
 
-`ai/` and the Chrome extension do not exist yet, so nothing agentic runs.
+`ai/` exists as of 2026-09-18 but holds no graph: Phase 5's two capabilities are called by hand, so
+nothing agentic runs yet. The Chrome extension is built (Phase 9).
 
 | Built | Backed by |
 |---|---|

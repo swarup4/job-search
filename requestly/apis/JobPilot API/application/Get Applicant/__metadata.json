@@ -2,9 +2,9 @@
   "$schema": "https://assets.requestly.com/local/v1.15.0/metadata.json",
   "type": "api",
   "entryType": "http",
-  "id": "a480fdf9-a03c-4462-a823-653818771cf8",
-  "rank": "a3",
-  "url": "{{base_url}}/api/profile/preferences",
+  "id": "a78138c5-ac18-42c6-8d58-41087b569f75",
+  "rank": "a0",
+  "url": "{{base_url}}/api/application/applicant",
   "method": "GET",
   "contentType": "none"
 }

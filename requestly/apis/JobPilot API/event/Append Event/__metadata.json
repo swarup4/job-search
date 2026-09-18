@@ -2,9 +2,9 @@
   "$schema": "https://assets.requestly.com/local/v1.15.0/metadata.json",
   "type": "api",
   "entryType": "http",
-  "id": "19c5e02e-9a5b-4b0d-8c94-c27d9bdf86f9",
+  "id": "92d1d0db-b881-4e27-a641-0896dd7ca3e8",
   "rank": "a1",
-  "url": "{{base_url}}/api/event",
+  "url": "{{base_url}}/api/event/appendEvent",
   "method": "POST",
   "contentType": "json"
 }

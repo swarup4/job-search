@@ -160,6 +160,28 @@ class JobRead(BaseModel):
     discoveredAt: datetime
 
 
+class JobDescription(BaseModel):
+    """The posting as keyword extraction reads it, `jdText` included.
+
+    `JobRead` withholds it because no screen renders it; the matching step is the one
+    caller that needs the prose, so it gets its own response rather than widening the
+    shape every dashboard list already uses."""
+
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
+    id: PydanticObjectId
+    title: str
+    company: Company
+    location: str
+    jobType: JobType | None = None
+    workMode: WorkMode | None = None
+    experienceBand: str | None = None
+    summary: str | None = None
+    responsibilities: list[str] = Field(default_factory=list)
+    requirements: list[str] = Field(default_factory=list)
+    jdText: str
+
+
 class JobCreated(BaseModel):
     """`duplicate` is how discovery learns its dedup hash already existed."""
 

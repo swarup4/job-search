@@ -17,6 +17,7 @@ class Project(BaseModel):
 
 # --- personal details --------------------------------------------------------
 
+
 class ProfileFields(BaseModel):
     headline: str | None = None
     phone: str | None = None
@@ -66,6 +67,7 @@ class ProfileRead(BaseModel):
 
 # --- work experience ---------------------------------------------------------
 
+
 class ExperienceFields(BaseModel):
     title: str
     company: str
@@ -110,6 +112,7 @@ class ExperienceRead(BaseModel):
 
 # --- education ---------------------------------------------------------------
 
+
 class EducationFields(BaseModel):
     degree: str
     institution: str
@@ -145,6 +148,7 @@ class EducationRead(BaseModel):
 
 # --- skills ------------------------------------------------------------------
 
+
 class SkillFields(BaseModel):
     """One group and its items — `Languages: Python, Go`."""
 
@@ -172,6 +176,7 @@ class SkillRead(BaseModel):
 
 
 # --- certifications ----------------------------------------------------------
+
 
 class CertificationFields(BaseModel):
     name: str

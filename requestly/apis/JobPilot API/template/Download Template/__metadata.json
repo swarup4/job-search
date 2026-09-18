@@ -2,9 +2,9 @@
   "$schema": "https://assets.requestly.com/local/v1.15.0/metadata.json",
   "type": "api",
   "entryType": "http",
-  "id": "1fadbff0-c92e-4f7d-95a3-25937b60830b",
-  "rank": "a7",
-  "url": "{{base_url}}/api/profile/chunks/{{chunk_id}}",
+  "id": "6b1e1ed8-6e68-4ebf-9821-27332bd13b50",
+  "rank": "a1",
+  "url": "{{base_url}}/api/template/download/{{template_id}}",
   "method": "GET",
   "contentType": "none"
 }

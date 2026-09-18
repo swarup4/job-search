@@ -128,9 +128,7 @@ async def staged_count(user_id: PydanticObjectId) -> int:
 
 
 async def list_answer_bank(user_id: PydanticObjectId) -> list[AnswerBank]:
-    return (
-        await AnswerBank.find(AnswerBank.userId == user_id).sort(-AnswerBank.usedCount).to_list()
-    )
+    return await AnswerBank.find(AnswerBank.userId == user_id).sort(-AnswerBank.usedCount).to_list()
 
 
 async def upsert_answer(
@@ -156,9 +154,7 @@ async def get_applicant(user_id: PydanticObjectId) -> ApplicantProfile:
     return stored or ApplicantProfile(userId=user_id)
 
 
-async def save_applicant(
-    user_id: PydanticObjectId, payload: ApplicantFields
-) -> ApplicantProfile:
+async def save_applicant(user_id: PydanticObjectId, payload: ApplicantFields) -> ApplicantProfile:
     """Upsert, and a full replace: one per user, and the Settings form posts the
     whole thing, so an omitted field means the user cleared it."""
     stored = await ApplicantProfile.find_one(ApplicantProfile.userId == user_id)

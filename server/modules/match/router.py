@@ -27,11 +27,11 @@ async def record_selection(
     return await service.record_selection(user_id, job_id, payload)
 
 
-@router.post("", response_model=MatchRead, status_code=status.HTTP_201_CREATED)
+@router.post("/writeMatch", response_model=MatchRead, status_code=status.HTTP_201_CREATED)
 async def write_match(payload: MatchWrite, user_id: CurrentUser) -> Match:
     return await service.write_match(user_id, payload)
 
 
-@router.get("/{job_id}", response_model=MatchRead)
+@router.get("/getMatch/{job_id}", response_model=MatchRead)
 async def get_match(job_id: PydanticObjectId, user_id: CurrentUser) -> Match:
     return await service.get_match(user_id, job_id)

@@ -1,8 +1,8 @@
 import { axiosInstance, orNull } from "@/lib/axiosInstance";
 
-/** GET /api/match/{jobId} — null before the matching agent has scored the job. */
+/** GET /api/match/getMatch/{jobId} — null before the matching agent has scored the job. */
 export function getMatch(jobId) {
-    return orNull(axiosInstance.get(`/match/${jobId}`));
+    return orNull(axiosInstance.get(`/match/getMatch/${jobId}`));
 }
 
 /** GET /api/match/pending — feeds the "⚠ Pending your review" banner. */

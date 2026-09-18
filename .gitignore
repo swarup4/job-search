@@ -29,6 +29,8 @@ app/extension/dist/
 *.aux
 *.log
 *.out
+# one .tex per tailoring run — output, not source
+ai/output/
 
 # Template previews are copied out of templates/Template*/ by import_templates.py
 # and named after the row's id, so they are per-database, not source.

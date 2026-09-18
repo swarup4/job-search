@@ -20,8 +20,6 @@ router = APIRouter(tags=["application"])
 
 
 # --- the applicant's standing answers ----------------------------------------
-# Declared before `/{application_id}`: a literal path has to be matched ahead of
-# the parameterised one, or `applicant` is read as an application id.
 
 
 @router.get("/applicant", response_model=ApplicantRead)
@@ -67,11 +65,13 @@ async def list_applications(
     return await service.list_applications(user_id, application_status)
 
 
-@router.post("", response_model=ApplicationRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/stageApplication", response_model=ApplicationRead, status_code=status.HTTP_201_CREATED
+)
 async def stage_application(payload: ApplicationStage, user_id: CurrentUser) -> Application:
     return await service.stage_application(user_id, payload)
 
 
-@router.get("/{application_id}", response_model=ApplicationRead)
+@router.get("/getApplication/{application_id}", response_model=ApplicationRead)
 async def get_application(application_id: PydanticObjectId, user_id: CurrentUser) -> Application:
     return await service.get_application(user_id, application_id)

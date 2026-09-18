@@ -99,13 +99,15 @@
             }
           }
         ]
-      },
+      }
+    },
+    "/api/job/createJob": {
       "post": {
         "tags": [
           "job"
         ],
         "summary": "Create Job",
-        "operationId": "create_job_api_job_post",
+        "operationId": "create_job_api_job_createJob_post",
         "parameters": [
           {
             "name": "authorization",
@@ -136,13 +138,14 @@
         }
       }
     },
-    "/api/job/{job_id}": {
+    "/api/job/getJobDescription/{job_id}": {
       "get": {
         "tags": [
           "job"
         ],
-        "summary": "Get Job",
-        "operationId": "get_job_api_job__job_id__get",
+        "summary": "Get Job Description",
+        "description": "What the matching step reads. Same row as `getJob`, with the JD prose.",
+        "operationId": "get_job_description_api_job_getJobDescription__job_id__get",
         "parameters": [
           {
             "name": "job_id",
@@ -169,13 +172,50 @@
             }
           }
         ]
-      },
+      }
+    },
+    "/api/job/getJob/{job_id}": {
+      "get": {
+        "tags": [
+          "job"
+        ],
+        "summary": "Get Job",
+        "operationId": "get_job_api_job_getJob__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ]
+      }
+    },
+    "/api/job/updateJob/{job_id}": {
       "patch": {
         "tags": [
           "job"
         ],
         "summary": "Update Job",
-        "operationId": "update_job_api_job__job_id__patch",
+        "operationId": "update_job_api_job_updateJob__job_id__patch",
         "parameters": [
           {
             "name": "job_id",
@@ -287,13 +327,13 @@
         }
       }
     },
-    "/api/match": {
+    "/api/match/writeMatch": {
       "post": {
         "tags": [
           "match"
         ],
         "summary": "Write Match",
-        "operationId": "write_match_api_match_post",
+        "operationId": "write_match_api_match_writeMatch_post",
         "parameters": [
           {
             "name": "authorization",
@@ -324,13 +364,13 @@
         }
       }
     },
-    "/api/match/{job_id}": {
+    "/api/match/getMatch/{job_id}": {
       "get": {
         "tags": [
           "match"
         ],
         "summary": "Get Match",
-        "operationId": "get_match_api_match__job_id__get",
+        "operationId": "get_match_api_match_getMatch__job_id__get",
         "parameters": [
           {
             "name": "job_id",
@@ -456,13 +496,41 @@
         }
       }
     },
-    "/api/resume": {
+    "/api/resume/base/pdf": {
+      "get": {
+        "tags": [
+          "resume"
+        ],
+        "summary": "Download Base Pdf",
+        "description": "The stored .tex compiled, not re-rendered: the PDF has to be the document the\nuser is looking at, including anything the model rectified since the last render.",
+        "operationId": "download_base_pdf_api_resume_base_pdf_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ]
+      }
+    },
+    "/api/resume/storeResume": {
       "post": {
         "tags": [
           "resume"
         ],
         "summary": "Store Resume",
-        "operationId": "store_resume_api_resume_post",
+        "operationId": "store_resume_api_resume_storeResume_post",
         "parameters": [
           {
             "name": "authorization",
@@ -493,13 +561,13 @@
         }
       }
     },
-    "/api/resume/{job_id}": {
+    "/api/resume/getResume/{job_id}": {
       "get": {
         "tags": [
           "resume"
         ],
         "summary": "Get Resume",
-        "operationId": "get_resume_api_resume__job_id__get",
+        "operationId": "get_resume_api_resume_getResume__job_id__get",
         "parameters": [
           {
             "name": "job_id",
@@ -535,6 +603,42 @@
         ],
         "summary": "Render Template",
         "operationId": "render_template_api_template_render__template_id__get",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ]
+      }
+    },
+    "/api/template/download/{template_id}": {
+      "get": {
+        "tags": [
+          "template"
+        ],
+        "summary": "Download Template",
+        "description": "The same render as `/render`, handed over as the .tex itself. `/render` returns\nit inside JSON, where every newline is an escape the caller has to undo before\nthe source is usable.",
+        "operationId": "download_template_api_template_download__template_id__get",
         "parameters": [
           {
             "name": "template_id",
@@ -759,6 +863,68 @@
         }
       }
     },
+    "/api/application/applicant": {
+      "get": {
+        "tags": [
+          "application"
+        ],
+        "summary": "Get Applicant",
+        "operationId": "get_applicant_api_application_applicant_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "application"
+        ],
+        "summary": "Save Applicant",
+        "operationId": "save_applicant_api_application_applicant_put",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicantFields"
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/application/answer-bank": {
       "get": {
         "tags": [
@@ -953,13 +1119,15 @@
             }
           }
         ]
-      },
+      }
+    },
+    "/api/application/stageApplication": {
       "post": {
         "tags": [
           "application"
         ],
         "summary": "Stage Application",
-        "operationId": "stage_application_api_application_post",
+        "operationId": "stage_application_api_application_stageApplication_post",
         "parameters": [
           {
             "name": "authorization",
@@ -990,13 +1158,13 @@
         }
       }
     },
-    "/api/application/{application_id}": {
+    "/api/application/getApplication/{application_id}": {
       "get": {
         "tags": [
           "application"
         ],
         "summary": "Get Application",
-        "operationId": "get_application_api_application__application_id__get",
+        "operationId": "get_application_api_application_getApplication__application_id__get",
         "parameters": [
           {
             "name": "application_id",
@@ -1034,7 +1202,7 @@
         "operationId": "list_events_api_event_get",
         "parameters": [
           {
-            "name": "job_id",
+            "name": "jobId",
             "in": "query",
             "required": false,
             "schema": {
@@ -1046,11 +1214,11 @@
                   "type": "null"
                 }
               ],
-              "title": "Job Id"
+              "title": "Jobid"
             }
           },
           {
-            "name": "event_type",
+            "name": "eventType",
             "in": "query",
             "required": false,
             "schema": {
@@ -1062,7 +1230,7 @@
                   "type": "null"
                 }
               ],
-              "title": "Event Type"
+              "title": "Eventtype"
             }
           },
           {
@@ -1093,13 +1261,15 @@
             }
           }
         ]
-      },
+      }
+    },
+    "/api/event/appendEvent": {
       "post": {
         "tags": [
           "event"
         ],
         "summary": "Append Event",
-        "operationId": "append_event_api_event_post",
+        "operationId": "append_event_api_event_appendEvent_post",
         "parameters": [
           {
             "name": "authorization",
@@ -1962,7 +2132,7 @@
             ],
             "title": "Role"
           },
-          "profile_picture": {
+          "profilePicture": {
             "anyOf": [
               {
                 "type": "string"
@@ -1971,7 +2141,7 @@
                 "type": "null"
               }
             ],
-            "title": "Profile Picture"
+            "title": "Profilepicture"
           }
         },
         "type": "object",
@@ -1989,21 +2159,219 @@
         "title": "Actor",
         "description": "Who caused it. The audit trail behind every guardrail claim."
       },
+      "Address": {
+        "properties": {
+          "line1": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line1"
+          },
+          "line2": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line2"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "postalCode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postalcode"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country"
+          }
+        },
+        "type": "object",
+        "title": "Address",
+        "description": "ATS forms want the parts separately; `profile.location` is one free-text\nline, which is right for a resume header and useless for a form."
+      },
+      "ApplicantFields": {
+        "properties": {
+          "address": {
+            "$ref": "#/components/schemas/Address"
+          },
+          "demographics": {
+            "$ref": "#/components/schemas/Demographics"
+          },
+          "totalExperienceYears": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 70.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Totalexperienceyears"
+          },
+          "noticePeriod": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Noticeperiod"
+          },
+          "earliestStartDate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Earlieststartdate"
+          },
+          "currentSalary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currentsalary"
+          },
+          "expectedSalary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expectedsalary"
+          },
+          "workAuthorization": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workauthorization"
+          },
+          "requiresSponsorship": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requiressponsorship"
+          },
+          "willingToRelocate": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Willingtorelocate"
+          },
+          "howHeard": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Howheard"
+          },
+          "referredBy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Referredby"
+          }
+        },
+        "type": "object",
+        "title": "ApplicantFields",
+        "description": "The facts every application form asks for and no resume carries, so the\nprofile has nowhere to put them. Stored once, answered everywhere.\n\nThis is not `P4-02`: those are discovery preferences (which jobs to look for).\nThese are answers about you, used only when filling a form."
+      },
       "ApplicationFill": {
         "properties": {
-          "fields_filled": {
+          "fieldsFilled": {
             "items": {
               "$ref": "#/components/schemas/FieldFill"
             },
             "type": "array",
-            "title": "Fields Filled"
+            "title": "Fieldsfilled"
           },
-          "screening_answers": {
+          "screeningAnswers": {
             "items": {
               "$ref": "#/components/schemas/ScreeningAnswer"
             },
             "type": "array",
-            "title": "Screening Answers"
+            "title": "Screeninganswers"
           }
         },
         "type": "object",
@@ -2012,21 +2380,21 @@
       },
       "ApplicationStage": {
         "properties": {
-          "job_id": {
+          "jobId": {
             "$ref": "#/components/schemas/PydanticObjectId"
           },
-          "resume_id": {
+          "resumeId": {
             "$ref": "#/components/schemas/PydanticObjectId"
           },
-          "tex_path": {
+          "texPath": {
             "type": "string",
-            "title": "Tex Path"
+            "title": "Texpath"
           },
           "ats": {
             "$ref": "#/components/schemas/AtsPlatform",
             "default": "other"
           },
-          "apply_url": {
+          "applyUrl": {
             "anyOf": [
               {
                 "type": "string",
@@ -2038,14 +2406,14 @@
                 "type": "null"
               }
             ],
-            "title": "Apply Url"
+            "title": "Applyurl"
           }
         },
         "type": "object",
         "required": [
-          "job_id",
-          "resume_id",
-          "tex_path"
+          "jobId",
+          "resumeId",
+          "texPath"
         ],
         "title": "ApplicationStage",
         "description": "What `resume` posts once a .tex exists for the job."
@@ -2077,7 +2445,7 @@
       },
       "BaseResumeStore": {
         "properties": {
-          "template_id": {
+          "templateId": {
             "$ref": "#/components/schemas/PydanticObjectId"
           },
           "tex": {
@@ -2088,7 +2456,7 @@
         },
         "type": "object",
         "required": [
-          "template_id",
+          "templateId",
           "tex"
         ],
         "title": "BaseResumeStore",
@@ -2240,6 +2608,57 @@
         ],
         "title": "ContactStyle"
       },
+      "Demographics": {
+        "properties": {
+          "gender": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gender"
+          },
+          "race": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Race"
+          },
+          "veteranStatus": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Veteranstatus"
+          },
+          "disabilityStatus": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disabilitystatus"
+          }
+        },
+        "type": "object",
+        "title": "Demographics",
+        "description": "US-style EEO questions. Every field is free text and every one is optional \u2014\n\"Prefer not to say\" is a real answer and the default is to answer nothing."
+      },
       "EducationFields": {
         "properties": {
           "degree": {
@@ -2293,13 +2712,13 @@
       },
       "EventAppend": {
         "properties": {
-          "event_type": {
+          "eventType": {
             "$ref": "#/components/schemas/EventType"
           },
           "actor": {
             "$ref": "#/components/schemas/Actor"
           },
-          "job_id": {
+          "jobId": {
             "anyOf": [
               {
                 "$ref": "#/components/schemas/PydanticObjectId"
@@ -2309,7 +2728,7 @@
               }
             ]
           },
-          "application_id": {
+          "applicationId": {
             "anyOf": [
               {
                 "$ref": "#/components/schemas/PydanticObjectId"
@@ -2338,7 +2757,7 @@
         },
         "type": "object",
         "required": [
-          "event_type",
+          "eventType",
           "actor"
         ],
         "title": "EventAppend",
@@ -2481,7 +2900,7 @@
             "type": "string",
             "title": "Location"
           },
-          "job_type": {
+          "jobType": {
             "anyOf": [
               {
                 "$ref": "#/components/schemas/JobType"
@@ -2491,7 +2910,7 @@
               }
             ]
           },
-          "work_mode": {
+          "workMode": {
             "anyOf": [
               {
                 "$ref": "#/components/schemas/WorkMode"
@@ -2501,7 +2920,7 @@
               }
             ]
           },
-          "experience_band": {
+          "experienceBand": {
             "anyOf": [
               {
                 "type": "string"
@@ -2510,9 +2929,9 @@
                 "type": "null"
               }
             ],
-            "title": "Experience Band"
+            "title": "Experienceband"
           },
-          "salary_text": {
+          "salaryText": {
             "anyOf": [
               {
                 "type": "string"
@@ -2521,7 +2940,7 @@
                 "type": "null"
               }
             ],
-            "title": "Salary Text"
+            "title": "Salarytext"
           },
           "summary": {
             "anyOf": [
@@ -2551,7 +2970,7 @@
           "source": {
             "$ref": "#/components/schemas/JobSource"
           },
-          "source_url": {
+          "sourceUrl": {
             "anyOf": [
               {
                 "type": "string",
@@ -2563,9 +2982,9 @@
                 "type": "null"
               }
             ],
-            "title": "Source Url"
+            "title": "Sourceurl"
           },
-          "posted_at": {
+          "postedAt": {
             "anyOf": [
               {
                 "type": "string",
@@ -2575,9 +2994,9 @@
                 "type": "null"
               }
             ],
-            "title": "Posted At"
+            "title": "Postedat"
           },
-          "deadline_at": {
+          "deadlineAt": {
             "anyOf": [
               {
                 "type": "string",
@@ -2587,9 +3006,9 @@
                 "type": "null"
               }
             ],
-            "title": "Deadline At"
+            "title": "Deadlineat"
           },
-          "applicant_count": {
+          "applicantCount": {
             "anyOf": [
               {
                 "type": "integer"
@@ -2598,13 +3017,13 @@
                 "type": "null"
               }
             ],
-            "title": "Applicant Count"
+            "title": "Applicantcount"
           },
-          "jd_text": {
+          "jdText": {
             "type": "string",
-            "title": "Jd Text"
+            "title": "Jdtext"
           },
-          "dedup_hash": {
+          "dedupHash": {
             "anyOf": [
               {
                 "type": "string"
@@ -2613,7 +3032,7 @@
                 "type": "null"
               }
             ],
-            "title": "Dedup Hash"
+            "title": "Deduphash"
           }
         },
         "type": "object",
@@ -2622,7 +3041,7 @@
           "company",
           "location",
           "source",
-          "jd_text"
+          "jdText"
         ],
         "title": "JobCreate",
         "description": "The posting as discovery found it."
@@ -2729,12 +3148,12 @@
       },
       "KeywordSelection": {
         "properties": {
-          "selected_keys": {
+          "selectedKeys": {
             "items": {
               "type": "string"
             },
             "type": "array",
-            "title": "Selected Keys"
+            "title": "Selectedkeys"
           },
           "skip": {
             "type": "boolean",
@@ -2748,10 +3167,10 @@
       },
       "LineChange": {
         "properties": {
-          "line_no": {
+          "lineNo": {
             "type": "integer",
             "minimum": 1.0,
-            "title": "Line No"
+            "title": "Lineno"
           },
           "text": {
             "type": "string",
@@ -2771,7 +3190,7 @@
         },
         "type": "object",
         "required": [
-          "line_no",
+          "lineNo",
           "text"
         ],
         "title": "LineChange",
@@ -2824,7 +3243,7 @@
       },
       "MatchWrite": {
         "properties": {
-          "job_id": {
+          "jobId": {
             "$ref": "#/components/schemas/PydanticObjectId"
           },
           "score": {
@@ -2854,7 +3273,7 @@
             "type": "array",
             "title": "Risks"
           },
-          "model_name": {
+          "modelName": {
             "anyOf": [
               {
                 "type": "string"
@@ -2863,12 +3282,12 @@
                 "type": "null"
               }
             ],
-            "title": "Model Name"
+            "title": "Modelname"
           }
         },
         "type": "object",
         "required": [
-          "job_id",
+          "jobId",
           "score"
         ],
         "title": "MatchWrite",
@@ -2908,7 +3327,7 @@
             "type": "string",
             "title": "Label"
           },
-          "chunk_id": {
+          "chunkId": {
             "anyOf": [
               {
                 "type": "string"
@@ -2917,7 +3336,7 @@
                 "type": "null"
               }
             ],
-            "title": "Chunk Id"
+            "title": "Chunkid"
           }
         },
         "type": "object",
@@ -3078,29 +3497,29 @@
       },
       "Refresh": {
         "properties": {
-          "refresh_token": {
+          "refreshToken": {
             "type": "string",
-            "title": "Refresh Token"
+            "title": "Refreshtoken"
           }
         },
         "type": "object",
         "required": [
-          "refresh_token"
+          "refreshToken"
         ],
         "title": "Refresh"
       },
       "ResumeStore": {
         "properties": {
-          "job_id": {
+          "jobId": {
             "$ref": "#/components/schemas/PydanticObjectId"
           },
-          "file_path": {
+          "filePath": {
             "type": "string",
-            "title": "File Path"
+            "title": "Filepath"
           },
-          "template_path": {
+          "templatePath": {
             "type": "string",
-            "title": "Template Path",
+            "title": "Templatepath",
             "default": "templates/base_resume.tex"
           },
           "incorporated": {
@@ -3127,8 +3546,8 @@
         },
         "type": "object",
         "required": [
-          "job_id",
-          "file_path"
+          "jobId",
+          "filePath"
         ],
         "title": "ResumeStore",
         "description": "What the tailoring agent posts once it has written the file."
@@ -3174,9 +3593,9 @@
             ],
             "title": "Answer"
           },
-          "answered_by_user": {
+          "answeredByUser": {
             "type": "boolean",
-            "title": "Answered By User",
+            "title": "Answeredbyuser",
             "default": false
           }
         },
@@ -3257,9 +3676,9 @@
             ],
             "title": "Note"
           },
-          "confirmed_by_user": {
+          "confirmedByUser": {
             "type": "boolean",
-            "title": "Confirmed By User",
+            "title": "Confirmedbyuser",
             "default": false
           }
         },
