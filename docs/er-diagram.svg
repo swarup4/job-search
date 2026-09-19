@@ -1,163 +1,328 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1320 507" width="1320" height="507" role="img" aria-label="JobPilot entity relationship diagram">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1266 892" width="1266" height="892" role="img" aria-label="JobPilot entity relationship diagram">
     <title>JobPilot data model</title>
-    <rect width="1320" height="507" fill="#ffffff"/>
-    <text x="30" y="34" font-family="ui-sans-serif,-apple-system,'Helvetica Neue',Arial,sans-serif" font-size="10.5" font-weight="600" letter-spacing="1.6" fill="#7c8088">LOCAL MONGODB · server</text>
-    <text x="1090" y="34" font-family="ui-sans-serif,-apple-system,'Helvetica Neue',Arial,sans-serif" font-size="10.5" font-weight="600" letter-spacing="1.6" fill="#7c8088">MONGODB ATLAS · ai/rag</text>
-    <rect x="30" y="92" width="170" height="143" rx="4" fill="#f7f8f9" stroke="#e3e6e8"/>
-    <text x="42" y="111" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="600" fill="#3d3a5c">jobs</text>
-    <line x1="30" y1="120" x2="200" y2="120" stroke="#e3e6e8"/>
-    <text x="42" y="133" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c" font-weight="600">_id</text>
-    <text x="188" y="133" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">PK</text>
-    <text x="42" y="148" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">title</text>
-    <text x="42" y="163" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c">company</text>
-    <text x="188" y="163" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">{}</text>
-    <text x="42" y="178" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">location</text>
-    <text x="42" y="193" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c" font-weight="600">dedup_hash</text>
-    <text x="188" y="193" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">UK</text>
-    <text x="42" y="208" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">status</text>
-    <text x="42" y="223" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">shortlisted</text>
-    <rect x="236" y="92" width="170" height="143" rx="4" fill="#f7f8f9" stroke="#e3e6e8"/>
-    <text x="248" y="111" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="600" fill="#3d3a5c">matches</text>
-    <line x1="236" y1="120" x2="406" y2="120" stroke="#e3e6e8"/>
-    <text x="248" y="133" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c" font-weight="600">_id</text>
-    <text x="394" y="133" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">PK</text>
-    <text x="248" y="148" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c" font-weight="600">job_id</text>
-    <text x="394" y="148" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">FK UK</text>
-    <text x="248" y="163" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">score</text>
-    <text x="248" y="178" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c">present</text>
-    <text x="394" y="178" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">[]</text>
-    <text x="248" y="193" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c">missing</text>
-    <text x="394" y="193" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">[]</text>
-    <text x="248" y="208" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c">risks</text>
-    <text x="394" y="208" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">[]</text>
-    <text x="248" y="223" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c">review</text>
-    <text x="394" y="223" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">{}</text>
-    <rect x="442" y="92" width="170" height="143" rx="4" fill="#f7f8f9" stroke="#e3e6e8"/>
-    <text x="454" y="111" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="600" fill="#3d3a5c">resumes</text>
-    <line x1="442" y1="120" x2="612" y2="120" stroke="#e3e6e8"/>
-    <text x="454" y="133" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c" font-weight="600">_id</text>
-    <text x="600" y="133" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">PK</text>
-    <text x="454" y="148" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c" font-weight="600">job_id</text>
-    <text x="600" y="148" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">FK</text>
-    <text x="454" y="163" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c" font-weight="600">match_id</text>
-    <text x="600" y="163" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">FK</text>
-    <text x="454" y="178" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">version</text>
-    <text x="454" y="193" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">file_path</text>
-    <text x="454" y="208" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c">selected_keys</text>
-    <text x="600" y="208" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">[]</text>
-    <text x="454" y="223" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c">changes</text>
-    <text x="600" y="223" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">[]</text>
-    <rect x="648" y="92" width="170" height="143" rx="4" fill="#f7f8f9" stroke="#e3e6e8"/>
-    <text x="660" y="111" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="600" fill="#3d3a5c">applications</text>
-    <line x1="648" y1="120" x2="818" y2="120" stroke="#e3e6e8"/>
-    <text x="660" y="133" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c" font-weight="600">_id</text>
-    <text x="806" y="133" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">PK</text>
-    <text x="660" y="148" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c" font-weight="600">job_id</text>
-    <text x="806" y="148" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">FK</text>
-    <text x="660" y="163" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c" font-weight="600">resume_id</text>
-    <text x="806" y="163" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">FK</text>
-    <text x="660" y="178" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">tex_path</text>
-    <text x="660" y="193" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">status</text>
-    <text x="660" y="208" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">approved_by_user</text>
-    <text x="660" y="223" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c">fields_filled</text>
-    <text x="806" y="223" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">[]</text>
-    <rect x="854" y="92" width="170" height="128" rx="4" fill="#f7f8f9" stroke="#e3e6e8"/>
-    <text x="866" y="111" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="600" fill="#3d3a5c">events</text>
-    <line x1="854" y1="120" x2="1024" y2="120" stroke="#e3e6e8"/>
-    <text x="866" y="133" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c" font-weight="600">_id</text>
-    <text x="1012" y="133" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">PK</text>
-    <text x="866" y="148" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c" font-weight="600">job_id</text>
-    <text x="1012" y="148" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">FK</text>
-    <text x="866" y="163" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c" font-weight="600">application_id</text>
-    <text x="1012" y="163" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">FK</text>
-    <text x="866" y="178" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">event_type</text>
-    <text x="866" y="193" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">actor</text>
-    <text x="866" y="208" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">occurred_at</text>
-    <line x1="200" y1="163" x2="236" y2="163" stroke="#cfd4d8"/>
-    <line x1="207" y1="158" x2="207" y2="168" stroke="#cfd4d8"/>
-    <line x1="231" y1="158" x2="231" y2="168" stroke="#cfd4d8"/><circle cx="224" cy="163" r="3" fill="none" stroke="#cfd4d8"/>
-    <text x="218" y="78" text-anchor="middle" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10" fill="#7c8088">job_id</text>
-    <line x1="406" y1="163" x2="442" y2="163" stroke="#cfd4d8"/>
-    <line x1="413" y1="158" x2="413" y2="168" stroke="#cfd4d8"/>
-    <line x1="433" y1="163" x2="442" y2="158" stroke="#cfd4d8"/><line x1="433" y1="163" x2="442" y2="163" stroke="#cfd4d8"/><line x1="433" y1="163" x2="442" y2="168" stroke="#cfd4d8"/>
-    <text x="424" y="78" text-anchor="middle" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10" fill="#7c8088">match_id</text>
-    <line x1="612" y1="163" x2="648" y2="163" stroke="#cfd4d8"/>
-    <line x1="619" y1="158" x2="619" y2="168" stroke="#cfd4d8"/>
-    <line x1="639" y1="163" x2="648" y2="158" stroke="#cfd4d8"/><line x1="639" y1="163" x2="648" y2="163" stroke="#cfd4d8"/><line x1="639" y1="163" x2="648" y2="168" stroke="#cfd4d8"/>
-    <text x="630" y="78" text-anchor="middle" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10" fill="#7c8088">resume_id</text>
-    <line x1="818" y1="163" x2="854" y2="163" stroke="#cfd4d8"/>
-    <line x1="825" y1="158" x2="825" y2="168" stroke="#cfd4d8"/>
-    <line x1="845" y1="163" x2="854" y2="158" stroke="#cfd4d8"/><line x1="845" y1="163" x2="854" y2="163" stroke="#cfd4d8"/><line x1="845" y1="163" x2="854" y2="168" stroke="#cfd4d8"/>
-    <text x="836" y="78" text-anchor="middle" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10" fill="#7c8088">application_id</text>
-    <path d="M115,235 V261 H939" fill="none" stroke="#cfd4d8"/>
-    <line x1="527" y1="261" x2="527" y2="235" stroke="#cfd4d8"/>
-    <line x1="527" y1="244" x2="522" y2="235" stroke="#cfd4d8"/><line x1="527" y1="244" x2="527" y2="235" stroke="#cfd4d8"/><line x1="527" y1="244" x2="532" y2="235" stroke="#cfd4d8"/>
-    <line x1="733" y1="261" x2="733" y2="235" stroke="#cfd4d8"/>
-    <line x1="733" y1="244" x2="728" y2="235" stroke="#cfd4d8"/><line x1="733" y1="244" x2="733" y2="235" stroke="#cfd4d8"/><line x1="733" y1="244" x2="738" y2="235" stroke="#cfd4d8"/>
-    <line x1="939" y1="261" x2="939" y2="220" stroke="#cfd4d8"/>
-    <line x1="939" y1="229" x2="934" y2="220" stroke="#cfd4d8"/><line x1="939" y1="229" x2="939" y2="220" stroke="#cfd4d8"/><line x1="939" y1="229" x2="944" y2="220" stroke="#cfd4d8"/>
-    <text x="115" y="281" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10" fill="#7c8088">job_id — carried on every downstream document</text>
-    <rect x="30" y="305" width="170" height="98" rx="4" fill="#f7f8f9" stroke="#e3e6e8"/>
-    <text x="42" y="324" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="600" fill="#3d3a5c">answer_bank</text>
-    <line x1="30" y1="333" x2="200" y2="333" stroke="#e3e6e8"/>
-    <text x="42" y="346" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c" font-weight="600">_id</text>
-    <text x="188" y="346" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">PK</text>
-    <text x="42" y="361" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c" font-weight="600">key</text>
-    <text x="188" y="361" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">UK</text>
-    <text x="42" y="376" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">question</text>
-    <text x="42" y="391" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">answer</text>
-    <rect x="236" y="305" width="170" height="128" rx="4" fill="#f7f8f9" stroke="#e3e6e8"/>
-    <text x="248" y="324" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="600" fill="#3d3a5c">profile</text>
-    <line x1="236" y1="333" x2="406" y2="333" stroke="#e3e6e8"/>
-    <text x="248" y="346" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c" font-weight="600">_id</text>
-    <text x="394" y="346" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">PK</text>
-    <text x="248" y="361" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c" font-weight="600">email</text>
-    <text x="394" y="361" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">UK</text>
-    <text x="248" y="376" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c">personal</text>
-    <text x="394" y="376" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">{}</text>
-    <text x="248" y="391" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c">experience</text>
-    <text x="394" y="391" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">[]</text>
-    <text x="248" y="406" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c">skill_groups</text>
-    <text x="394" y="406" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">[]</text>
-    <text x="248" y="421" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c">preferences</text>
-    <text x="394" y="421" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">{}</text>
-    <rect x="648" y="305" width="170" height="98" rx="4" fill="#f7f8f9" stroke="#e3e6e8"/>
-    <text x="660" y="324" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="600" fill="#3d3a5c">resume_chunk_text</text>
-    <line x1="648" y1="333" x2="818" y2="333" stroke="#e3e6e8"/>
-    <text x="660" y="346" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c" font-weight="600">_id</text>
-    <text x="806" y="346" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">PK</text>
-    <text x="660" y="361" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c" font-weight="600">chunk_id</text>
-    <text x="806" y="361" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">UK</text>
-    <text x="660" y="376" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">section</text>
-    <text x="660" y="391" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">text</text>
-    <line x1="406" y1="351" x2="648" y2="351" stroke="#cfd4d8"/>
-    <line x1="413" y1="346" x2="413" y2="356" stroke="#cfd4d8"/>
-    <line x1="639" y1="351" x2="648" y2="346" stroke="#cfd4d8"/><line x1="639" y1="351" x2="648" y2="351" stroke="#cfd4d8"/><line x1="639" y1="351" x2="648" y2="356" stroke="#cfd4d8"/>
-    <text x="527" y="341" text-anchor="middle" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10" fill="#7c8088">chunked at index time</text>
-    <text x="30" y="421" font-family="ui-sans-serif,-apple-system,'Helvetica Neue',Arial,sans-serif" font-size="10.5" fill="#7c8088">no FK — matched by</text>
-    <text x="30" y="435" font-family="ui-sans-serif,-apple-system,'Helvetica Neue',Arial,sans-serif" font-size="10.5" fill="#7c8088">question key at fill time</text>
-    <line x1="1050" y1="40" x2="1050" y2="463" stroke="#e3e6e8" stroke-dasharray="3 4"/>
-    <rect x="1090" y="92" width="190" height="83" rx="4" fill="#f7f8f9" stroke="#e3e6e8" stroke-dasharray="4 3"/>
-    <text x="1102" y="111" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="600" fill="#3d3a5c">jd_embedding</text>
-    <line x1="1090" y1="120" x2="1280" y2="120" stroke="#e3e6e8"/>
-    <text x="1102" y="133" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c" font-weight="600">_id</text>
-    <text x="1268" y="133" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">PK</text>
-    <text x="1102" y="148" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">job_id</text>
-    <text x="1102" y="163" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">embedding_vector</text>
-    <rect x="1090" y="305" width="190" height="98" rx="4" fill="#f7f8f9" stroke="#e3e6e8" stroke-dasharray="4 3"/>
-    <text x="1102" y="324" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="600" fill="#3d3a5c">resume_chunks</text>
-    <line x1="1090" y1="333" x2="1280" y2="333" stroke="#e3e6e8"/>
-    <text x="1102" y="346" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c" font-weight="600">_id</text>
-    <text x="1268" y="346" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">PK</text>
-    <text x="1102" y="361" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">chunk_id</text>
-    <text x="1102" y="376" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">section</text>
-    <text x="1102" y="391" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">embedding_vector</text>
-    <path d="M115,92 V60 H1185 V88" fill="none" stroke="#2F6F6A" stroke-width="1.5" stroke-dasharray="5 3"/>
-    <path d="M1181,88 L1185,96 L1189,88 z" fill="#2F6F6A"/>
-    <text x="602" y="54" text-anchor="middle" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#26564F">job_id</text>
-    <line x1="818" y1="351" x2="1082" y2="351" stroke="#2F6F6A" stroke-width="1.5" stroke-dasharray="5 3"/>
-    <path d="M1082,347 L1090,351 L1082,355 z" fill="#2F6F6A"/>
-    <text x="954" y="341" text-anchor="middle" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#26564F">chunk_id</text>
-    <line x1="30" y1="481" x2="64" y2="481" stroke="#2F6F6A" stroke-width="1.5" stroke-dasharray="5 3"/>
-    <text x="74" y="485" font-family="ui-sans-serif,-apple-system,'Helvetica Neue',Arial,sans-serif" font-size="10.5" fill="#7c8088">crosses the store boundary — resolved by id in application code, never by $lookup. Every _id is an ObjectId.</text>
+    <rect width="1266" height="892" fill="#ffffff"/>
+    <text x="30" y="28" font-family="ui-sans-serif,-apple-system,'Helvetica Neue',Arial,sans-serif" font-size="10.5" font-weight="600" letter-spacing="1.6" fill="#7c8088">MONGODB ATLAS — one store, every collection</text>
+    <text x="30" y="56" font-family="ui-sans-serif,-apple-system,'Helvetica Neue',Arial,sans-serif" font-size="10" font-weight="600" letter-spacing="1.4" fill="#7c8088">ACCOUNT &amp; PIPELINE</text>
+    <rect x="30" y="72" width="176" height="158" rx="4" fill="#f7f8f9" stroke="#e3e6e8"/>
+    <text x="42" y="91" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="600" fill="#3d3a5c">accounts</text>
+    <line x1="30" y1="100" x2="206" y2="100" stroke="#e3e6e8"/>
+    <text x="42" y="113" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">_id</text>
+    <text x="194" y="113" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">PK</text>
+    <text x="42" y="128" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">name</text>
+    <text x="42" y="143" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">email</text>
+    <text x="194" y="143" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">UK</text>
+    <text x="42" y="158" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">passwordHash</text>
+    <text x="42" y="173" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">role</text>
+    <text x="42" y="188" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">profilePicture</text>
+    <text x="42" y="203" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">active</text>
+    <text x="42" y="218" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">createdAt</text>
+    <rect x="236" y="72" width="176" height="218" rx="4" fill="#f7f8f9" stroke="#e3e6e8"/>
+    <text x="248" y="91" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="600" fill="#3d3a5c">jobs</text>
+    <line x1="236" y1="100" x2="412" y2="100" stroke="#e3e6e8"/>
+    <text x="248" y="113" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">_id</text>
+    <text x="400" y="113" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">PK</text>
+    <text x="248" y="128" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">userId</text>
+    <text x="400" y="128" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">FK</text>
+    <text x="248" y="143" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">refId</text>
+    <text x="248" y="158" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">title</text>
+    <text x="248" y="173" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c">company</text>
+    <text x="400" y="173" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">{}</text>
+    <text x="248" y="188" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">location</text>
+    <text x="248" y="203" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">listingUrl</text>
+    <text x="248" y="218" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">source</text>
+    <text x="248" y="233" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c">requirements</text>
+    <text x="400" y="233" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">[]</text>
+    <text x="248" y="248" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">dedupHash</text>
+    <text x="400" y="248" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">UK</text>
+    <text x="248" y="263" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">status</text>
+    <text x="248" y="278" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">shortlisted</text>
+    <rect x="442" y="72" width="176" height="173" rx="4" fill="#f7f8f9" stroke="#e3e6e8"/>
+    <text x="454" y="91" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="600" fill="#3d3a5c">job_descriptions</text>
+    <line x1="442" y1="100" x2="618" y2="100" stroke="#e3e6e8"/>
+    <text x="454" y="113" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">_id</text>
+    <text x="606" y="113" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">PK</text>
+    <text x="454" y="128" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">userId</text>
+    <text x="606" y="128" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">FK</text>
+    <text x="454" y="143" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">jobId</text>
+    <text x="606" y="143" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">FK UK</text>
+    <text x="454" y="158" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">url</text>
+    <text x="454" y="173" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">jdText</text>
+    <text x="454" y="188" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">htmlString</text>
+    <text x="454" y="203" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">embedding</text>
+    <text x="606" y="203" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">VEC</text>
+    <text x="454" y="218" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">contentHash</text>
+    <text x="606" y="218" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">UK</text>
+    <text x="454" y="233" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">capturedAt</text>
+    <rect x="648" y="72" width="176" height="173" rx="4" fill="#f7f8f9" stroke="#e3e6e8"/>
+    <text x="660" y="91" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="600" fill="#3d3a5c">matches</text>
+    <line x1="648" y1="100" x2="824" y2="100" stroke="#e3e6e8"/>
+    <text x="660" y="113" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">_id</text>
+    <text x="812" y="113" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">PK</text>
+    <text x="660" y="128" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">userId</text>
+    <text x="812" y="128" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">FK</text>
+    <text x="660" y="143" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">jobId</text>
+    <text x="812" y="143" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">FK UK</text>
+    <text x="660" y="158" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">score</text>
+    <text x="660" y="173" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c">present</text>
+    <text x="812" y="173" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">[]</text>
+    <text x="660" y="188" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c">missing</text>
+    <text x="812" y="188" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">[]</text>
+    <text x="660" y="203" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c">risks</text>
+    <text x="812" y="203" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">[]</text>
+    <text x="660" y="218" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c">review</text>
+    <text x="812" y="218" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">{}</text>
+    <text x="660" y="233" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">modelName</text>
+    <rect x="854" y="72" width="176" height="173" rx="4" fill="#f7f8f9" stroke="#e3e6e8"/>
+    <text x="866" y="91" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="600" fill="#3d3a5c">resumes</text>
+    <line x1="854" y1="100" x2="1030" y2="100" stroke="#e3e6e8"/>
+    <text x="866" y="113" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">_id</text>
+    <text x="1018" y="113" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">PK</text>
+    <text x="866" y="128" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">userId</text>
+    <text x="1018" y="128" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">FK</text>
+    <text x="866" y="143" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">jobId</text>
+    <text x="1018" y="143" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">FK</text>
+    <text x="866" y="158" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">matchId</text>
+    <text x="1018" y="158" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">FK</text>
+    <text x="866" y="173" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">filePath</text>
+    <text x="866" y="188" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c">selectedKeys</text>
+    <text x="1018" y="188" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">[]</text>
+    <text x="866" y="203" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c">incorporated</text>
+    <text x="1018" y="203" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">[]</text>
+    <text x="866" y="218" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c">changes</text>
+    <text x="1018" y="218" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">[]</text>
+    <text x="866" y="233" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">version</text>
+    <text x="1018" y="233" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">UK</text>
+    <rect x="1060" y="72" width="176" height="188" rx="4" fill="#f7f8f9" stroke="#e3e6e8"/>
+    <text x="1072" y="91" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="600" fill="#3d3a5c">applications</text>
+    <line x1="1060" y1="100" x2="1236" y2="100" stroke="#e3e6e8"/>
+    <text x="1072" y="113" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">_id</text>
+    <text x="1224" y="113" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">PK</text>
+    <text x="1072" y="128" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">userId</text>
+    <text x="1224" y="128" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">FK</text>
+    <text x="1072" y="143" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">jobId</text>
+    <text x="1224" y="143" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">FK</text>
+    <text x="1072" y="158" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">resumeId</text>
+    <text x="1224" y="158" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">FK</text>
+    <text x="1072" y="173" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">texPath</text>
+    <text x="1072" y="188" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">ats</text>
+    <text x="1072" y="203" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">status</text>
+    <text x="1072" y="218" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c">fieldsFilled</text>
+    <text x="1224" y="218" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">[]</text>
+    <text x="1072" y="233" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c">screeningAnswers</text>
+    <text x="1224" y="233" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">[]</text>
+    <text x="1072" y="248" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">approvedByUser</text>
+    <line x1="206" y1="158" x2="236" y2="158" stroke="#cfd4d8"/>
+    <line x1="213" y1="153" x2="213" y2="163" stroke="#cfd4d8"/>
+    <line x1="227" y1="158" x2="236" y2="153" stroke="#cfd4d8"/>
+    <line x1="227" y1="158" x2="236" y2="158" stroke="#cfd4d8"/>
+    <line x1="227" y1="158" x2="236" y2="163" stroke="#cfd4d8"/>
+    <text x="221" y="56" text-anchor="middle" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">userId</text>
+    <line x1="412" y1="158" x2="442" y2="158" stroke="#cfd4d8"/>
+    <line x1="419" y1="153" x2="419" y2="163" stroke="#cfd4d8"/>
+    <line x1="437" y1="153" x2="437" y2="163" stroke="#cfd4d8"/>
+    <circle cx="430" cy="158" r="3" fill="none" stroke="#cfd4d8"/>
+    <text x="427" y="56" text-anchor="middle" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">jobId</text>
+    <line x1="824" y1="158" x2="854" y2="158" stroke="#cfd4d8"/>
+    <line x1="831" y1="153" x2="831" y2="163" stroke="#cfd4d8"/>
+    <line x1="845" y1="158" x2="854" y2="153" stroke="#cfd4d8"/>
+    <line x1="845" y1="158" x2="854" y2="158" stroke="#cfd4d8"/>
+    <line x1="845" y1="158" x2="854" y2="163" stroke="#cfd4d8"/>
+    <text x="839" y="56" text-anchor="middle" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">matchId</text>
+    <line x1="1030" y1="158" x2="1060" y2="158" stroke="#cfd4d8"/>
+    <line x1="1037" y1="153" x2="1037" y2="163" stroke="#cfd4d8"/>
+    <line x1="1051" y1="158" x2="1060" y2="153" stroke="#cfd4d8"/>
+    <line x1="1051" y1="158" x2="1060" y2="158" stroke="#cfd4d8"/>
+    <line x1="1051" y1="158" x2="1060" y2="163" stroke="#cfd4d8"/>
+    <text x="1045" y="56" text-anchor="middle" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">resumeId</text>
+    <path d="M324,290 V312 H1148" fill="none" stroke="#cfd4d8"/>
+    <line x1="736" y1="312" x2="736" y2="245" stroke="#cfd4d8"/>
+    <line x1="736" y1="254" x2="731" y2="245" stroke="#cfd4d8"/>
+    <line x1="736" y1="254" x2="736" y2="245" stroke="#cfd4d8"/>
+    <line x1="736" y1="254" x2="741" y2="245" stroke="#cfd4d8"/>
+    <line x1="942" y1="312" x2="942" y2="245" stroke="#cfd4d8"/>
+    <line x1="942" y1="254" x2="937" y2="245" stroke="#cfd4d8"/>
+    <line x1="942" y1="254" x2="942" y2="245" stroke="#cfd4d8"/>
+    <line x1="942" y1="254" x2="947" y2="245" stroke="#cfd4d8"/>
+    <line x1="1148" y1="312" x2="1148" y2="260" stroke="#cfd4d8"/>
+    <line x1="1148" y1="269" x2="1143" y2="260" stroke="#cfd4d8"/>
+    <line x1="1148" y1="269" x2="1148" y2="260" stroke="#cfd4d8"/>
+    <line x1="1148" y1="269" x2="1153" y2="260" stroke="#cfd4d8"/>
+    <text x="338" y="328" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">jobId — on matches, resumes and applications</text>
+    <path d="M222,158 V613" fill="none" stroke="#cfd4d8"/>
+    <path d="M222,376 H1148" fill="none" stroke="#cfd4d8"/>
+    <path d="M222,613 H736" fill="none" stroke="#cfd4d8"/>
+    <line x1="324" y1="376" x2="324" y2="388" stroke="#cfd4d8"/>
+    <line x1="324" y1="379" x2="319" y2="388" stroke="#cfd4d8"/>
+    <line x1="324" y1="379" x2="324" y2="388" stroke="#cfd4d8"/>
+    <line x1="324" y1="379" x2="329" y2="388" stroke="#cfd4d8"/>
+    <line x1="530" y1="376" x2="530" y2="388" stroke="#cfd4d8"/>
+    <line x1="530" y1="379" x2="525" y2="388" stroke="#cfd4d8"/>
+    <line x1="530" y1="379" x2="530" y2="388" stroke="#cfd4d8"/>
+    <line x1="530" y1="379" x2="535" y2="388" stroke="#cfd4d8"/>
+    <line x1="736" y1="376" x2="736" y2="388" stroke="#cfd4d8"/>
+    <line x1="736" y1="379" x2="731" y2="388" stroke="#cfd4d8"/>
+    <line x1="736" y1="379" x2="736" y2="388" stroke="#cfd4d8"/>
+    <line x1="736" y1="379" x2="741" y2="388" stroke="#cfd4d8"/>
+    <line x1="942" y1="376" x2="942" y2="388" stroke="#cfd4d8"/>
+    <line x1="942" y1="379" x2="937" y2="388" stroke="#cfd4d8"/>
+    <line x1="942" y1="379" x2="942" y2="388" stroke="#cfd4d8"/>
+    <line x1="942" y1="379" x2="947" y2="388" stroke="#cfd4d8"/>
+    <line x1="1148" y1="376" x2="1148" y2="388" stroke="#cfd4d8"/>
+    <line x1="1148" y1="379" x2="1143" y2="388" stroke="#cfd4d8"/>
+    <line x1="1148" y1="379" x2="1148" y2="388" stroke="#cfd4d8"/>
+    <line x1="1148" y1="379" x2="1153" y2="388" stroke="#cfd4d8"/>
+    <line x1="324" y1="613" x2="324" y2="625" stroke="#cfd4d8"/>
+    <line x1="324" y1="616" x2="319" y2="625" stroke="#cfd4d8"/>
+    <line x1="324" y1="616" x2="324" y2="625" stroke="#cfd4d8"/>
+    <line x1="324" y1="616" x2="329" y2="625" stroke="#cfd4d8"/>
+    <line x1="530" y1="613" x2="530" y2="625" stroke="#cfd4d8"/>
+    <line x1="530" y1="616" x2="525" y2="625" stroke="#cfd4d8"/>
+    <line x1="530" y1="616" x2="530" y2="625" stroke="#cfd4d8"/>
+    <line x1="530" y1="616" x2="535" y2="625" stroke="#cfd4d8"/>
+    <line x1="736" y1="613" x2="736" y2="625" stroke="#cfd4d8"/>
+    <line x1="736" y1="616" x2="731" y2="625" stroke="#cfd4d8"/>
+    <line x1="736" y1="616" x2="736" y2="625" stroke="#cfd4d8"/>
+    <line x1="736" y1="616" x2="741" y2="625" stroke="#cfd4d8"/>
+    <text x="236" y="362" font-family="ui-sans-serif,-apple-system,'Helvetica Neue',Arial,sans-serif" font-size="10" font-weight="600" letter-spacing="1.4" fill="#7c8088">PROFILE — one account, many rows per section</text>
+    <rect x="236" y="388" width="176" height="143" rx="4" fill="#f7f8f9" stroke="#e3e6e8"/>
+    <text x="248" y="407" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="600" fill="#3d3a5c">profile</text>
+    <line x1="236" y1="416" x2="412" y2="416" stroke="#e3e6e8"/>
+    <text x="248" y="429" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">_id</text>
+    <text x="400" y="429" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">PK</text>
+    <text x="248" y="444" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">userId</text>
+    <text x="400" y="444" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">FK UK</text>
+    <text x="248" y="459" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">headline</text>
+    <text x="248" y="474" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">phone</text>
+    <text x="248" y="489" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">location</text>
+    <text x="248" y="504" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">summary</text>
+    <text x="248" y="519" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c">links</text>
+    <text x="400" y="519" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">[]</text>
+    <rect x="442" y="388" width="176" height="173" rx="4" fill="#f7f8f9" stroke="#e3e6e8"/>
+    <text x="454" y="407" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="600" fill="#3d3a5c">work_experience</text>
+    <line x1="442" y1="416" x2="618" y2="416" stroke="#e3e6e8"/>
+    <text x="454" y="429" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">_id</text>
+    <text x="606" y="429" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">PK</text>
+    <text x="454" y="444" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">userId</text>
+    <text x="606" y="444" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">FK</text>
+    <text x="454" y="459" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">title</text>
+    <text x="454" y="474" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">company</text>
+    <text x="454" y="489" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">start</text>
+    <text x="454" y="504" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">end</text>
+    <text x="454" y="519" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">current</text>
+    <text x="454" y="534" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c">bullets</text>
+    <text x="606" y="534" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">[]</text>
+    <text x="454" y="549" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c">projects</text>
+    <text x="606" y="549" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">[]</text>
+    <rect x="648" y="388" width="176" height="128" rx="4" fill="#f7f8f9" stroke="#e3e6e8"/>
+    <text x="660" y="407" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="600" fill="#3d3a5c">education</text>
+    <line x1="648" y1="416" x2="824" y2="416" stroke="#e3e6e8"/>
+    <text x="660" y="429" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">_id</text>
+    <text x="812" y="429" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">PK</text>
+    <text x="660" y="444" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">userId</text>
+    <text x="812" y="444" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">FK</text>
+    <text x="660" y="459" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">degree</text>
+    <text x="660" y="474" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">institution</text>
+    <text x="660" y="489" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">start</text>
+    <text x="660" y="504" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">end</text>
+    <rect x="854" y="388" width="176" height="98" rx="4" fill="#f7f8f9" stroke="#e3e6e8"/>
+    <text x="866" y="407" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="600" fill="#3d3a5c">skills</text>
+    <line x1="854" y1="416" x2="1030" y2="416" stroke="#e3e6e8"/>
+    <text x="866" y="429" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">_id</text>
+    <text x="1018" y="429" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">PK</text>
+    <text x="866" y="444" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">userId</text>
+    <text x="1018" y="444" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">FK</text>
+    <text x="866" y="459" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">name</text>
+    <text x="866" y="474" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c">items</text>
+    <text x="1018" y="474" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">[]</text>
+    <rect x="1060" y="388" width="176" height="113" rx="4" fill="#f7f8f9" stroke="#e3e6e8"/>
+    <text x="1072" y="407" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="600" fill="#3d3a5c">certifications</text>
+    <line x1="1060" y1="416" x2="1236" y2="416" stroke="#e3e6e8"/>
+    <text x="1072" y="429" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">_id</text>
+    <text x="1224" y="429" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">PK</text>
+    <text x="1072" y="444" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">userId</text>
+    <text x="1224" y="444" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">FK</text>
+    <text x="1072" y="459" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">name</text>
+    <text x="1072" y="474" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">issuer</text>
+    <text x="1072" y="489" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">year</text>
+    <text x="236" y="599" font-family="ui-sans-serif,-apple-system,'Helvetica Neue',Arial,sans-serif" font-size="10" font-weight="600" letter-spacing="1.4" fill="#7c8088">APPLICATION SUPPORT &amp; RESUME SOURCE</text>
+    <rect x="236" y="625" width="176" height="158" rx="4" fill="#f7f8f9" stroke="#e3e6e8"/>
+    <text x="248" y="644" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="600" fill="#3d3a5c">applicant_profile</text>
+    <line x1="236" y1="653" x2="412" y2="653" stroke="#e3e6e8"/>
+    <text x="248" y="666" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">_id</text>
+    <text x="400" y="666" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">PK</text>
+    <text x="248" y="681" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">userId</text>
+    <text x="400" y="681" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">FK UK</text>
+    <text x="248" y="696" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c">address</text>
+    <text x="400" y="696" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">{}</text>
+    <text x="248" y="711" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c">demographics</text>
+    <text x="400" y="711" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">{}</text>
+    <text x="248" y="726" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">noticePeriod</text>
+    <text x="248" y="741" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">expectedSalary</text>
+    <text x="248" y="756" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">workAuthorization</text>
+    <text x="248" y="771" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">willingToRelocate</text>
+    <rect x="442" y="625" width="176" height="143" rx="4" fill="#f7f8f9" stroke="#e3e6e8"/>
+    <text x="454" y="644" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="600" fill="#3d3a5c">answer_bank</text>
+    <line x1="442" y1="653" x2="618" y2="653" stroke="#e3e6e8"/>
+    <text x="454" y="666" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">_id</text>
+    <text x="606" y="666" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">PK</text>
+    <text x="454" y="681" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">userId</text>
+    <text x="606" y="681" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">FK</text>
+    <text x="454" y="696" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">key</text>
+    <text x="606" y="696" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">UK</text>
+    <text x="454" y="711" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">question</text>
+    <text x="454" y="726" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">answer</text>
+    <text x="454" y="741" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c">tags</text>
+    <text x="606" y="741" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">[]</text>
+    <text x="454" y="756" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">usedCount</text>
+    <rect x="648" y="625" width="176" height="113" rx="4" fill="#f7f8f9" stroke="#e3e6e8"/>
+    <text x="660" y="644" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="600" fill="#3d3a5c">base_resumes</text>
+    <line x1="648" y1="653" x2="824" y2="653" stroke="#e3e6e8"/>
+    <text x="660" y="666" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">_id</text>
+    <text x="812" y="666" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">PK</text>
+    <text x="660" y="681" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">userId</text>
+    <text x="812" y="681" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">FK UK</text>
+    <text x="660" y="696" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">templateId</text>
+    <text x="812" y="696" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">FK</text>
+    <text x="660" y="711" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">templateName</text>
+    <text x="660" y="726" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">tex</text>
+    <rect x="854" y="625" width="176" height="143" rx="4" fill="#f7f8f9" stroke="#e3e6e8"/>
+    <text x="866" y="644" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="600" fill="#3d3a5c">templates</text>
+    <line x1="854" y1="653" x2="1030" y2="653" stroke="#e3e6e8"/>
+    <text x="866" y="666" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">_id</text>
+    <text x="1018" y="666" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">PK</text>
+    <text x="866" y="681" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">name</text>
+    <text x="1018" y="681" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">UK</text>
+    <text x="866" y="696" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">tex</text>
+    <text x="866" y="711" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c">style</text>
+    <text x="1018" y="711" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">{}</text>
+    <text x="866" y="726" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c">tokens</text>
+    <text x="1018" y="726" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">[]</text>
+    <text x="866" y="741" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">previewPath</text>
+    <text x="866" y="756" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">status</text>
+    <line x1="824" y1="695" x2="854" y2="695" stroke="#cfd4d8"/>
+    <line x1="833" y1="695" x2="824" y2="690" stroke="#cfd4d8"/>
+    <line x1="833" y1="695" x2="824" y2="695" stroke="#cfd4d8"/>
+    <line x1="833" y1="695" x2="824" y2="700" stroke="#cfd4d8"/>
+    <line x1="847" y1="690" x2="847" y2="700" stroke="#cfd4d8"/>
+    <text x="839" y="599" text-anchor="middle" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">templateId</text>
+    <text x="854" y="786" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#2F6F6A">global — no userId</text>
+    <text x="236" y="801" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">answer_bank has no FK to applications — the extension matches an answer</text>
+    <text x="236" y="816" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">to a form field by question key at fill time.</text>
+    <text x="30" y="392" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="600" fill="#26564F">userId</text>
+    <text x="30" y="412" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">is a plain PydanticObjectId</text>
+    <text x="30" y="427" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">on every document</text>
+    <text x="30" y="442" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">except templates. Every</text>
+    <text x="30" y="457" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">query filters on it, so one</text>
+    <text x="30" y="472" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">account never sees</text>
+    <text x="30" y="487" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">another's rows.</text>
+    <text x="30" y="629" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="600" fill="#26564F">vector search</text>
+    <text x="30" y="649" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">job_descriptions.embedding</text>
+    <text x="30" y="664" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">carries a $vectorSearch</text>
+    <text x="30" y="679" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">index. One store, so a hit</text>
+    <text x="30" y="694" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">returns the JD text with it</text>
+    <text x="30" y="709" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">— no second collection and</text>
+    <text x="30" y="724" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">no id to resolve.</text>
+    <text x="30" y="836" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">PK _id, an ObjectId   ·   FK foreign key   ·   UK unique index   ·   VEC $vectorSearch index   ·   [] array   ·   {} embedded document</text>
+    <text x="30" y="852" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">Foreign keys are plain PydanticObjectId fields, never Beanie Links — ai holds no database URI, receives them as JSON over HTTP, and cannot dereference a link.</text>
+    <text x="30" y="868" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#2F6F6A">jobs.requirements is the job's tech stack, multikey-indexed — it backs the listing page's keyword filter, so the search needs no join.</text>
 </svg>

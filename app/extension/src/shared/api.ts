@@ -186,7 +186,7 @@ export async function getResumePdf(): Promise<{ name: string; base64: string }> 
  * which the API's CORS list does not include. Same boundary as the resume fetch.
  */
 export function createCapture(page: CapturePayload): Promise<CaptureCreated> {
-    return request<CaptureCreated>("/capture", {
+    return request<CaptureCreated>("/job-description", {
         method: "POST",
         body: JSON.stringify(page),
     });

@@ -6,8 +6,8 @@ requires-python = ">=3.12"
 dependencies = [
     "httpx>=0.28.0",
     "pydantic>=2.9.0",
-    "pydantic-settings>=2.6.0",
     "python-dotenv>=1.0.1",
+    "voyageai>=0.5.0",
 ]
 
 [dependency-groups]
@@ -15,7 +15,6 @@ dev = [
     "ruff>=0.7.0",
     "pytest>=8.3.0",
     "pytest-asyncio>=0.24.0",
-    "respx>=0.21.0",
 ]
 
 [tool.ruff]

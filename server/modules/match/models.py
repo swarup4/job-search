@@ -28,6 +28,9 @@ class MissingKeyword(BaseModel):
     label: str
     mentions: int = 1
     evidence: str
+    # A profile span the agent read as this requirement in other words. Advisory: the
+    # keyword stays missing and stays selectable, so FR-2.5 is untouched.
+    nearMiss: str | None = None
 
 
 class RiskFlag(BaseModel):

@@ -27,7 +27,7 @@ class UnknownKeyword(Invalid):
 async def write_match(user_id: PydanticObjectId, payload: MatchWrite) -> Match:
     # Raises JobNotFound for a job that is not yours, so a match never dangles and
     # never attaches to someone else's posting.
-    await get_job(user_id, payload.jobId)
+    await get_job(payload.jobId)
 
     match = await Match.find_one(Match.userId == user_id, Match.jobId == payload.jobId)
     if match is None:
@@ -41,7 +41,7 @@ async def write_match(user_id: PydanticObjectId, payload: MatchWrite) -> Match:
         match.scoredAt = datetime.now(UTC)
 
     await match.save()
-    await update_job(user_id, payload.jobId, JobUpdate(status=JobStatus.REVIEWED))
+    await update_job(payload.jobId, JobUpdate(status=JobStatus.REVIEWED))
     return match
 
 

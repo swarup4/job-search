@@ -1,5 +1,8 @@
-"""The one LLM client. OpenAI-compatible, so Ollama and the HF router are the same
-code path — see the Phase 5 decision note in the roadmap.
+"""The one LLM client, against an OpenAI-compatible endpoint.
+
+Generation is hosted: Ollama was dropped on 2026-09-19, so every JD, profile span and
+resume line in a prompt leaves the machine. That contradicts SRS NFR-3 as written —
+see the Phase 5 decision note in the roadmap.
 
 Every call is schema-constrained: the model is handed a JSON Schema with
 `strict: true` and the reply is validated against the Pydantic model that produced
@@ -9,12 +12,36 @@ repaired with a regex. (NFR-2)
 
 from __future__ import annotations
 
+import os
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 from pydantic import BaseModel, ValidationError
 
-from config.settings import settings
+import config  # noqa: F401 — imported for its .env load
+
+# Pointing at another OpenAI-compatible endpoint is these three values, not a provider
+# abstraction. The model carries its provider (`:nscale`): `strict: true` support varies
+# between them, and an unpinned router drops it silently.
+LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "https://router.huggingface.co/v1")
+LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
+LLM_MODEL = os.environ.get("LLM_MODEL", "Qwen/Qwen3-32B:nscale")
+LLM_TIMEOUT = float(os.environ.get("LLM_TIMEOUT", "240"))
+# One generation plus two schema-repair retries. See NFR-2.
+LLM_ATTEMPTS = int(os.environ.get("LLM_ATTEMPTS", "3"))
+LLM_DISABLE_THINKING = os.environ.get("LLM_DISABLE_THINKING", "").lower() in {"1", "true", "yes"}
+
+
+def _host() -> str:
+    host = urlparse(LLM_BASE_URL).hostname or ""
+    return "huggingface" if "huggingface" in host else host or "unknown"
+
+
+LLM_HOST = _host()
+# Provenance, not routing: a score from one model is not comparable to a score from
+# another, so `Match.modelName` records which produced it.
+PROVENANCE = f"{LLM_HOST}/{LLM_MODEL}"
 
 
 class GenerationError(RuntimeError):
@@ -58,7 +85,7 @@ async def generate[T: BaseModel](
     ]
 
     failure = ""
-    for _ in range(settings.llm_attempts):
+    for _ in range(LLM_ATTEMPTS):
         raw = await _complete(messages, schema, shape.__name__, max_tokens)
         try:
             return shape.model_validate_json(raw)
@@ -75,9 +102,7 @@ async def generate[T: BaseModel](
                 },
             ]
 
-    raise GenerationError(
-        f"{settings.provenance} would not produce a valid {shape.__name__}: {failure}"
-    )
+    raise GenerationError(f"{PROVENANCE} would not produce a valid {shape.__name__}: {failure}")
 
 
 async def _complete(
@@ -87,7 +112,7 @@ async def _complete(
     max_tokens: int,
 ) -> str:
     payload: dict[str, Any] = {
-        "model": settings.llm_model,
+        "model": LLM_MODEL,
         "messages": messages,
         # Extraction and scoring are not creative tasks, and a re-score should agree
         # with the score it replaces.
@@ -98,25 +123,25 @@ async def _complete(
             "json_schema": {"name": name, "strict": True, "schema": schema},
         },
     }
-    if settings.llm_disable_thinking:
+    if LLM_DISABLE_THINKING:
         payload["chat_template_kwargs"] = {"enable_thinking": False}
 
-    async with httpx.AsyncClient(timeout=settings.llm_timeout) as client:
+    async with httpx.AsyncClient(timeout=LLM_TIMEOUT) as client:
         response = await client.post(
-            f"{settings.llm_base_url.rstrip('/')}/chat/completions",
+            f"{LLM_BASE_URL.rstrip('/')}/chat/completions",
             json=payload,
-            headers={"Authorization": f"Bearer {settings.llm_api_key}"},
+            headers={"Authorization": f"Bearer {LLM_API_KEY}"},
         )
         if response.status_code >= 400:
             raise GenerationError(
-                f"{settings.llm_host} returned {response.status_code}: {response.text[:300]}"
+                f"{LLM_HOST} returned {response.status_code}: {response.text[:300]}"
             )
         body = response.json()
 
     try:
         return body["choices"][0]["message"]["content"] or ""
     except (KeyError, IndexError) as exc:
-        raise GenerationError(f"unreadable completion from {settings.llm_host}: {body}") from exc
+        raise GenerationError(f"unreadable completion from {LLM_HOST}: {body}") from exc
 
 
 def _first_errors(exc: ValidationError, limit: int = 3) -> str:
@@ -138,6 +163,6 @@ if __name__ == "__main__":
             "We are hiring a Python engineer with Kubernetes experience.",
             system="Extract the technologies named in the text.",
         )
-        print(settings.provenance, "->", answer.skills)
+        print(PROVENANCE, "->", answer.skills)
 
     asyncio.run(main())

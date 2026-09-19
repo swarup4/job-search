@@ -12,10 +12,20 @@ from httpx import AsyncClient
 
 JOB = {
     "title": "Platform Engineer",
-    "company": {"name": "Acme"},
+    "company": "Acme",
     "location": "Bengaluru, India",
     "source": "linkedin",
-    "jdText": "Run our Kubernetes clusters and write Terraform for the AWS estate.",
+    "requirements": ["kubernetes", "terraform", "aws"],
+}
+
+JD_TEXT = "Run our Kubernetes clusters and write Terraform for the AWS estate."
+
+DESCRIPTION = {
+    "url": "https://acme.example/jobs/platform-engineer",
+    "pageTitle": "Platform Engineer at Acme",
+    "markdown": JD_TEXT,
+    "region": "main",
+    "textLength": len(JD_TEXT),
 }
 
 MISSING = [
@@ -30,9 +40,19 @@ MISSING = [
 
 
 async def make_job(client: AsyncClient) -> str:
+    """A job and the description it was parsed from — two collections now, so the
+    prose has to be captured and linked rather than posted with the listing."""
     response = await client.post("/job/createJob", json=JOB)
     assert response.status_code == 201, response.text
-    return response.json()["id"]
+    job_id = response.json()["id"]
+
+    captured = await client.post("/job-description", json=DESCRIPTION)
+    assert captured.status_code == 201, captured.text
+    description_id = captured.json()["id"]
+
+    linked = await client.post(f"/job-description/link/{description_id}/{job_id}")
+    assert linked.status_code == 200, linked.text
+    return job_id
 
 
 async def make_match(client: AsyncClient, job_id: str) -> None:
@@ -44,7 +64,7 @@ async def make_match(client: AsyncClient, job_id: str) -> None:
             "present": [{"label": "AWS"}],
             "missing": MISSING,
             "risks": [],
-            "modelName": "ollama/llama3.2:latest",
+            "modelName": "huggingface/Qwen/Qwen3-32B:nscale",
         },
     )
     assert response.status_code == 201, response.text
@@ -202,13 +222,20 @@ async def test_the_jd_endpoint_carries_the_prose_the_list_endpoint_withholds(
     job_id = await make_job(signed_in)
 
     listed = (await signed_in.get(f"/job/getJob/{job_id}")).json()
-    described = (await signed_in.get(f"/job/getJobDescription/{job_id}")).json()
+    described = (await signed_in.get(f"/job-description/for-job/{job_id}")).json()
 
     assert "jdText" not in listed
-    assert described["jdText"] == JOB["jdText"]
+    assert described["jdText"] == JD_TEXT
 
 
-async def test_another_account_cannot_read_a_job_description(client: AsyncClient) -> None:
+async def test_a_posting_is_shared_across_accounts(client: AsyncClient) -> None:
+    """`jobs` and `job_descriptions` are a shared catalogue, not per-account data.
+
+    This asserted a 404 until 2026-09-19, when `userId` was removed from both: a
+    posting is a public advert, and what is private about it — the match, the
+    tailored resume, the application — lives in collections that are still scoped.
+    Kept as the record of that reversal of `P1-07`, so a 404 here reads as a
+    regression rather than as the guarantee it used to be."""
     first = await client.post(
         "/account/signup",
         json={"name": "One", "email": "one@example.com", "password": "correct-horse"},
@@ -222,8 +249,12 @@ async def test_another_account_cannot_read_a_job_description(client: AsyncClient
     )
     client.headers["Authorization"] = f"Bearer {second.json()['accessToken']}"
 
-    assert (await client.get(f"/job/getJobDescription/{job_id}")).status_code == 404
+    response = await client.get(f"/job-description/for-job/{job_id}")
+    assert response.status_code == 200, response.text
+    assert response.json()["jdText"] == JD_TEXT
 
 
 async def test_the_jd_endpoint_still_needs_a_token(client: AsyncClient) -> None:
-    assert (await client.get("/job/getJobDescription/000000000000000000000000")).status_code == 401
+    assert (
+        await client.get("/job-description/for-job/000000000000000000000000")
+    ).status_code == 401

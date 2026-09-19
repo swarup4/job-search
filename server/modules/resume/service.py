@@ -59,7 +59,7 @@ async def store_resume(user_id: PydanticObjectId, payload: ResumeStore) -> Tailo
     )
     await resume.insert()
 
-    await update_job(user_id, payload.jobId, JobUpdate(status=JobStatus.TAILORED))
+    await update_job(payload.jobId, JobUpdate(status=JobStatus.TAILORED))
     await stage_application(
         user_id,
         ApplicationStage(jobId=payload.jobId, resumeId=resume.id, texPath=resume.filePath),

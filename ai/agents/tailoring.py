@@ -27,7 +27,7 @@ from typing import Any, Literal
 from pydantic import BaseModel
 
 from config.llm import generate
-from config.settings import settings
+from config.paths import TAILORED_DIR
 from mcp_servers import jobpilot_api
 
 # Words a rewrite may introduce on its own. Deliberately dull and deliberately short:
@@ -337,9 +337,9 @@ def _last_item(items: list[str]) -> str:
 
 def _write(job_id: str, tex: str) -> Path:
     """One `.tex` per run. No PDF — FR-4.4 defers compilation to a later version."""
-    settings.tailored_dir.mkdir(parents=True, exist_ok=True)
+    TAILORED_DIR.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-    path = settings.tailored_dir / f"{job_id}-{stamp}.tex"
+    path = TAILORED_DIR / f"{job_id}-{stamp}.tex"
     path.write_text(tex, encoding="utf-8")
     return path
 

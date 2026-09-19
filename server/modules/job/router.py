@@ -7,7 +7,6 @@ from modules.job.models import (
     Job,
     JobCreate,
     JobCreated,
-    JobDescription,
     JobRead,
     JobStatus,
     JobUpdate,
@@ -18,32 +17,26 @@ router = APIRouter(tags=["job"])
 
 @router.get("", response_model=list[JobRead])
 async def list_jobs(
-    user_id: CurrentUser,
+    _: CurrentUser,
     job_status: JobStatus | None = Query(default=None, alias="status"),
     shortlisted: bool | None = None,
     company: str | None = None,
     limit: int = Query(default=50, le=200),
     skip: int = 0,
 ) -> list[Job]:
-    return await service.list_jobs(user_id, job_status, shortlisted, company, limit, skip)
+    return await service.list_jobs(job_status, shortlisted, company, limit, skip)
 
 
 @router.post("/createJob", response_model=JobCreated, status_code=status.HTTP_201_CREATED)
-async def create_job(payload: JobCreate, user_id: CurrentUser) -> JobCreated:
-    return await service.create_job(user_id, payload)
-
-
-@router.get("/getJobDescription/{job_id}", response_model=JobDescription)
-async def get_job_description(job_id: PydanticObjectId, user_id: CurrentUser) -> Job:
-    """What the matching step reads. Same row as `getJob`, with the JD prose."""
-    return await service.get_job(user_id, job_id)
+async def create_job(payload: JobCreate, _: CurrentUser) -> JobCreated:
+    return await service.create_job(payload)
 
 
 @router.get("/getJob/{job_id}", response_model=JobRead)
-async def get_job(job_id: PydanticObjectId, user_id: CurrentUser) -> Job:
-    return await service.get_job(user_id, job_id)
+async def get_job(job_id: PydanticObjectId, _: CurrentUser) -> Job:
+    return await service.get_job(job_id)
 
 
 @router.patch("/updateJob/{job_id}", response_model=JobRead)
-async def update_job(job_id: PydanticObjectId, payload: JobUpdate, user_id: CurrentUser) -> Job:
-    return await service.update_job(user_id, job_id, payload)
+async def update_job(job_id: PydanticObjectId, payload: JobUpdate, _: CurrentUser) -> Job:
+    return await service.update_job(job_id, payload)

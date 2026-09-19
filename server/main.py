@@ -13,16 +13,15 @@ from middleware import REQUEST_ID_HEADER, AccessLogMiddleware, ErrorHandlingMidd
 from modules import (
     account,
     application,
-    capture,
-    event,
     job,
+    job_description,
     match,
     profile,
     resume,
     template,
 )
 
-MODULES = (job, match, resume, template, application, capture, event, profile, account)
+MODULES = (job, job_description, match, resume, template, application, profile, account)
 
 
 @asynccontextmanager

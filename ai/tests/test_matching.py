@@ -19,6 +19,7 @@ from agents.matching import (
     Verdict,
     coverage_score,
     profile_corpus,
+    profile_units,
     slug,
 )
 
@@ -261,3 +262,99 @@ def test_the_corpus_carries_every_role_not_just_the_current_one() -> None:
 
 def test_slugs_are_stable_across_spelling() -> None:
     assert slug("CI/CD") == slug("ci cd") == "ci-cd"
+
+
+# --- P5-06: a near miss is a hint, never a verdict ---------------------------
+
+
+def vectors(labels: list[list[float]], spans: list[list[float]]):
+    """Stand in for the Voyage encoder, answering each half of the comparison in turn.
+
+    Returns a class, because `flag_near_misses` constructs the encoder itself."""
+
+    class FakeEncoder:
+        calls: list[str] = []
+
+        async def embed_queries(self, texts):
+            FakeEncoder.calls.append("query")
+            assert len(texts) == len(labels)
+            return [list(row) for row in labels]
+
+        async def embed_documents(self, texts):
+            FakeEncoder.calls.append("document")
+            assert len(texts) == len(spans)
+            return [list(row) for row in spans]
+
+    FakeEncoder.calls = []
+    return FakeEncoder
+
+
+def requirement() -> Requirement:
+    return Requirement(
+        key="agentic-orchestration",
+        label="agentic orchestration",
+        mentions=1,
+        evidence="Strong expertise in agentic orchestration",
+    )
+
+
+def test_profile_units_splits_the_whole_career_into_comparable_spans() -> None:
+    units = profile_units(PROFILE)
+    assert "Ran the AWS estate and the deployment pipeline" in units
+    # The role from 2017 is in there for the same reason the diff reads it.
+    assert "Built a RASA chatbot for internal support" in units
+    assert "Docker" in units
+    assert all(unit.strip() for unit in units)
+
+
+async def test_near_miss_names_the_span_it_matched(monkeypatch) -> None:
+    monkeypatch.setattr(
+        matching, "profile_units", lambda profile: ["Built a RASA chatbot", "LangGraph pipelines"]
+    )
+    monkeypatch.setattr(
+        matching, "VoyageEmbeddings", vectors([[0.0, 1.0]], [[1.0, 0.0], [0.0, 1.0]])
+    )
+
+    result = await matching.flag_near_misses([requirement()], PROFILE)
+
+    assert result[0].near_miss == "LangGraph pipelines"
+
+
+async def test_a_distant_span_is_not_a_near_miss(monkeypatch) -> None:
+    monkeypatch.setattr(matching, "profile_units", lambda profile: ["Built a RASA chatbot"])
+    monkeypatch.setattr(matching, "VoyageEmbeddings", vectors([[0.0, 1.0]], [[1.0, 0.0]]))
+
+    result = await matching.flag_near_misses([requirement()], PROFILE)
+
+    assert result[0].near_miss is None
+
+
+async def test_a_near_miss_leaves_the_requirement_missing(monkeypatch) -> None:
+    """Promoting it on a cosine would hide a keyword the user never got to tick —
+    the same failure the diff refuses in the other direction."""
+    monkeypatch.setattr(matching, "profile_units", lambda profile: ["LangGraph pipelines"])
+    monkeypatch.setattr(matching, "VoyageEmbeddings", vectors([[0.0, 1.0]], [[0.0, 1.0]]))
+
+    result = await matching.flag_near_misses([requirement()], PROFILE)
+
+    assert [item.key for item in result] == ["agentic-orchestration"]
+    assert result[0].near_miss is not None
+
+
+async def test_a_profile_with_nothing_to_compare_skips_the_encoder(monkeypatch) -> None:
+    monkeypatch.setattr(matching, "profile_units", lambda profile: [])
+    monkeypatch.setattr(matching, "VoyageEmbeddings", vectors([], []))
+
+    assert await matching.flag_near_misses([requirement()], PROFILE) == [requirement()]
+
+
+async def test_the_label_is_the_query_and_the_profile_is_the_document(monkeypatch) -> None:
+    """Voyage embeds the two sides differently, so sending them the same way would
+    quietly cost accuracy that the threshold then gets blamed for."""
+    encoder = vectors([[0.0, 1.0]], [[0.0, 1.0]])
+    monkeypatch.setattr(matching, "profile_units", lambda profile: ["LangGraph pipelines"])
+    monkeypatch.setattr(matching, "VoyageEmbeddings", encoder)
+
+    await matching.flag_near_misses([requirement()], PROFILE)
+
+    assert encoder.calls == ["query", "document"]

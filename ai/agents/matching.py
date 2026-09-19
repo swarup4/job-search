@@ -10,6 +10,7 @@ What each step is allowed to see is a guardrail, not only an economy:
 |-----------------|---------------------------------------|
 | extraction      | the JD                                |
 | diff            | the whole profile — every role         |
+| near misses     | the profile span by span, via Voyage   |
 | risk flags      | the JD and a profile digest            |
 
 The diff stays wide on purpose. A skill sitting in a role from six years ago is
@@ -24,9 +25,9 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from config.llm import generate
-from config.settings import settings
+from config.llm import PROVENANCE, generate
 from mcp_servers import jobpilot_api
+from rag.embeddings import NEAR_MISS_THRESHOLD, VoyageEmbeddings, nearest
 
 # An unbounded prompt is a cost problem on a hosted model and a context problem on a
 # local one. A JD longer than this is padding — boilerplate, benefits, legal text.
@@ -68,6 +69,9 @@ class Requirement(BaseModel):
     label: str
     mentions: int
     evidence: str
+    # A profile span that reads like this requirement under different wording. Set on
+    # Missing requirements only, and never acted on without the user.
+    near_miss: str | None = None
 
 
 EXTRACT_SYSTEM = """You read job descriptions and list the concrete, checkable requirements they state.
@@ -109,21 +113,32 @@ async def rectify(job_id: str) -> dict[str, Any]:
     that is the user's answer at the interrupt, and the server refuses a resume
     built on keywords they did not tick. (FR-2.5, FR-7.3)
     """
-    job = await jobpilot_api.get_job_description(job_id)
+    job = await jobpilot_api.get_job(job_id)
+    description = await jobpilot_api.get_description_for_job(job_id)
     profile = await jobpilot_api.get_profile()
 
-    jd_text = _jd_text(job)
+    jd_text = _jd_text(description)
     requirements = await extract_requirements(jd_text)
     present, missing = await split_by_profile(requirements, profile)
+    missing = await flag_near_misses(missing, profile)
     risks = await detect_risks(job, jd_text, profile)
 
     payload = {
         "jobId": job_id,
         "score": coverage_score(present, missing),
         "present": [{"label": item.label} for item in present],
-        "missing": [item.model_dump() for item in missing],
+        "missing": [
+            {
+                "key": item.key,
+                "label": item.label,
+                "mentions": item.mentions,
+                "evidence": item.evidence,
+                "nearMiss": item.near_miss,
+            }
+            for item in missing
+        ],
         "risks": [{"key": item.key, "title": item.title, "detail": item.detail} for item in risks],
-        "modelName": settings.provenance,
+        "modelName": PROVENANCE,
     }
     return await jobpilot_api.write_match(payload)
 
@@ -214,6 +229,40 @@ async def split_by_profile(
     return present, missing
 
 
+# --- P5-06: near misses, locally embedded ------------------------------------
+
+
+async def flag_near_misses(
+    missing: list[Requirement], profile: dict[str, Any]
+) -> list[Requirement]:
+    """Mark a Missing requirement that the profile appears to state in other words.
+
+    The diff before this reads the profile literally and then asks a model; both work
+    on wording. A requirement the JD calls "agentic orchestration" and the profile
+    calls "LangGraph multi-agent pipeline" survives both and reaches the user as
+    Missing, which invites them to add what they already have.
+
+    The flag is advisory and nothing more. The requirement stays Missing and stays
+    selectable: telling the user they may already have this is safe, deciding it for
+    them is the fabrication the diff exists to prevent.
+    """
+    units = profile_units(profile)
+    if not missing or not units:
+        return missing
+
+    # Two calls, not one: Voyage embeds a query and a document differently, and asking
+    # whether a requirement appears in a span is a retrieval, not a symmetry.
+    voyage = VoyageEmbeddings()
+    label_vectors = await voyage.embed_queries([item.label for item in missing])
+    unit_vectors = await voyage.embed_documents(units)
+
+    for item, label_vector in zip(missing, label_vectors, strict=True):
+        index, score = nearest(label_vector, unit_vectors)
+        if index >= 0 and score >= NEAR_MISS_THRESHOLD:
+            item.near_miss = units[index]
+    return missing
+
+
 # --- P5-05: risk flags -------------------------------------------------------
 
 
@@ -228,7 +277,7 @@ async def detect_risks(job: dict[str, Any], jd_text: str, profile: dict[str, Any
     would be a misrepresentation. (FR-2.4)"""
     report = await generate(
         RiskReport,
-        f"Job:\n{job.get('title', '')} at {job.get('company', {}).get('name', '')}\n"
+        f"Job:\n{job.get('title', '')} at {job.get('company', '')}\n"
         f"Location: {job.get('location', '')}\n"
         f"Experience band: {job.get('experienceBand') or 'not stated'}\n"
         f"Work mode: {job.get('workMode') or 'not stated'}\n\n"
@@ -255,9 +304,11 @@ async def detect_risks(job: dict[str, Any], jd_text: str, profile: dict[str, Any
 def coverage_score(present: list[Requirement], missing: list[Requirement]) -> int:
     """Keyword coverage, weighted by how often the JD asks for each requirement.
 
-    P5-06 replaces this with JD-embedding similarity once Atlas exists. Until then
-    the score is arithmetic over the diff rather than a number the model invents,
-    which is the honest version of not having a vector store.
+    This stays the score. P5-06 originally called for JD-embedding similarity, but a
+    cosine between a JD and a resume lands in the same narrow band for every job in a
+    field and cannot separate a good fit from an average one — and it cannot be
+    explained to someone asking why a job scored 62. Arithmetic over verdicts the user
+    can see on screen can. The embeddings went to `flag_near_misses` instead.
     """
     covered = sum(item.mentions for item in present)
     total = covered + sum(item.mentions for item in missing)
@@ -313,6 +364,39 @@ def profile_corpus(profile: dict[str, Any]) -> str:
     return "\n".join(parts)
 
 
+def profile_units(profile: dict[str, Any]) -> list[str]:
+    """The profile as separately comparable spans — one bullet, one skill, one
+    credential each.
+
+    A single whole-profile vector averages a career into mush, and the near-miss check
+    has to hand back the span it matched so the user can see why.
+    """
+    personal = profile.get("profile") or {}
+    units: list[str] = [
+        value for value in (personal.get("headline"), personal.get("summary")) if value
+    ]
+
+    for entry in profile.get("work", []):
+        units.append(f"{entry.get('title', '')} at {entry.get('company', '')}")
+        units.extend(entry.get("bullets", []))
+        for project in entry.get("projects", []):
+            units.extend(project.get("bullets", []))
+
+    for group in profile.get("skill", []):
+        units.extend(group.get("items", []))
+
+    units.extend(
+        f"{entry.get('name', '')} — {entry.get('issuer', '')}"
+        for entry in profile.get("certification", [])
+    )
+    units.extend(
+        f"{entry.get('degree', '')}, {entry.get('institution', '')}"
+        for entry in profile.get("education", [])
+    )
+
+    return [unit for unit in (value.strip() for value in units) if len(unit) >= 3]
+
+
 def profile_digest(profile: dict[str, Any]) -> str:
     """The shorter view the risk step works from: who they are and how long, not
     every bullet they have ever written."""
@@ -343,14 +427,14 @@ def profile_digest(profile: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def _jd_text(job: dict[str, Any]) -> str:
-    parts = [job.get("jdText", "")]
-    if job.get("requirements"):
-        parts.append("Requirements:\n" + "\n".join(f"- {line}" for line in job["requirements"]))
-    if job.get("responsibilities"):
-        parts.append(
-            "Responsibilities:\n" + "\n".join(f"- {line}" for line in job["responsibilities"])
-        )
+def _jd_text(description: dict[str, Any] | None) -> str:
+    """The posting's prose, with the parsed stack appended as a hint. Empty when the
+    job has no description yet — nothing to score rather than an error."""
+    if not description:
+        return ""
+    parts = [description.get("jdText", "")]
+    if description.get("requirements"):
+        parts.append("Tech stack named in the posting: " + ", ".join(description["requirements"]))
     return "\n\n".join(part for part in parts if part)[:MAX_JD_CHARS]
 
 
@@ -406,6 +490,9 @@ if __name__ == "__main__":
         print(f"score {match['score']} via {match['modelName']}")
         print("present:", [item["label"] for item in match["present"]])
         print("missing:", [item["label"] for item in match["missing"]])
+        for item in match["missing"]:
+            if item.get("nearMiss"):
+                print(f"  near miss — {item['label']}: {item['nearMiss']}")
         print("risks:  ", [item["title"] for item in match["risks"]])
 
     asyncio.run(main())
