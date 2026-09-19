@@ -5,7 +5,7 @@
 | **Product** | JobPilot — Agentic AI Job Search Platform |
 | **Owner** | Swarup Saha |
 | **Status** | v1.5 — eleven phases, application first then agents. Phase 1 done; PDF compilation closed 2026-09-17 |
-| **Updated** | 2026-09-17 |
+| **Updated** | 2026-09-18 |
 
 ---
 
@@ -24,13 +24,13 @@ anything starts reasoning.
 |---|---|---|
 | [1](#2-phase-1--authentication--profile) | Sign in, and the profile everything hangs off | ✅ done |
 | [2](#3-phase-2--resume-generation--download) | A resume built from that profile, downloadable | 🚧 `.tex` and PDF both download; three tasks left |
-| [3](#4-phase-3--job-scraping-search--shortlist) | Real jobs in the system, searchable and shortlistable | ⬜ API only, no sources |
+| [3](#4-phase-3--job-scraping-search--shortlist) | Real jobs in the system, searchable and shortlistable | 🚧 capture is the first source; connectors open |
 | [4](#5-phase-4--applications--settings) | Tracking what you applied to, and the preferences driving it | ⬜ API only |
 | [5](#6-phase-5--llm-integration--resume-rectification) | A resume rectified against a specific job | ⬜ not started |
 | [6](#7-phase-6--rag--retrieval) | Retrieval over your own resume, with the split vector store | ⬜ not started |
 | [7](#8-phase-7--mcp-tool-servers) | The tool servers agents reach the world through | ⬜ not started |
 | [8](#9-phase-8--agents--orchestration) | LangGraph agents under a supervisor, with approval interrupts | ⬜ not started |
-| [9](#10-phase-9--application-agent--chrome-extension) | Form autofill in your own browser session | 🚧 extension works; the two LLM tasks wait on `ai/` |
+| [9](#10-phase-9--application-agent--chrome-extension) | Form autofill in your own browser session | 🚧 extension fills and captures; the two LLM tasks wait on `ai/` |
 | [10](#11-phase-10--eval-guardrails--observability) | Ragas faithfulness, guardrail tests, tracing | ⬜ not started |
 | [11](#12-phase-11--daily-use--polish) | What only real daily use reveals | ⬜ not started |
 
@@ -171,8 +171,8 @@ hint. **Invariant 5 and FR-4.4 still forbid this and need amending.**
 ---
 
 ## 4. Phase 3 — Job scraping, search & shortlist
-⬜ **API only.** Get real jobs into the system so the screens that already exist have something to
-work on.
+🚧 **one source works.** Get real jobs into the system so the screens that already exist have
+something to work on. Capture (`P3-13`) landed first; turning a capture into a `Job` has not.
 
 **API**
 - ✅ `P3-01` `job` module: create with dedup-hash check, list by status, shortlist toggle
@@ -183,6 +183,17 @@ work on.
 - ⬜ `P3-05` Adapt the `linkedin-hiring-scraper` skill as a tool
 - ⬜ `P3-06` Naukri and company career-page sources
 - ⬜ `P3-07` Scheduled daily run *(needs Redis + Celery, below)*
+- ✅ `P3-13` **`capture` module.** `captures` collection holding a career page as **markdown**:
+  `url`, `pageTitle`, `markdown`, `links`, `region`, `markdownLength`, `textLength`,
+  `contentHash`, `status`, `jobId`. `POST /capture` (201, `{id, duplicate}`), `GET /capture`
+  (list, text omitted from `CaptureRead`), `GET /capture/{id}` (the one response carrying it).
+  Dedup copies `P3-04` exactly — sha256 over url + markdown, unique per `(userId, contentHash)`,
+  and a repeat returns `duplicate: true` rather than 409, because recapturing an unchanged page
+  is not an error
+- ⬜ `P3-14` **Parse a capture into a `Job`.** The step `P3-13` deliberately stops short of:
+  read the stored markdown, pull `title` / `company` / `location` / `jdText`, write a job with
+  `source: career_page`, and set the capture's `jobId` and `status: parsed`. Wants the `ai/`
+  tier, so it sits behind Phases 6–8 like `P3-02`/`P3-03` do not
 
 **UI**
 - ✅ `P3-08` Job Search screen built (multi-field search + facets)
@@ -195,6 +206,19 @@ work on.
 
 **Sequence that matters:** one source working end to end beats four half-built connectors. The
 Indeed connector plus content-hash dedup is the smallest thing that makes the three screens real.
+
+**Capture is the cheapest first source.** `P3-13` needs no connector, no API key and no
+scheduler — the user is already on the career page, and the browser is already authenticated to
+it. It also sidesteps the `FR-1.4` robots.txt question entirely, because a human opening a page
+they were invited to apply through is not a crawler. What it does *not* do is scale: it is one
+page per click, which is why it complements `P3-02`/`P3-03` rather than replacing them.
+
+**Markdown, not HTML.** Storing the converted text rather than the markup was a deliberate
+narrowing: a posting is ~700 characters of markdown against ~1 MB of page, `jdText` is a text
+field anyway, and markdown cannot express a `<style>` or a `<script>` so the exclusion needs no
+filter to maintain. The cost is that it is **one-way** — the earlier design kept raw HTML so a
+better extractor could be re-run over old rows, and that is no longer possible. A capture the
+converter mangles is recaptured by hand. `region` and `textLength` exist to make that visible.
 
 ---
 
@@ -337,6 +361,25 @@ Both remaining tasks need an LLM, so they wait on Phases 6–8.
   The extension reads it on every fill and prefers it over `profile` for form fields — `city` is a
   form box, `profile.location` is a resume line, and only one of them belongs in each
 
+- ✅ `P9-12` **Capture button.** One button in the popup below "Fill this form": it stores the
+  current career page against your account via `P3-13`. Reuses `ensureInjected()` in
+  `background.ts`, which already falls back to `chrome.scripting.executeScript` for any page
+  outside the four declared boards — so **no manifest change**. `activeTab` is conferred by the
+  user opening the popup, which is the same gesture that starts the capture; `<all_urls>` would
+  buy nothing here and cost the "read all your data on all websites" install warning
+- ✅ `P9-13` **Extraction to markdown**, in `features/capture/`, via `turndown`. Region first:
+  `main` / `[role=main]` / `article`, else a link-density-penalised largest-text-block
+  heuristic, else `body` — and whichever matched is recorded in `region`, so a bad capture is
+  legible as bad rather than silently wrong. Then furniture (`nav`, `footer`, `aside`, and
+  `related`/`cookie`/`share`-class blocks holding under 40% of the text) is removed from the
+  *clone*, links are resolved against `document.baseURI`, and images and form controls are
+  dropped. 400k-char ceiling on both sides: the extension refuses first with the measured size,
+  `CaptureCreate.markdown` carries `max_length` as the backstop
+- ✅ `P9-14` Capture from frame 0 only, and **not** through `broadcast()`/`merge()` — those are
+  fill-shaped and typed to `FrameResult`. The `capture` arm widened the content listener's
+  reply type to `Reply<FrameResult | CapturePayload | null>`, which `npm run typecheck`
+  enforced across every caller
+
 **API**
 - ✅ `P9-08` Serve job context and the Q&A answer bank to the extension
 - ⬜ `P9-09` Application agent coordinating the fill from the `ai` tier — **blocked on `ai/`**
@@ -356,6 +399,15 @@ screen only — nothing here navigates a form. The answer bank is still read-onl
 popup fills the field and is recorded on the application, but is not saved for next time. And
 `applicant_profile` has **no UI** — it is populated through `/docs` or curl until a Settings screen
 reaches it, which is `P4-10`'s neighbour rather than part of this phase.
+
+**Where capture will fail, and how you will know.** A DOM walk does not cross a shadow root, so a
+posting rendered inside one stores a near-empty shell; the same is true of a posting in a
+cross-origin iframe, since `P9-14` reads frame 0 only. An SPA that has not painted yet captures
+whatever *has*. A sign-in wall captures cleanly and looks like a success. All four share one tell —
+`textLength` near zero — which is why it is a stored column and why `CaptureRead` carries it while
+dropping the text itself. `region: "body"` is the second tell: it means no rule was confident.
+Unlike the HTML design this replaced, none of these are repairable by re-running a better extractor
+later — the markup is not kept. They are recaptured by hand.
 
 **`applicant_profile` is not `P4-02`.** Those are discovery preferences — which jobs to go looking
 for. These are answers about you, read only when filling a form. Two stores, two purposes; merging
