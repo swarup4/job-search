@@ -173,3 +173,20 @@ export interface ApplicantProfile {
     howHeard: string | null;
     referredBy: string | null;
 }
+
+export type CaptureRegion = "main" | "article" | "heuristic" | "body";
+
+/** What the extension POSTs to `/capture`. Mirrors `CaptureCreate`. */
+export interface CapturePayload {
+    url: string;
+    pageTitle: string;
+    markdown: string;
+    region: CaptureRegion;
+    textLength: number;
+    links: string[];
+}
+
+export interface CaptureCreated {
+    id: string;
+    duplicate: boolean;
+}
