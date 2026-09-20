@@ -4,7 +4,7 @@
 |---|---|
 | **Product** | JobPilot — Agentic AI Job Search Platform |
 | **Owner** | Swarup Saha |
-| **Status** | v1.7 — eleven phases, application first then agents. Phases 1 and 5 done; one Atlas cluster and hosted-only inference as of 2026-09-19 |
+| **Status** | v1.8 — eleven phases, application first then agents. Phases 1, 5 and 6 done; one Atlas cluster and hosted-only inference as of 2026-09-19 |
 | **Updated** | 2026-09-19 |
 
 ---
@@ -27,7 +27,7 @@ anything starts reasoning.
 | [3](#4-phase-3--job-scraping-search--shortlist) | Real jobs in the system, searchable and shortlistable | 🚧 capture and parse land; connectors open |
 | [4](#5-phase-4--applications--settings) | Tracking what you applied to, and the preferences driving it | ⬜ API only |
 | [5](#6-phase-5--llm-integration--resume-rectification) | A resume rectified against a specific job | ✅ done |
-| [6](#7-phase-6--rag--retrieval) | Retrieval over your own resume | ⬜ not started |
+| [6](#7-phase-6--rag--retrieval) | Retrieval over your own resume | ✅ done |
 | [7](#8-phase-7--mcp-tool-servers) | The tool servers agents reach the world through | ⬜ not started |
 | [8](#9-phase-8--agents--orchestration) | LangGraph agents under a supervisor, with approval interrupts | ⬜ not started |
 | [9](#10-phase-9--application-agent--chrome-extension) | Form autofill in your own browser session | 🚧 extension fills and captures; the two LLM tasks wait on `ai/` |
@@ -106,8 +106,7 @@ the product is keyed by `userId`, so this comes first.
   name and role to `PATCH /account/updateAccount`, the rest to the profile endpoints,
   creating the profile row on first save. Entries added in the browser pick up their
   server ids from the response, so a second save updates instead of duplicating. Email is
-  read-only — it is the login key. Only the retrieval panel still reads `profile.json`,
-  and that is Phase 6 work
+  read-only — it is the login key. The retrieval panel beside it went live with `P6-07`
 
 ---
 
@@ -282,7 +281,8 @@ no orchestration yet — deliberately, so a wrong answer stays debuggable.
     managed at any threshold. Set to **0.35**, above the midpoint because a missed hint costs
     nothing and a wrong one invites a claim the user cannot back. The sample is representative,
     not exhaustive; re-measure if the embedding model changes
-  - Known waste: profile spans are re-embedded per job, though they change only with the profile
+  - ~~Known waste: profile spans are re-embedded per job~~ — **closed by `P6-04`** (2026-09-19).
+    The spans now come from the stored chunks, which change when the profile does
 - ✅ `P5-07` Incorporate **only** ticked keywords. The `.tex` never reaches the model — it gets the
   current role and skill groups as data and answers with *placement*, which `tailoring.py` folds in
   line by line. No word may enter but the keyword and plain connectives, so a new metric, employer
@@ -360,26 +360,80 @@ section are now wrong and need amending — this is a privacy claim, not a nicet
 ---
 
 ## 7. Phase 6 — RAG & retrieval
-⬜ **not started.** Tailoring and scoring should work against what your resume actually says, not
-against the whole document stuffed into a prompt. This is the retrieval layer that makes that true.
+✅ **done.** Scoring now works against what your resume actually says rather than against the whole
+document re-embedded for every job. The server cuts the profile into chunks and searches them; the
+AI tier embeds them and reranks what comes back. Nothing here reaches a database: `$vectorSearch`
+runs on `server`, because the AI tier holds no URI and no credentials.
 
 **API**
-- ⬜ `P6-01` `resume_chunks` — chunk text and its vector on one document
-  *(a text-only version existed and was removed on 2026-09-11)*
-- ⬜ `P6-02` Chunk the profile into retrievable units, section by section
-- ⬜ `P6-03` Re-index on profile edit, so retrieval never serves stale text
+- ✅ `P6-01` `resume_chunks` — chunk text and its vector on one document, per user. `contentHash`
+  is `section|text`, which is what makes a re-index cheap: a chunk whose text survived keeps the
+  vector it already had
+- ✅ `P6-02` `modules/profile/chunking.py` — one bullet, one skill, one credential each. A skill
+  group becomes one chunk per item, not one per group: embedding "Python, TypeScript, Go, SQL" as
+  a unit returns all four whenever a posting asks for any one of them. Chunking lives in the
+  profile module and the store in `resume_chunk`, so the dependency points one way
+- ✅ `P6-03` Re-index on profile edit — all fourteen mutations end in `profile.service.reindex`,
+  plus `POST /api/profile/reindex` for the panel's button. **Stale is not a state retrieval can
+  reach:** an edited chunk is rewritten with no vector, and a chunk with no vector is invisible to
+  `$vectorSearch`. The window between an edit and the next embedding run serves nothing rather
+  than serving what the user just replaced
 
 **AI tier**
-- ⬜ `P6-04` Embed each chunk and store the vector beside its text
-- ⬜ `P6-05` Retrieval: `$vectorSearch` top ~50 → rerank → top ~5
+- ✅ `P6-04` `rag/indexing.py` — embed everything still pending and store the vectors in one
+  request. Chunks go up as `document`, matching `P5-06`. `rectify` calls it before scoring, which
+  costs one GET when nothing changed and means no run depends on somebody having remembered to
+  index first
+- ✅ `P6-05` `rag/retrieval.py` — `$vectorSearch` top 50 → `rerank-2.5-lite` → top 5. Two models
+  doing two different jobs: `voyage-4-lite` is a bi-encoder and scored every chunk without ever
+  seeing the query, which is what makes the index possible and what limits how well it can rank;
+  the reranker reads query and chunk together and is far too expensive to run over everything.
+  ~2k tokens a query, well under a hundredth of a cent — noise next to the ~$0.001 a job the LLM
+  costs. The reranker is skipped when there are fewer candidates than the answer asked for
 
 **Infrastructure**
-- ⬜ `P6-06` `$vectorSearch` index on the chunk collection, dimension matching the model
-  *(the cluster and the pattern are already there — see `P5-12`)*
+- ✅ `P6-06` `chunk_embedding_index` on `resume_chunks.embedding` — 1024 dimensions, cosine, with
+  `userId` as a **filter field in the index definition**, not a `$match` after it: an approximate
+  search filtered afterwards comes back short, or empty. `_ensure_vector_index` now takes a
+  collection, so it covers this and `P5-12`'s
+
+**UI**
+- ✅ `P6-07` "Indexed for retrieval" now reads the index. Real chunk count, a working **Re-index
+  now**, and `pending` shown as its own number rather than folded into the total — the button
+  re-cuts the text but cannot embed it, and a chunk without a vector is not retrievable yet.
+  Saying otherwise would be a claim about the index that is not true. `profile.json` is down to
+  `resumeFile` on that screen
+
+**Guardrail**
+- ✅ `P6-08` 15 tests in `server/tests/test_retrieval.py`, 11 in `ai/tests/test_retrieval.py`. A
+  vector cannot be written onto another user's chunk; a batch naming a chunk a re-index deleted is
+  refused whole rather than applied in part; an edited bullet loses its vector and an untouched one
+  keeps it. `$vectorSearch` itself is not exercised — it is an Atlas Search stage and the server
+  suite is forced at a local MongoDB on purpose
+
+### Decisions (2026-09-19)
 
 **One store, one hop.** The earlier design split vectors into Atlas and kept text in a local
 MongoDB, which is why this phase used to need two hops and a `chunk_id` join. Everything is one
-Atlas cluster as of 2026-09-19, so a chunk carries its own text and a search returns it.
+Atlas cluster, so a chunk carries its own text and a search returns it.
+
+**`P5-06`'s known waste is closed.** `flag_near_misses` re-embedded every profile span for every
+job. It now reads the stored chunks — the profile changes when the user edits it, not when a new
+posting turns up. The near-miss path deliberately **does not rerank**: `NEAR_MISS_THRESHOLD` is a
+cosine calibrated against `voyage-4-lite`, and a cross-encoder's relevance score sits on a
+different scale, so feeding one to that comparison would invalidate the calibration without
+failing anything. For the same reason the server converts Atlas's `(1 + cosine) / 2` back to a
+true cosine before answering, and a `Span` records which of the two scales its score is on.
+
+**`P5-04` was left alone.** The diff still reads the whole profile. Feeding it the top five chunks
+would drop a skill from a six-year-old role out of the window and report it Missing — the failure
+that task exists to prevent. Retrieval is a capability this phase delivers; it is not a narrower
+context for a step that was widened on purpose.
+
+**Chunk boundaries are load-bearing.** They are the spans `NEAR_MISS_THRESHOLD` was measured
+against, so text goes into a chunk raw and its context is carried alongside in `sourceRef` rather
+than glued onto the front. Prefixing every bullet with its role would shift every cosine the
+threshold compares.
 
 ---
 
@@ -562,7 +616,7 @@ nothing agentic runs yet. The Chrome extension is built (Phase 9).
 | Keyword Selection — starts with nothing checked, per FR-2.5 | `matches.json` |
 | Resume Preview — Preview / Diff / Source tabs, `.tex` download | `resume.json` + `templates/base_resume.tex` |
 | **Login · Signup · sign-out · route guard** | **live — `POST /api/account/{signup,login}`, JWT in `sessionStorage`, mirrored into Redux** |
-| **My Details — identity, experience, education, skills, certifications** | **live — `getAccount` + the five profile endpoints on load, one Save writes them all back. Only the "Indexed for retrieval" panel still reads `profile.json`; chunking is Phase 6** |
+| **My Details — identity, experience, education, skills, certifications** | **live — `getAccount` + the five profile endpoints on load, one Save writes them all back. The "Indexed for retrieval" panel is live too — `GET /api/resume-chunk/stats` and `POST /api/profile/reindex`. `profile.json` is down to `resumeFile` on this screen** |
 | **Resume — template picker, render, submit as default** | **live — `GET /api/template`, `GET /api/template/render/{id}`, `PUT /api/resume/base`** |
 | **Resume review — stored resume, Regenerate, `.tex` and PDF download** | **live — `GET /api/resume/base`, `GET /api/resume/base/pdf` (pdflatex). The chat panel beside it is layout only** |
 
@@ -586,8 +640,9 @@ nothing agentic runs yet. The Chrome extension is built (Phase 9).
    to `/login` without one. **Those three documents are now wrong and need amending** — the decision
    went the other way. Reopened as in scope.
 4. **`profile.preferences` and `resume_chunk_text` were removed** (2026-09-11) to keep the profile
-   module focused on resume material. The Settings screen therefore has no backend, and chunked
-   retrieval no longer exists — it is rebuilt in Phase 6. Doc 06 and doc 03 still describe both.
+   module focused on resume material. The Settings screen therefore has no backend. Chunked
+   retrieval was rebuilt in Phase 6 on 2026-09-19, as `resume_chunks` — one collection carrying
+   both the text and its vector, not the local/Atlas pair doc 06 and doc 03 still describe.
 6. **One store, not two.** The design split structural data into a local MongoDB and vectors into
    Atlas, with `job_id` and `chunk_id` crossing the boundary. As of 2026-09-19 everything is one
    Atlas cluster: `captures` became `job_descriptions`, which carries its own `embedding`, and

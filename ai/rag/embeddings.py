@@ -10,6 +10,7 @@ from "nothing leaves" to "all generation is local".
 
 from __future__ import annotations
 
+import asyncio
 import math
 import os
 from collections.abc import Sequence
@@ -88,7 +89,6 @@ def nearest(probe: Vector, candidates: Sequence[Vector]) -> tuple[int, float]:
 
 
 if __name__ == "__main__":
-    import asyncio
 
     async def main() -> None:
         """Where `NEAR_MISS_THRESHOLD` should sit: put the line between the two groups

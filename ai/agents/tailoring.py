@@ -19,7 +19,9 @@ does not depend on this process behaving. (FR-4.2, NFR-8)
 
 from __future__ import annotations
 
+import asyncio
 import re
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
@@ -399,8 +401,6 @@ def _words(value: str) -> set[str]:
 
 
 if __name__ == "__main__":
-    import asyncio
-    import sys
 
     async def main() -> None:
         job_id = sys.argv[1] if len(sys.argv) > 1 else ""

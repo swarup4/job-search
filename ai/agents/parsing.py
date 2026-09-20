@@ -12,6 +12,7 @@ decides.
 
 from __future__ import annotations
 
+import asyncio
 import re
 from typing import Any
 
@@ -204,7 +205,6 @@ def _verified_stack(tokens: list[str], flat_page: str) -> list[str]:
 
 
 if __name__ == "__main__":
-    import asyncio
 
     async def main() -> None:
         for outcome in await parse_pending():

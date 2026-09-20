@@ -22,6 +22,7 @@ from modules.profile.models import (
     SkillRead,
     UserProfile,
 )
+from modules.resume_chunk import IndexStats
 
 # Every route works on the caller's own profile: `user_id` comes from the token, so
 # there is no id in any URL here and no way to ask for somebody else's.
@@ -45,6 +46,15 @@ async def get_profile(user_id: CurrentUser) -> UserProfile:
 @router.patch("/updateProfile", response_model=ProfileRead)
 async def update_profile(payload: ProfileUpdate, user_id: CurrentUser) -> Profile:
     return await service.update_profile(user_id, payload)
+
+
+@router.post("/reindex", response_model=IndexStats)
+async def reindex(user_id: CurrentUser) -> IndexStats:
+    """Rebuild the retrieval chunks now. Every edit below already does this, so this
+    is for the panel's button and for a profile that predates chunking — cutting a
+    profile up is what this module knows how to do, which is why the route is here
+    rather than on `resume-chunk`."""
+    return await service.reindex(user_id)
 
 
 # --- work experience ---------------------------------------------------------

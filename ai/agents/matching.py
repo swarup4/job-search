@@ -10,7 +10,7 @@ What each step is allowed to see is a guardrail, not only an economy:
 |-----------------|---------------------------------------|
 | extraction      | the JD                                |
 | diff            | the whole profile — every role         |
-| near misses     | the profile span by span, via Voyage   |
+| near misses     | the indexed profile chunks, via Voyage |
 | risk flags      | the JD and a profile digest            |
 
 The diff stays wide on purpose. A skill sitting in a role from six years ago is
@@ -20,14 +20,16 @@ Missing and invite the user to add what they already have.
 
 from __future__ import annotations
 
+import asyncio
 import re
+import sys
 from typing import Any
 
 from pydantic import BaseModel
 
 from config.llm import PROVENANCE, generate
 from mcp_servers import jobpilot_api
-from rag.embeddings import NEAR_MISS_THRESHOLD, VoyageEmbeddings, nearest
+from rag import NEAR_MISS_THRESHOLD, embed_pending, nearest_spans
 
 # An unbounded prompt is a cost problem on a hosted model and a context problem on a
 # local one. A JD longer than this is padding — boilerplate, benefits, legal text.
@@ -120,7 +122,10 @@ async def rectify(job_id: str) -> dict[str, Any]:
     jd_text = _jd_text(description)
     requirements = await extract_requirements(jd_text)
     present, missing = await split_by_profile(requirements, profile)
-    missing = await flag_near_misses(missing, profile)
+    # Chunks the user edited since the last run have no vector yet, so the near-miss
+    # check would quietly come back empty. One GET when there is nothing to do.
+    await embed_pending()
+    missing = await flag_near_misses(missing)
     risks = await detect_risks(job, jd_text, profile)
 
     payload = {
@@ -232,9 +237,7 @@ async def split_by_profile(
 # --- P5-06: near misses, locally embedded ------------------------------------
 
 
-async def flag_near_misses(
-    missing: list[Requirement], profile: dict[str, Any]
-) -> list[Requirement]:
+async def flag_near_misses(missing: list[Requirement]) -> list[Requirement]:
     """Mark a Missing requirement that the profile appears to state in other words.
 
     The diff before this reads the profile literally and then asks a model; both work
@@ -242,24 +245,22 @@ async def flag_near_misses(
     calls "LangGraph multi-agent pipeline" survives both and reaches the user as
     Missing, which invites them to add what they already have.
 
+    Since P6-04 the spans come from the stored chunks rather than being re-embedded
+    for every job: the profile changes when the user edits it, not when a new posting
+    turns up, and paying Voyage per job for the same forty spans was the waste P5-06
+    wrote down and left standing.
+
     The flag is advisory and nothing more. The requirement stays Missing and stays
     selectable: telling the user they may already have this is safe, deciding it for
     them is the fabrication the diff exists to prevent.
     """
-    units = profile_units(profile)
-    if not missing or not units:
+    if not missing:
         return missing
 
-    # Two calls, not one: Voyage embeds a query and a document differently, and asking
-    # whether a requirement appears in a span is a retrieval, not a symmetry.
-    voyage = VoyageEmbeddings()
-    label_vectors = await voyage.embed_queries([item.label for item in missing])
-    unit_vectors = await voyage.embed_documents(units)
-
-    for item, label_vector in zip(missing, label_vectors, strict=True):
-        index, score = nearest(label_vector, unit_vectors)
-        if index >= 0 and score >= NEAR_MISS_THRESHOLD:
-            item.near_miss = units[index]
+    spans = await nearest_spans([item.label for item in missing])
+    for item, span in zip(missing, spans, strict=True):
+        if span is not None and span.score >= NEAR_MISS_THRESHOLD:
+            item.near_miss = span.text
     return missing
 
 
@@ -364,39 +365,6 @@ def profile_corpus(profile: dict[str, Any]) -> str:
     return "\n".join(parts)
 
 
-def profile_units(profile: dict[str, Any]) -> list[str]:
-    """The profile as separately comparable spans — one bullet, one skill, one
-    credential each.
-
-    A single whole-profile vector averages a career into mush, and the near-miss check
-    has to hand back the span it matched so the user can see why.
-    """
-    personal = profile.get("profile") or {}
-    units: list[str] = [
-        value for value in (personal.get("headline"), personal.get("summary")) if value
-    ]
-
-    for entry in profile.get("work", []):
-        units.append(f"{entry.get('title', '')} at {entry.get('company', '')}")
-        units.extend(entry.get("bullets", []))
-        for project in entry.get("projects", []):
-            units.extend(project.get("bullets", []))
-
-    for group in profile.get("skill", []):
-        units.extend(group.get("items", []))
-
-    units.extend(
-        f"{entry.get('name', '')} — {entry.get('issuer', '')}"
-        for entry in profile.get("certification", [])
-    )
-    units.extend(
-        f"{entry.get('degree', '')}, {entry.get('institution', '')}"
-        for entry in profile.get("education", [])
-    )
-
-    return [unit for unit in (value.strip() for value in units) if len(unit) >= 3]
-
-
 def profile_digest(profile: dict[str, Any]) -> str:
     """The shorter view the risk step works from: who they are and how long, not
     every bullet they have ever written."""
@@ -478,8 +446,6 @@ def _sentence_with(label: str, source: str) -> str | None:
 
 
 if __name__ == "__main__":
-    import asyncio
-    import sys
 
     async def main() -> None:
         job_id = sys.argv[1] if len(sys.argv) > 1 else ""

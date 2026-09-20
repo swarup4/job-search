@@ -12,6 +12,7 @@ repaired with a regex. (NFR-2)
 
 from __future__ import annotations
 
+import asyncio
 import os
 from typing import Any
 from urllib.parse import urlparse
@@ -152,7 +153,6 @@ def _first_errors(exc: ValidationError, limit: int = 3) -> str:
 
 
 if __name__ == "__main__":
-    import asyncio
 
     class Demo(BaseModel):
         skills: list[str]

@@ -22,6 +22,7 @@ export {
     setApplicationStatus,
 } from "./application";
 export { listEvents } from "./event";
+export { getIndexStats, reindexProfile } from "./retrieval";
 export {
     addCertification,
     addEducation,

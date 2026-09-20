@@ -105,6 +105,33 @@ async def get_profile() -> dict[str, Any]:
     return await _request("GET", "/profile/getProfile")
 
 
+async def reindex_profile() -> dict[str, Any]:
+    """Re-cut My Details into chunks. Returns the index stats. Text only — the server
+    never embeds anything, which is why this leaves chunks pending."""
+    return await _request("POST", "/profile/reindex")
+
+
+async def list_pending_chunks(limit: int = 200) -> list[dict[str, Any]]:
+    """Chunks with no vector yet — everything this tier still owes the index."""
+    return await _request("GET", "/resume-chunk/pending", params={"limit": limit})
+
+
+async def store_chunk_embeddings(embeddings: list[dict[str, Any]]) -> dict[str, Any]:
+    """One request for a whole profile's vectors. Refused outright if any chunk id is
+    not the caller's or no longer exists, rather than partly applied."""
+    return await _request("PUT", "/resume-chunk/embeddings", json={"embeddings": embeddings})
+
+
+async def search_chunks(vector: list[float], limit: int = 50) -> list[dict[str, Any]]:
+    """`$vectorSearch` over the caller's own chunks. The vector is embedded here; the
+    server runs the query, because this tier has no database URI."""
+    return await _request("POST", "/resume-chunk/search", json={"vector": vector, "limit": limit})
+
+
+async def chunk_stats() -> dict[str, Any]:
+    return await _request("GET", "/resume-chunk/stats")
+
+
 async def get_match(job_id: str) -> dict[str, Any]:
     return await _request("GET", f"/match/getMatch/{job_id}")
 

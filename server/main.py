@@ -18,10 +18,21 @@ from modules import (
     match,
     profile,
     resume,
+    resume_chunk,
     template,
 )
 
-MODULES = (job, job_description, match, resume, template, application, profile, account)
+MODULES = (
+    job,
+    job_description,
+    match,
+    resume,
+    resume_chunk,
+    template,
+    application,
+    profile,
+    account,
+)
 
 
 @asynccontextmanager

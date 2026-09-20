@@ -30,4 +30,4 @@ testpaths = ["tests"]
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["config*", "agents*", "mcp_servers*"]
+include = ["config*", "agents*", "mcp_servers*", "rag*"]

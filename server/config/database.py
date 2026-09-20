@@ -12,13 +12,15 @@ from modules.job_description import JobDescription
 from modules.match import Match
 from modules.profile import Certification, Education, Experience, Profile, Skill
 from modules.resume import BaseResume, TailoredResume
+from modules.resume_chunk import VECTOR_INDEX as CHUNK_INDEX
+from modules.resume_chunk import ResumeChunk
 from modules.template import Template
 
 _client: AsyncMongoClient | None = None
 
-VECTOR_INDEX = "jd_embedding_index"
-# `rag/embeddings.py` passes no `output_dimension`, so voyage-4-lite returns its
-# default. A mismatch here is not an error, it is a search that never matches.
+JD_INDEX = "jd_embedding_index"
+# Both vector indexes and `rag/embeddings.py` have to agree on this. A mismatch is
+# not an error, it is a search that never matches.
 EMBEDDING_DIMS = 1024
 
 
@@ -30,6 +32,7 @@ def document_models() -> list[type]:
         Match,
         TailoredResume,
         BaseResume,
+        ResumeChunk,
         Application,
         AnswerBank,
         ApplicantProfile,
@@ -61,34 +64,38 @@ async def connect(db_name: str | None = None) -> AsyncDatabase:
     # Beanie manages ordinary indexes and knows nothing about Atlas search indexes,
     # so without this a fresh database has no vector search at all.
     if uri.startswith("mongodb+srv://"):
-        await _ensure_vector_index(database)
+        await _ensure_vector_index(database, "job_descriptions", JD_INDEX)
+        # Chunks are per-user, so this one carries a filter field. Filtering after an
+        # approximate search returns fewer rows than asked for, or none — it has to
+        # be part of the index. (P6-06)
+        await _ensure_vector_index(database, "resume_chunks", CHUNK_INDEX, filters=["userId"])
     return database
 
 
-async def _ensure_vector_index(database: AsyncDatabase) -> None:
-    """Create the `$vectorSearch` index on `job_descriptions.embedding` if it is
-    missing. Atlas only — a local MongoDB has no such command."""
-    existing = [
-        index["name"] async for index in await database.job_descriptions.list_search_indexes()
-    ]
-    if VECTOR_INDEX in existing:
+async def _ensure_vector_index(
+    database: AsyncDatabase,
+    collection: str,
+    name: str,
+    filters: list[str] | None = None,
+) -> None:
+    """Create a `$vectorSearch` index on `<collection>.embedding` if it is missing.
+    Atlas only — a local MongoDB has no such command."""
+    existing = [index["name"] async for index in await database[collection].list_search_indexes()]
+    if name in existing:
         return
 
-    await database.job_descriptions.create_search_index(
-        SearchIndexModel(
-            name=VECTOR_INDEX,
-            type="vectorSearch",
-            definition={
-                "fields": [
-                    {
-                        "type": "vector",
-                        "path": "embedding",
-                        "numDimensions": EMBEDDING_DIMS,
-                        "similarity": "cosine",
-                    }
-                ]
-            },
-        )
+    fields: list[dict[str, object]] = [
+        {
+            "type": "vector",
+            "path": "embedding",
+            "numDimensions": EMBEDDING_DIMS,
+            "similarity": "cosine",
+        }
+    ]
+    fields.extend({"type": "filter", "path": path} for path in filters or [])
+
+    await database[collection].create_search_index(
+        SearchIndexModel(name=name, type="vectorSearch", definition={"fields": fields})
     )
 
 

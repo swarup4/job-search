@@ -1,11 +1,10 @@
-import { Building2, FileText, Mail, MapPin, RefreshCw } from "lucide-react";
+import { Building2, FileText, Mail, MapPin } from "lucide-react";
 import { AppShell } from "@/layout/AppShell";
 import { PageHeader } from "@/layout/PageHeader";
 import { Panel, PanelBody, PanelHeader, PanelTitle } from "@/component/ui/panel";
-import { Button } from "@/component/ui/button";
 import { ROUTES } from "@/routes";
-// MOCK: the retrieval panel and the shell badges still read fixtures. Chunking is
-// Phase 6 and the badge endpoints are Phase 3/4 — neither exists to call yet.
+// MOCK: the shell badges still read fixtures — those endpoints are Phase 3/4.
+// `resumeFile` below is the only fixture left on this screen.
 import profileData from "@/data/profile.json";
 import board from "@/data/board.json";
 import search from "@/data/search.json";
@@ -39,18 +38,7 @@ export default async function Page() {
                     <Panel>
                         <PanelHeader><PanelTitle>Indexed for retrieval</PanelTitle></PanelHeader>
                         <PanelBody className="flex flex-col gap-4 py-4">
-                            <IndexedStats chunks={profile.chunks} />
-                            <p className="text-[12.5px] leading-relaxed text-muted-foreground">
-                                Everything above is chunked and embedded so the match agent can find it. Editing a
-                                section marks it for re-indexing.
-                            </p>
-                            <Button variant="outline" size="sm" className="w-full">
-                                <RefreshCw />
-                                Re-index now
-                            </Button>
-                            <p className="text-center text-[12px] text-muted-foreground">
-                                last indexed {profile.lastIndexed}
-                            </p>
+                            <IndexedStats />
                         </PanelBody>
                     </Panel>
 

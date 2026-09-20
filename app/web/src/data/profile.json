@@ -83,7 +83,5 @@
     { "id": "c5", "name": "Deep Learning Specialization", "issuer": "DeepLearning.AI", "year": "2021" },
     { "id": "c6", "name": "Google Cloud Associate Engineer", "issuer": "Google Cloud", "year": "2020" }
   ],
-  "resumeFile": "templates/base_resume.tex",
-  "lastIndexed": "2 days ago",
-  "chunks": 41
+  "resumeFile": "templates/base_resume.tex"
 }
