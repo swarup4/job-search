@@ -2,7 +2,7 @@ import { axiosInstance, orNull } from "@/lib/axiosInstance";
 
 /** GET /api/resume/{jobId} — the latest tailored .tex. Null before tailoring runs. */
 export function getResume(jobId) {
-    return orNull(axiosInstance.get(`/resume/${jobId}`));
+    return orNull(axiosInstance.get(`/resume/getResume/${jobId}`));
 }
 
 /** GET /api/resume/{jobId}/versions — newest first. */

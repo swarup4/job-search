@@ -8,6 +8,7 @@ from modules.match.models import (
     KeywordReview,
     KeywordSelection,
     Match,
+    MatchSummary,
     MatchWrite,
     PendingCounts,
     ReviewState,
@@ -27,7 +28,7 @@ class UnknownKeyword(Invalid):
 async def write_match(user_id: PydanticObjectId, payload: MatchWrite) -> Match:
     # Raises JobNotFound for a job that is not yours, so a match never dangles and
     # never attaches to someone else's posting.
-    await get_job(user_id, payload.jobId)
+    await get_job(payload.jobId)
 
     match = await Match.find_one(Match.userId == user_id, Match.jobId == payload.jobId)
     if match is None:
@@ -41,7 +42,7 @@ async def write_match(user_id: PydanticObjectId, payload: MatchWrite) -> Match:
         match.scoredAt = datetime.now(UTC)
 
     await match.save()
-    await update_job(user_id, payload.jobId, JobUpdate(status=JobStatus.REVIEWED))
+    await update_job(payload.jobId, JobUpdate(status=JobStatus.REVIEWED))
     return match
 
 
@@ -73,8 +74,26 @@ async def record_selection(
 
 
 async def pending_counts(user_id: PydanticObjectId) -> PendingCounts:
+    waiting = Match.find(Match.userId == user_id, Match.review.state == ReviewState.PENDING)
+    oldest = await waiting.clone().sort(+Match.scoredAt).first_or_none()
     return PendingCounts(
-        keywordSelections=await Match.find(
-            Match.userId == user_id, Match.review.state == ReviewState.PENDING
-        ).count()
+        keywordSelections=await waiting.count(),
+        nextJobId=oldest.jobId if oldest else None,
     )
+
+
+async def summaries(
+    user_id: PydanticObjectId, job_ids: list[PydanticObjectId]
+) -> list[MatchSummary]:
+    """The caller's matches for these jobs, in one query. A job with no match is simply
+    absent — unscored is the normal state for a job discovery just found."""
+    matches = await Match.find({"userId": user_id, "jobId": {"$in": job_ids}}).to_list()
+    return [
+        MatchSummary(
+            jobId=match.jobId,
+            score=match.score,
+            reviewState=match.review.state,
+            risk=match.risks[0].title if match.risks else None,
+        )
+        for match in matches
+    ]

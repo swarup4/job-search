@@ -4,8 +4,8 @@
 |---|---|
 | **Product** | JobPilot — Agentic AI Job Search Platform |
 | **Owner** | Swarup Saha |
-| **Status** | v1.5 — eleven phases, application first then agents. Phase 1 done; PDF compilation closed 2026-09-17 |
-| **Updated** | 2026-09-18 |
+| **Status** | v1.9 — eleven phases, application first then agents. Phases 1, 5 and 6 done; Workday career-page scraping live from Settings as of 2026-09-25 |
+| **Updated** | 2026-09-25 |
 
 ---
 
@@ -24,10 +24,10 @@ anything starts reasoning.
 |---|---|---|
 | [1](#2-phase-1--authentication--profile) | Sign in, and the profile everything hangs off | ✅ done |
 | [2](#3-phase-2--resume-generation--download) | A resume built from that profile, downloadable | 🚧 `.tex` and PDF both download; three tasks left |
-| [3](#4-phase-3--job-scraping-search--shortlist) | Real jobs in the system, searchable and shortlistable | 🚧 capture is the first source; connectors open |
+| [3](#4-phase-3--job-scraping-search--shortlist) | Real jobs in the system, searchable and shortlistable | 🚧 capture, parse and Workday scraping land; other ATS adapters and screen wiring open |
 | [4](#5-phase-4--applications--settings) | Tracking what you applied to, and the preferences driving it | ⬜ API only |
-| [5](#6-phase-5--llm-integration--resume-rectification) | A resume rectified against a specific job | ⬜ not started |
-| [6](#7-phase-6--rag--retrieval) | Retrieval over your own resume, with the split vector store | ⬜ not started |
+| [5](#6-phase-5--llm-integration--resume-rectification) | A resume rectified against a specific job | ✅ done |
+| [6](#7-phase-6--rag--retrieval) | Retrieval over your own resume | ✅ done |
 | [7](#8-phase-7--mcp-tool-servers) | The tool servers agents reach the world through | ⬜ not started |
 | [8](#9-phase-8--agents--orchestration) | LangGraph agents under a supervisor, with approval interrupts | ⬜ not started |
 | [9](#10-phase-9--application-agent--chrome-extension) | Form autofill in your own browser session | 🚧 extension fills and captures; the two LLM tasks wait on `ai/` |
@@ -78,9 +78,9 @@ the product is keyed by `userId`, so this comes first.
   bearer token, and **no URL carries a user id any more** — one `verify_token` dependency
   reads it from the token and hands it to the route. Reading another user's data is not
   refused, it is unreachable: there is nowhere to name them
-- ✅ `P1-07` **Every collection is keyed by `userId`**, not just the profile ones: `jobs`,
-  `matches`, `resumes`, `applications`, `answer_bank` and `events` each carry the owning
-  account, and every query filters on it. Another user's id reads as 404, never 403 —
+- ✅ `P1-07` **Every collection is keyed by `userId`** except `templates`, which is global:
+  `jobs`, `job_descriptions`, `matches`, `resumes`, `applications` and `answer_bank` each carry
+  the owning account, and every query filters on it. Another user's id reads as 404, never 403 —
   the caller has no business learning the row exists
 - ✅ `P1-08` Dedup is per user. `jobs.dedup_hash` was globally unique, so the second person to
   find a posting would have been handed the first person's row; it is now unique per
@@ -106,8 +106,7 @@ the product is keyed by `userId`, so this comes first.
   name and role to `PATCH /account/updateAccount`, the rest to the profile endpoints,
   creating the profile row on first save. Entries added in the browser pick up their
   server ids from the response, so a second save updates instead of duplicating. Email is
-  read-only — it is the login key. Only the retrieval panel still reads `profile.json`,
-  and that is Phase 6 work
+  read-only — it is the login key. The retrieval panel beside it went live with `P6-07`
 
 ---
 
@@ -171,35 +170,94 @@ hint. **Invariant 5 and FR-4.4 still forbid this and need amending.**
 ---
 
 ## 4. Phase 3 — Job scraping, search & shortlist
-🚧 **one source works.** Get real jobs into the system so the screens that already exist have
-something to work on. Capture (`P3-13`) landed first; turning a capture into a `Job` has not.
+🚧 **two sources work end to end.** Get real jobs into the system so the screens that already
+exist have something to work on. Extension capture with its parse into a `Job`, and Workday
+career-page scraping started from Settings, both land — 41 companies registered, 33 enabled.
+The other ATS adapters, the scheduler and the screen wiring are still open.
 
 **API**
 - ✅ `P3-01` `job` module: create with dedup-hash check, list by status, shortlist toggle
 - ⬜ `P3-02` Indeed MCP connector
 - ⬜ `P3-03` Google CSE / SerpAPI search
-- ✅ `P3-04` Dedup logic on content hash: sha256 over title, company, location and
-  `jd_text`, unique per `(userId, dedup_hash)`, checked on every create
+- ✅ `P3-04` Dedup on content hash, unique per `(userId, dedupHash)`, checked on every create:
+  sha256 over `source` + `refId` where the board gives one, else title + company + location.
+  The JD prose left `jobs` in the 2026-09-19 split and can no longer be part of the seed
 - ⬜ `P3-05` Adapt the `linkedin-hiring-scraper` skill as a tool
-- ⬜ `P3-06` Naukri and company career-page sources
+- ⬜ `P3-06` Naukri and company career-page sources. *Career pages are broken down as
+  `P3-15`…`P3-27` below; this task is Naukri only from here on*
 - ⬜ `P3-07` Scheduled daily run *(needs Redis + Celery, below)*
-- ✅ `P3-13` **`capture` module.** `captures` collection holding a career page as **markdown**:
-  `url`, `pageTitle`, `markdown`, `links`, `region`, `markdownLength`, `textLength`,
-  `contentHash`, `status`, `jobId`. `POST /capture` (201, `{id, duplicate}`), `GET /capture`
-  (list, text omitted from `CaptureRead`), `GET /capture/{id}` (the one response carrying it).
-  Dedup copies `P3-04` exactly — sha256 over url + markdown, unique per `(userId, contentHash)`,
-  and a repeat returns `duplicate: true` rather than 409, because recapturing an unchanged page
-  is not an error
-- ⬜ `P3-14` **Parse a capture into a `Job`.** The step `P3-13` deliberately stops short of:
-  read the stored markdown, pull `title` / `company` / `location` / `jdText`, write a job with
-  `source: career_page`, and set the capture's `jobId` and `status: parsed`. Wants the `ai/`
-  tier, so it sits behind Phases 6–8 like `P3-02`/`P3-03` do not
+- ✅ `P3-13` **`job_description` module**, renamed from `capture` on 2026-09-19. The
+  `job_descriptions` collection holds the page as markdown (`jdText`), the HTML the job page
+  renders (`htmlString`) and the `embedding` behind search, plus `url`, `pageTitle`, `region`,
+  `links`, `textLength`, `contentHash`, `status` and a nullable `jobId`. `POST`/`GET
+  /job-description`, `GET /job-description/{id}`, and `link` / `status` / `embedding` writes.
+  Dedup copies `P3-04` — sha256 over url + text, unique per `(userId, contentHash)` — and a
+  repeat returns `duplicate: true` rather than 409, because recapturing an unchanged page is
+  not an error
+- ✅ `P3-14` **Parse a capture into a `Job`.** `ai/agents/parsing.py` reads the stored markdown,
+  writes the listing with `source: career_page`, and links the two. The model proposes and the
+  page decides: a title or company not present verbatim refuses the parse, a technology the page
+  never names is dropped from `requirements`, an unfindable requisition id is dropped, and a page
+  that is not one posting is marked `discarded` rather than written. 9 tests in `ai/tests/`
+- ✅ `P3-15` **`career_source` module** — the companies to scrape, one flat document each:
+  `name`, `careersUrl`, `platform`, `config` (tenant / site / board id), `enabled`, `notes`,
+  `lastRunAt`, `lastResult`. CRUD plus `PUT /career-source/result/{id}`. **Seeded 2026-09-25**
+  into Atlas from `server/career_sources_seed.json`: the 41 Workday companies, 33 enabled — 5 off
+  for robots.txt, 3 because their jobs sit inside another company's tenant. 6 tests
+- ✅ `P3-16` `create_description`, `description_stored`, `get_account`, `list_career_sources`
+  and `record_source_result` in `mcp_servers/jobpilot_api/client.py`
+- ✅ `P3-17` **Workday adapter**, `ai/sources/workday.py` — `POST /wday/cxs/{tenant}/{site}/jobs`
+  for the list, one detail call per *new* posting for the JD. The country facet is found by name
+  and applied; titles are matched locally, since Workday's search is loose enough to fill the
+  2,000 cap anyway. A posting already stored is recognised by URL and never re-fetched, which
+  took a full re-run from 137s to 32s. Verified over all 35 then-enabled companies
+- ⬜ `P3-18` **Capgemini adapter** — `GET cg-jobstream-api.azurewebsites.net/api/job-search`. The
+  description comes in the list response, so one call per page and no detail fetch
+- ⬜ `P3-19` Greenhouse, Lever, Ashby and SmartRecruiters adapters over their public board feeds
+- ⬜ `P3-20` ATS detection from a pasted careers URL — host first, then the page's embed script;
+  stored on the `career_source` so it runs once per company
+- ✅ `P3-21` Filter on target title and location **before** any write. Reads the account's saved
+  Search targets (`P4-02`) per run; `SCRAPE_*` in `ai/.env` are only fallbacks
+- ✅ `P3-22` robots.txt checked inside every request, one identifying User-Agent, 2 requests per
+  host, backoff on 429 and transient 5xx. Every unclear robots answer reads as "no" — Workday
+  answers a JSON-accepting robots request with a 406, which a first draft read as permission
+- ⬜ `P3-23` JSON-LD `JobPosting` extractor for custom sites, with a sitemap or listing page to
+  find the detail URLs
+- ⬜ `P3-24` Playwright fallback: render → markdown → `POST /job-description` as `raw` →
+  `parse_description()` from `P3-14`
+- ✅ `P3-25` `POST /discovery/run` — every enabled source, answering new / duplicate / failed /
+  blocked per company. Lives on the AI tier's own server (`ai/api/`, `python -m api.main`, port
+  8001): it takes the dashboard's JWT, checks it against `getAccount`, and runs in the background
+  with `GET` for progress. One run at a time; the token is used for that run only. 7 tests
+- ⬜ `P3-26` Archive a job that has disappeared from its board since the last run
+- ✅ `P3-28` **Analyze.** `ai/agents/analysis.py` runs three isolated steps per job (HTML
+  conversion was dropped on 2026-09-26 — the job page renders the stored markdown itself):
+  experience / salary / work mode / job type
+  from the text (kept only if stated verbatim or backed by a word in the posting, and never over
+  a board-supplied value), the JD embedding (Voyage), and `rectify` — whose extracted labels are
+  also stored as the description's `requirements`. `POST`/`GET /api/analysis/run` on the AI
+  tier: chosen `jobIds` or the `newest` N in New, max 50, one run at a time; the dashboard
+  polls its status only while a run it started is going, never on page load. `JobUpdate` gained
+  the four detail fields. ~1 min and ~$0.001 per job. 12 tests
 
 **UI**
 - ✅ `P3-08` Job Search screen built (multi-field search + facets)
 - ✅ `P3-09` Shortlist / Match Review screen built
 - ✅ `P3-10` Job Details screen built
 - ⬜ `P3-11` Wire all three screens off `search.json` and onto the job API
+- 🟡 `P3-27` Settings: add a company by pasting its careers URL, showing the detected ATS; a
+  **Run discovery** button showing the last run's report. *The button and the live Sources rail
+  are built (`DiscoverySources`), replacing the fixture list; adding a company by URL waits on
+  `P3-20`*
+- ✅ `P3-29` Analyze on the Pipeline: an **Analyze N new jobs** button (10 per click) with
+  progress, and an Analyze / Re-analyze / Retry action on every card. The board reloads when a
+  run ends, so analyzed jobs move to Reviewed with their scores. Polling is shared with
+  discovery through `usePolledRun`
+- ✅ `P3-30` Pipeline cards cleaned up (2026-09-26): no match ring until a job is scored — a 0
+  meant "not started" and read as a bad match — and the per-card Analyze action removed. Opening
+  a job that was never scored starts its analysis once per visit; a failed run is left for the
+  job page's Analyze button. The header's **Analyze N new jobs** batch stays. *Analysis no longer
+  moves a job to Reviewed once `P4-13` lands — only shortlisting does*
 
 **Infrastructure**
 - ⬜ `P3-12` Redis + Celery for scheduling
@@ -220,6 +278,39 @@ filter to maintain. The cost is that it is **one-way** — the earlier design ke
 better extractor could be re-run over old rows, and that is no longer possible. A capture the
 converter mangles is recaptured by hand. `region` and `textLength` exist to make that visible.
 
+### Company career pages (planned 2026-09-24)
+
+**Read the JSON the page reads, not the HTML.** A branded careers site is usually a front end over
+an ATS or its own search API, and that API returns structured postings. Four tiers, cheapest
+first, and the LLM only in the last:
+
+| Tier | When | How | Tasks |
+|---|---|---|---|
+| 1. Known ATS | Hosted on, or embedding, Workday / Greenhouse / Lever / Ashby / SmartRecruiters | One adapter reused across every company on it | `P3-17`, `P3-19` |
+| 2. Company API | A branded site calling its own endpoint | Find it once in DevTools → Network, write a ~50-line adapter | `P3-18` |
+| 3. JSON-LD | Custom site with a `JobPosting` block | One plain fetch per detail page | `P3-23` |
+| 4. Render + parse | None of the above | Playwright, then the `P3-14` parser | `P3-24` |
+
+**Verified by hand on 2026-09-24; Workday built 2026-09-25** — progress per task is tracked in
+[docs/08](docs/08-Career-Page-Scraping.md).   Accenture's `accenture.com/careers` hands
+off to Workday; a Python search returned real postings with requisition ids (`R00334988`).
+accenture.com's robots.txt disallows `*/careers/jobsearch?`, so the adapter never touches that
+site; the Workday host allows `/AccentureCareers/`. Capgemini's search page reads
+`cg-jobstream-api` — 99 Python jobs in India, each with title, location, experience level, ref id,
+full description and apply URL. That API is undocumented and Capgemini's own, so it can change
+without notice; the fixture tests are how we find out.
+
+**Writes reuse what exists.** Tiers 1–3 know the fields, so each posting is `create_job`
+(`source: career_page`, `refId` from the board) → `create_description` → `link_description`,
+with no LLM. The dedup hash is `career_page|company|refId` — the company is in the seed because
+two Workday tenants can both issue `R0001` — so a daily re-run returns `duplicate: true` for
+anything already stored. Runs are triggered from the dashboard, which forwards the JWT — the AI
+tier holds no credentials, so the scheduled run in `P3-07` needs its own answer.
+
+**Scraping costs nothing.** The feeds are public and keyless, Playwright runs locally, and there
+is no scraping service, proxy or CAPTCHA solver in the plan. `P3-21`'s filter is what keeps the
+downstream cost down: Accenture alone lists thousands of openings.
+
 ---
 
 ## 5. Phase 4 — Applications & Settings
@@ -228,79 +319,263 @@ discovery.
 
 **API**
 - ✅ `P4-01` `application` module: stage, record fill, status transitions, answer bank
-- ⬜ `P4-02` **Rebuild a preferences store for Settings.** `profile.preferences` was removed
+- 🟡 `P4-02` **Rebuild a preferences store for Settings.** `profile.preferences` was removed
   on 2026-09-11, so target roles, locations, company preference and discovery schedule have
-  nowhere to live
+  nowhere to live. *Search targets built 2026-09-26: `preference` module, `GET`/`PUT
+  /api/preference`, one per account — `roles`, `locations`, `workMode`, `minExperience`; an
+  unsaved account reads back the defaults. Run discovery reads it at the start of each run and
+  echoes the filters it used; roles and locations filter, work mode and experience are kept for
+  matching. 7 tests. Company preference and the schedule are still open*
 - ⬜ `P4-03` Follow-up draft generation on an interval
 - ⬜ `P4-04` Google Sheet sync
+- ⬜ `P4-11` **`applications` becomes the per-user pipeline record.** A row exists from the
+  moment you shortlist: `status` gains `shortlisted` and `tailored` ahead of `staged`,
+  `resumeId` / `texPath` / `stagedAt` become nullable until a resume exists, `shortlistedAt` is
+  added, and `(userId, jobId)` becomes **unique**
+- ⬜ `P4-12` Shortlist endpoints: `POST /application/shortlist/{jobId}` creates the row at
+  `shortlisted` (a repeat returns the existing row); `DELETE /application/shortlist/{jobId}`
+  deletes it while it is still only shortlisted with no resume, and sets `withdrawn` once work
+  has started
+- ⬜ `P4-13` Move every per-user write off `jobs`: `match/service.py` stops setting
+  `status = reviewed` (a score alone moves nothing); `resume/service.py` upserts the application
+  to `tailored` with `resumeId` / `texPath` instead of setting the job's status; `stage` updates
+  that row to `staged` rather than inserting a second one
+- ⬜ `P4-14` Remove `status` and `shortlisted` from `Job`, `JobUpdate` and `JobRead`; replace the
+  `(status, discoveredAt)` index with `discoveredAt desc`; drop the `status` / `shortlisted`
+  filters from `listJobs`. `P3-26`'s archiving gets its own listing field (`closedAt`) when built
+- ⬜ `P4-15` Board reads: `GET /application/counts` — per status for the signed-in user, plus
+  `new` = jobs with no application of theirs; New lists `jobs` excluding the user's application
+  `jobId`s; every other column lists applications by status, joined to their jobs by id
+- ⬜ `P4-16` Migration `server/migrate_pipeline_to_applications.py`, dry-run by default: an
+  application for each job that is shortlisted or past `new`, for the existing account, then
+  `$unset` both fields from `jobs`
+- ⬜ `P4-17` Tests: shortlisting creates one row and a repeat is a no-op; a second account still
+  sees the job in New; unshortlist deletes vs withdraws; tailoring an unshortlisted job upserts
+  its row at `tailored`
 
 **UI**
 - ✅ `P4-05` Staged Applications screen built
 - ✅ `P4-06` Pipeline board built
 - ✅ `P4-07` "Pending your review" banner built
 - ✅ `P4-08` Settings screen built
-- ⬜ `P4-09` Wire all three screens onto the application API and real counts
-- ⬜ `P4-10` Wire the Settings screen onto that store, once it exists
+- 🟡 `P4-09` Wire all three screens onto the application API and real counts. *Pipeline board
+  done 2026-09-26: counts from `GET /api/job/counts`, each column's newest jobs with scores from
+  one `GET /api/match/summaries`, Interview read from applications, and the review banner from
+  `GET /api/match/pending`, whose new `nextJobId` is what Select keywords opens. The board's
+  columns left `board.json`; its `pending` stays for the other screens' badges. Staged
+  Applications and the banner's own screen are still open*
+- 🟡 `P4-10` Wire the Settings screen onto that store, once it exists. *Search targets is an
+  editable form with Save. Company preference and Applications were taken off the screen on
+  2026-09-26 as not needed; a Last run panel shows when discovery was triggered and what it found*
+- ⬜ `P4-18` Shortlist button on the `P4-12` endpoints; Job details reads "shortlisted" from the
+  user's application, not from the job
+- ⬜ `P4-19` Pipeline columns from `P4-15`: New = no application, Reviewed = `shortlisted`,
+  Tailored = `tailored` / `staged`, Applied = `applied` / `viewed`, Interview = `interview`
+- ⬜ `P4-20` The Shortlist screen and the sidebar's shortlisted badge read `shortlisted`
+  applications
 
 **The preferences store is new work, not a wiring job** — that screen has no backend at all today.
+
+### Decisions (2026-09-26)
+
+**A posting belongs to nobody; what you did about it is yours.** `jobs` is a shared catalogue,
+so a per-user fact on it — `status`, `shortlisted` — leaks: one account analyzing or
+shortlisting a job moved it for every account. Where you stand with a job now lives in your
+`applications` row, which exists from the moment you shortlist ("I've started working on this
+job"). `jobs` is written only by discovery and analysis of the listing itself. The ER diagram
+was updated first; `P4-11`…`P4-20` implement it.
+
+**Unshortlisting deletes only an untouched row.** While the row is still `shortlisted` with no
+resume, removing it returns the job to New with nothing left behind. Once a resume or a staged
+application hangs off it, the row is kept as `withdrawn`.
 
 ---
 
 ## 6. Phase 5 — LLM integration & resume rectification
-⬜ **not started.** The first intelligence in the product, called directly from the API. Still no
-agents and no orchestration — deliberately, so a wrong answer stays debuggable.
+✅ **done.** The first intelligence in the product, called by hand from the AI tier. No agents and
+no orchestration yet — deliberately, so a wrong answer stays debuggable.
+
+`ai/` holds `config/` (settings + the one LLM client), `agents/matching.py`, `agents/tailoring.py`,
+`mcp_servers/jobpilot_api/` and `tests/`. It imports nothing from `server` and reaches it over HTTP.
 
 **API**
 - ✅ `P5-01` `match` module: write score and keywords, record the user's selection
 - ✅ `P5-02` `resume` module: versioned `.tex` + selection set, rejects unselected keywords
-- ⬜ `P5-03` Structured keyword extraction from a JD
-- ⬜ `P5-04` Present / Missing keyword diff against the profile
-- ⬜ `P5-05` Risk-flag detection (seniority mismatch and similar)
-- ⬜ `P5-06` Embed the JD, `$vectorSearch`, compute a match score *(needs Atlas, below)*
-- ⬜ `P5-07` Incorporate **only** the keywords the user ticked
-- ✅ `P5-08` Version each `.tex` per job id: `version` on `resumes`, unique per
-  `(job_id, version)`, incremented from the latest on every store
+- ✅ `P5-03` Schema-constrained keyword extraction from a JD. A requirement whose quote is not in
+  the JD is dropped rather than invented, and `mentions` is counted from the text. Added
+  `GET /api/job/getJobDescription/{id}`
+- ✅ `P5-04` Present / Missing diff against the **whole** profile. An "already have it" verdict
+  with no evidence in the profile falls back to Missing — the safe direction to be wrong in
+- ✅ `P5-05` Risk flags — seniority mismatch and similar. Surfaced, never selectable
+- ✅ `P5-06` **Built differently from the task as written, deliberately:**
+  - Score stays `coverage_score`. A JD↔resume cosine lands in one narrow band for every job in a
+    field, and cannot be explained to someone asking why a job scored 62
+  - No `$vectorSearch` here: the corpus is one resume, 25–40 spans, and the diff reads all of it
+  - Embeddings bought `flag_near_misses` instead — a requirement the JD calls "agentic
+    orchestration" and the profile calls "LangGraph multi-agent pipeline". Advisory: the keyword
+    stays Missing and stays selectable
+  - Voyage `voyage-4-lite`, ~900 tokens and ~$0.000018 per job. The one call carrying profile text
+    off the machine, which is why NFR-3 reads "all generation is local" rather than absolute
+  - ✅ **`near_miss_threshold` calibrated 2026-09-19 — and the old value was silently fatal.**
+    At 0.70 nothing ever fired: on `voyage-4-lite` a true near-miss scores ~0.48, so the feature
+    had never produced a single hint. Measured over 14 labels against 6 profile spans, related
+    landed 0.368–0.544 and unrelated 0.219–0.324 — **the bands separate**, which bge-small never
+    managed at any threshold. Set to **0.35**, above the midpoint because a missed hint costs
+    nothing and a wrong one invites a claim the user cannot back. The sample is representative,
+    not exhaustive; re-measure if the embedding model changes
+  - ~~Known waste: profile spans are re-embedded per job~~ — **closed by `P6-04`** (2026-09-19).
+    The spans now come from the stored chunks, which change when the profile does
+- ✅ `P5-07` Incorporate **only** ticked keywords. The `.tex` never reaches the model — it gets the
+  current role and skill groups as data and answers with *placement*, which `tailoring.py` folds in
+  line by line. No word may enter but the keyword and plain connectives, so a new metric, employer
+  or tool is refused. A keyword with no honest home is declined and reported
+- ✅ `P5-08` Version each `.tex` per job id, unique per `(jobId, version)`
 
 **UI**
-- ✅ `P5-09` Keyword Selection screen built, starting with nothing checked (FR-2.5)
-- ⬜ `P5-10` Wire it onto real match data instead of `matches.json`
+- ✅ `P5-09` Keyword Selection screen, starting with nothing checked (FR-2.5)
+- ✅ `P5-10` Wired onto real match data — `getJob` + `getMatch` + `getShellCounts`, the two buttons
+  resolving the interrupt. An unscored job says so; a reopened match starts unchecked again
 
 **Infrastructure**
-- ⬜ `P5-11` Pick and validate a local LLM; confirm tool-calling reliability
-- ⬜ `P5-12` Atlas free tier + `$vectorSearch` index. *Not partial any more: the local
-  chunk store this counted as half-done was removed on 2026-09-11, so nothing vector
-  exists on either side*
+- ✅ `P5-11` **Validated against the hosted model, which is now the only one.**
+  `Qwen/Qwen3-32B:nscale` on the HF router honours `strict: true` on every pipeline shape —
+  checked 2026-09-19 against `Extraction`, `Diff`, `RiskReport` and `PlacementPlan`, the
+  nested-array schemas being where a provider usually drops it. Quotes came back verbatim and
+  the diff stayed conservative. **Ollama was dropped the same day**, so the local half of the
+  pair is not pending work — `qwen3:14b` was never run and never will be.
+  ⏱️ **Latency, measured:** 12–19s per call on nscale, so a full `rectify()` is ~45–60s a job.
+  Fine by hand, worth knowing before `P8-01` schedules it in bulk
+- ✅ `P5-12` `$vectorSearch` index on `job_descriptions.embedding` — 1024 dimensions (the
+  `voyage-4-lite` default), cosine, with `userId` as a filter field so a search scopes to one
+  account. Created by `server/migrate_job_descriptions.py`, which also moved `captures` across
 
 **Guardrail**
-- ⬜ `P5-13` No-fabrication test cases
+- ✅ `P5-13` No-fabrication tests — 12 in `server/tests/` against a throwaway database, 32 in
+  `ai/tests/`. A resume cannot be stored before the gate is answered, a skip is not a selection, a
+  re-score reopens the gate, and a rewrite inventing a metric or employer is declined
 
-**The guardrail is the point of this phase.** Tailoring from ticked keywords only, and the tests
-proving it, are what make "no fabrication" real rather than aspirational — and neither can be
-claimed while the API has no test suite.
+### Decisions (2026-09-18)
+
+**One OpenAI-compatible path.** `config/llm.py` is a single `generate(prompt, schema)` over
+`httpx`. Pointing it elsewhere is three environment values, not a provider abstraction:
+
+| | value |
+|---|---|
+| `LLM_BASE_URL` | `https://router.huggingface.co/v1` |
+| `LLM_API_KEY` | `${HF_TOKEN}` |
+| `LLM_MODEL` | `Qwen/Qwen3-32B:nscale` |
+
+**Pin the provider** (`:nscale`) — `strict: true` support varies between them, and an unpinned
+router drops it silently, which surfaces as intermittent parse failures rather than as a
+configuration error. Disable thinking mode.
+
+**Ollama was dropped on 2026-09-19.** The plan had been local-for-development and hosted-for-real,
+with Ollama as the offline fallback. It was never installed on the working machine, so the local
+half was validated only once, on `llama3.2:latest`, and never on the `qwen3:14b` the plan named.
+Keeping an untested fallback in the docs was worth less than saying plainly that there is one path.
+
+**Context discipline — what each step may see:**
+
+| Step | Sees | Tokens |
+|---|---|---|
+| `P5-03` extraction | JD + schema | ~1,200 |
+| `P5-04` diff | **the whole profile** | ~2,600 |
+| `P5-05` risk flags | JD + profile summary | ~1,500 |
+| `P5-07` tailoring | **current role + skills, no LaTeX** | ~1,300 |
+
+`P5-04` stays wide on purpose: RASA sits in the LTI role and Angular.js in Mphasis, so a diff seeing
+only the current role would mark both Missing and invite the user to add what they already have.
+
+Of `base_resume.tex`, only the skills table (350 tokens) and the current role (447) are mutable —
+797 of a 2,284-token body. The model never sees the preamble, education, certifications or the six
+closed-out roles, so it cannot alter them. A guardrail as much as an economy.
+
+**Cost** ~$0.00096/job, ~$0.10 per hundred. **Provenance:** `Match.modelName` records source and
+model; scores from different models are not comparable.
+
+**Now settled, and it went the other way.** Hosted inference contradicts SRS NFR-3 and invariant 3,
+which say all inference is local. That was deferred while Ollama was still the default; with Ollama
+gone it is simply true that **every JD, profile span and resume line in a prompt leaves the
+machine**. README §"All generation runs locally", SRS NFR-3 and doc 03's Ollama/vLLM compute
+section are now wrong and need amending — this is a privacy claim, not a nicety.
 
 ---
 
 ## 7. Phase 6 — RAG & retrieval
-⬜ **not started.** Tailoring and scoring should work against what your resume actually says, not
-against the whole document stuffed into a prompt. This is the retrieval layer that makes that true.
+✅ **done.** Scoring now works against what your resume actually says rather than against the whole
+document re-embedded for every job. The server cuts the profile into chunks and searches them; the
+AI tier embeds them and reranks what comes back. Nothing here reaches a database: `$vectorSearch`
+runs on `server`, because the AI tier holds no URI and no credentials.
 
 **API**
-- ⬜ `P6-01` RAG second hop: `resume_chunk_text` and the local text fetch by `chunk_id`
-  *(this existed and was removed on 2026-09-11; it comes back here)*
-- ⬜ `P6-02` Chunk the profile into retrievable units, section by section
-- ⬜ `P6-03` Re-index on profile edit, so retrieval never serves stale text
+- ✅ `P6-01` `resume_chunks` — chunk text and its vector on one document, per user. `contentHash`
+  is `section|text`, which is what makes a re-index cheap: a chunk whose text survived keeps the
+  vector it already had
+- ✅ `P6-02` `modules/profile/chunking.py` — one bullet, one skill, one credential each. A skill
+  group becomes one chunk per item, not one per group: embedding "Python, TypeScript, Go, SQL" as
+  a unit returns all four whenever a posting asks for any one of them. Chunking lives in the
+  profile module and the store in `resume_chunk`, so the dependency points one way
+- ✅ `P6-03` Re-index on profile edit — all fourteen mutations end in `profile.service.reindex`,
+  plus `POST /api/profile/reindex` for the panel's button. **Stale is not a state retrieval can
+  reach:** an edited chunk is rewritten with no vector, and a chunk with no vector is invisible to
+  `$vectorSearch`. The window between an edit and the next embedding run serves nothing rather
+  than serving what the user just replaced
 
 **AI tier**
-- ⬜ `P6-04` Embed chunks and store vectors in Atlas — **ids and vectors only, never prose**
-- ⬜ `P6-05` Two-stage retrieval: `$vectorSearch` top ~50 → fetch text from `server` → rerank
-  → top ~5
+- ✅ `P6-04` `rag/indexing.py` — embed everything still pending and store the vectors in one
+  request. Chunks go up as `document`, matching `P5-06`. `rectify` calls it before scoring, which
+  costs one GET when nothing changed and means no run depends on somebody having remembered to
+  index first
+- ✅ `P6-05` `rag/retrieval.py` — `$vectorSearch` top 50 → `rerank-2.5-lite` → top 5. Two models
+  doing two different jobs: `voyage-4-lite` is a bi-encoder and scored every chunk without ever
+  seeing the query, which is what makes the index possible and what limits how well it can rank;
+  the reranker reads query and chunk together and is far too expensive to run over everything.
+  ~2k tokens a query, well under a hundredth of a cent — noise next to the ~$0.001 a job the LLM
+  costs. The reranker is skipped when there are fewer candidates than the answer asked for
 
 **Infrastructure**
-- ⬜ `P6-06` Atlas free tier + `$vectorSearch` index, dimension matching the embedding model
+- ✅ `P6-06` `chunk_embedding_index` on `resume_chunks.embedding` — 1024 dimensions, cosine, with
+  `userId` as a **filter field in the index definition**, not a `$match` after it: an approximate
+  search filtered afterwards comes back short, or empty. `_ensure_vector_index` now takes a
+  collection, so it covers this and `P5-12`'s
 
-**The split store is the point.** Atlas holds vectors and `chunk_id`s; the text stays in local
-MongoDB. That is why retrieval needs two hops, and why the chunk store is a prerequisite rather
-than an optimisation.
+**UI**
+- ✅ `P6-07` "Indexed for retrieval" now reads the index. Real chunk count, a working **Re-index
+  now**, and `pending` shown as its own number rather than folded into the total — the button
+  re-cuts the text but cannot embed it, and a chunk without a vector is not retrievable yet.
+  Saying otherwise would be a claim about the index that is not true. `profile.json` is down to
+  `resumeFile` on that screen
+
+**Guardrail**
+- ✅ `P6-08` 15 tests in `server/tests/test_retrieval.py`, 11 in `ai/tests/test_retrieval.py`. A
+  vector cannot be written onto another user's chunk; a batch naming a chunk a re-index deleted is
+  refused whole rather than applied in part; an edited bullet loses its vector and an untouched one
+  keeps it. `$vectorSearch` itself is not exercised — it is an Atlas Search stage and the server
+  suite is forced at a local MongoDB on purpose
+
+### Decisions (2026-09-19)
+
+**One store, one hop.** The earlier design split vectors into Atlas and kept text in a local
+MongoDB, which is why this phase used to need two hops and a `chunk_id` join. Everything is one
+Atlas cluster, so a chunk carries its own text and a search returns it.
+
+**`P5-06`'s known waste is closed.** `flag_near_misses` re-embedded every profile span for every
+job. It now reads the stored chunks — the profile changes when the user edits it, not when a new
+posting turns up. The near-miss path deliberately **does not rerank**: `NEAR_MISS_THRESHOLD` is a
+cosine calibrated against `voyage-4-lite`, and a cross-encoder's relevance score sits on a
+different scale, so feeding one to that comparison would invalidate the calibration without
+failing anything. For the same reason the server converts Atlas's `(1 + cosine) / 2` back to a
+true cosine before answering, and a `Span` records which of the two scales its score is on.
+
+**`P5-04` was left alone.** The diff still reads the whole profile. Feeding it the top five chunks
+would drop a skill from a six-year-old role out of the window and report it Missing — the failure
+that task exists to prevent. Retrieval is a capability this phase delivers; it is not a narrower
+context for a step that was widened on purpose.
+
+**Chunk boundaries are load-bearing.** They are the spans `NEAR_MISS_THRESHOLD` was measured
+against, so text goes into a chunk raw and its context is carried alongside in `sourceRef` rather
+than glued onto the front. Prefixing every bullet with its role would shift every cosine the
+threshold compares.
 
 ---
 
@@ -362,8 +637,9 @@ Both remaining tasks need an LLM, so they wait on Phases 6–8.
   form box, `profile.location` is a resume line, and only one of them belongs in each
 
 - ✅ `P9-12` **Capture button.** One button in the popup below "Fill this form": it stores the
-  current career page against your account via `P3-13`. Reuses `ensureInjected()` in
-  `background.ts`, which already falls back to `chrome.scripting.executeScript` for any page
+  current career page against your account via `P3-13`, now `POST /job-description`. Reuses
+  `ensureInjected()` in `background.ts`, which already falls back to
+  `chrome.scripting.executeScript` for any page
   outside the four declared boards — so **no manifest change**. `activeTab` is conferred by the
   user opening the popup, which is the same gesture that starts the capture; `<all_urls>` would
   buy nothing here and cost the "read all your data on all websites" install warning
@@ -374,7 +650,7 @@ Both remaining tasks need an LLM, so they wait on Phases 6–8.
   `related`/`cookie`/`share`-class blocks holding under 40% of the text) is removed from the
   *clone*, links are resolved against `document.baseURI`, and images and form controls are
   dropped. 400k-char ceiling on both sides: the extension refuses first with the measured size,
-  `CaptureCreate.markdown` carries `max_length` as the backstop
+  `JobDescriptionCreate.jdText` carries `max_length` as the backstop
 - ✅ `P9-14` Capture from frame 0 only, and **not** through `broadcast()`/`merge()` — those are
   fill-shaped and typed to `FrameResult`. The `capture` arm widened the content listener's
   reply type to `Reply<FrameResult | CapturePayload | null>`, which `npm run typecheck`
@@ -404,7 +680,7 @@ reaches it, which is `P4-10`'s neighbour rather than part of this phase.
 posting rendered inside one stores a near-empty shell; the same is true of a posting in a
 cross-origin iframe, since `P9-14` reads frame 0 only. An SPA that has not painted yet captures
 whatever *has*. A sign-in wall captures cleanly and looks like a success. All four share one tell —
-`textLength` near zero — which is why it is a stored column and why `CaptureRead` carries it while
+`textLength` near zero — which is why it is a stored column and why `JobDescriptionRead` carries it while
 dropping the text itself. `region: "body"` is the second tell: it means no rule was confident.
 Unlike the HTML design this replaced, none of these are repairable by re-running a better extractor
 later — the markup is not kept. They are recaptured by hand.
@@ -463,8 +739,8 @@ used against real job applications — nothing above is verified by anything tha
 
 ## 14. Implementation status
 
-The dashboard UI was built ahead of the backend. `server/` is now built — eight modules, 51
-endpoints, 13 collections, every one of them behind a bearer token. Sign-in and My Details run
+The dashboard UI was built ahead of the backend. `server/` is now built — eight modules, 63
+endpoints, 15 collections, every one of them behind a bearer token. Sign-in and My Details run
 against it end to end and hold real data; **the other eight screens still render from a JSON
 fixture** in `app/web/src/data/`. No story meets the §10 Definition of Done, because the §15
 test-case requirement is unmet everywhere: `server/` has no tests and there is no CI.
@@ -473,19 +749,22 @@ Audited against the codebase on 2026-09-13; Phase 2 re-audited 2026-09-14, and a
 2026-09-17 for `P2-07`, `P2-08` and `P2-12`. Counts predate the Phase 2 additions
 (`P2-13`…`P2-17`) and the two download endpoints, and are due a recount.
 
-`ai/` and the Chrome extension do not exist yet, so nothing agentic runs.
+`ai/` exists as of 2026-09-18 but holds no graph: Phase 5's two capabilities are called by hand, so
+nothing agentic runs yet. The Chrome extension is built (Phase 9).
 
 | Built | Backed by |
 |---|---|
-| Pipeline board · Shortlist · Staged Applications · Job Search · Job Details · Settings | `board.json` `search.json` `applications.json` `settings.json` |
+| Shortlist · Staged Applications · Job Search · Job Details | `search.json` `applications.json`; every screen's sidebar badges still read `board.json` |
+| **Pipeline board — stat cards, five columns, review banner, sidebar badges** | **live — `GET /api/job/counts`, `GET /api/job?status=`, `GET /api/match/summaries`, `GET /api/match/pending`, `GET /api/application?status=`. A card opens Job Details, which is still fixture data (`P3-11`)** |
 | Keyword Selection — starts with nothing checked, per FR-2.5 | `matches.json` |
 | Resume Preview — Preview / Diff / Source tabs, `.tex` download | `resume.json` + `templates/base_resume.tex` |
 | **Login · Signup · sign-out · route guard** | **live — `POST /api/account/{signup,login}`, JWT in `sessionStorage`, mirrored into Redux** |
-| **My Details — identity, experience, education, skills, certifications** | **live — `getAccount` + the five profile endpoints on load, one Save writes them all back. Only the "Indexed for retrieval" panel still reads `profile.json`; chunking is Phase 6** |
+| **My Details — identity, experience, education, skills, certifications** | **live — `getAccount` + the five profile endpoints on load, one Save writes them all back. The "Indexed for retrieval" panel is live too — `GET /api/resume-chunk/stats` and `POST /api/profile/reindex`. `profile.json` is down to `resumeFile` on this screen** |
 | **Resume — template picker, render, submit as default** | **live — `GET /api/template`, `GET /api/template/render/{id}`, `PUT /api/resume/base`** |
 | **Resume review — stored resume, Regenerate, `.tex` and PDF download** | **live — `GET /api/resume/base`, `GET /api/resume/base/pdf` (pdflatex). The chat panel beside it is layout only** |
+| **Settings — Search targets, Last run, Sources, Models & privacy** | **live — `GET`/`PUT /api/preference` and `GET`/`PATCH /api/career-source` on the API; `POST`/`GET /api/discovery/run` and `GET /api/settings` on the AI tier (port 8001). Company preference, Applications and the old Discovery panel were removed on 2026-09-26; `settings.json` is gone** |
 
-**Five deviations from this document, recorded deliberately:**
+**Six deviations from this document, recorded deliberately:**
 
 1. **Next.js, not Streamlit/Gradio.** The original plan named Streamlit or Gradio and
    deferred a React frontend to v2. The dashboard was built directly in Next.js + Tailwind, matching
@@ -505,9 +784,14 @@ Audited against the codebase on 2026-09-13; Phase 2 re-audited 2026-09-14, and a
    to `/login` without one. **Those three documents are now wrong and need amending** — the decision
    went the other way. Reopened as in scope.
 4. **`profile.preferences` and `resume_chunk_text` were removed** (2026-09-11) to keep the profile
-   module focused on resume material. The Settings screen therefore has no backend, and the RAG
-   second hop no longer exists — it is rebuilt in Phase 6. Doc 06 and doc 03
-   still describe both.
+   module focused on resume material. The Settings screen therefore has no backend. Chunked
+   retrieval was rebuilt in Phase 6 on 2026-09-19, as `resume_chunks` — one collection carrying
+   both the text and its vector, not the local/Atlas pair doc 06 and doc 03 still describe.
+6. **One store, not two.** The design split structural data into a local MongoDB and vectors into
+   Atlas, with `job_id` and `chunk_id` crossing the boundary. As of 2026-09-19 everything is one
+   Atlas cluster: `captures` became `job_descriptions`, which carries its own `embedding`, and
+   `events` was dropped for having no writer. Doc 06 and its ER diagram were redrawn; doc 03 was
+   not.
 5. **The profile is five collections, not one embedded document.** `profile`, `work_experience`,
    `education`, `skills` and `certifications`, each keyed by `userId` = `accounts._id`. Doc 06
    describes the earlier single-document shape.

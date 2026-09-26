@@ -4,6 +4,7 @@ from beanie import PydanticObjectId
 
 from config.errors import Conflict, NotFound
 from modules.account import Account
+from modules.profile.chunking import chunk_profile
 from modules.profile.models import (
     Certification,
     CertificationFields,
@@ -23,6 +24,7 @@ from modules.profile.models import (
     SkillRead,
     UserProfile,
 )
+from modules.resume_chunk import IndexStats, replace_chunks
 
 
 class ProfileNotFound(NotFound):
@@ -122,6 +124,17 @@ async def get_user_profile(user_id: PydanticObjectId) -> UserProfile:
     )
 
 
+async def reindex(user_id: PydanticObjectId) -> IndexStats:
+    """Rebuild this user's retrieval chunks from what My Details now says. (P6-03)
+
+    Every edit below ends here. Re-chunking is string work over one aggregation, so
+    an edit pays milliseconds for it; embedding is the half that costs, and that is
+    the AI tier's. Until it runs, text the user just changed has no vector and so
+    cannot come back from a search — stale is not a state retrieval can reach.
+    """
+    return await replace_chunks(user_id, chunk_profile(await get_user_profile(user_id)))
+
+
 async def create_profile(user_id: PydanticObjectId, payload: ProfileFields) -> Profile:
     # `userId` is `accounts._id` — the account module is what issues the login token,
     # so a profile hangs off the same identity the browser signed in as.
@@ -132,6 +145,7 @@ async def create_profile(user_id: PydanticObjectId, payload: ProfileFields) -> P
 
     profile = Profile(userId=user_id, **payload.model_dump())
     await profile.insert()
+    await reindex(user_id)
     return profile
 
 
@@ -141,6 +155,7 @@ async def update_profile(user_id: PydanticObjectId, payload: ProfileUpdate) -> P
         setattr(profile, field, value)
     profile.updatedAt = datetime.now(UTC)
     await profile.save()
+    await reindex(user_id)
     return profile
 
 
@@ -156,6 +171,7 @@ async def list_experience(user_id: PydanticObjectId) -> list[Experience]:
 async def add_experience(user_id: PydanticObjectId, payload: ExperienceFields) -> Experience:
     entry = Experience(userId=user_id, **payload.model_dump())
     await entry.insert()
+    await reindex(user_id)
     return entry
 
 
@@ -170,6 +186,7 @@ async def replace_experience(
         setattr(entry, field, value)
     entry.updatedAt = datetime.now(UTC)
     await entry.save()
+    await reindex(user_id)
     return entry
 
 
@@ -178,6 +195,7 @@ async def remove_experience(user_id: PydanticObjectId, entry_id: PydanticObjectI
     if entry is None:
         raise ExperienceNotFound(entry_id)
     await entry.delete()
+    await reindex(user_id)
 
 
 # --- education ---------------------------------------------------------------
@@ -190,6 +208,7 @@ async def list_education(user_id: PydanticObjectId) -> list[Education]:
 async def add_education(user_id: PydanticObjectId, payload: EducationFields) -> Education:
     entry = Education(userId=user_id, **payload.model_dump())
     await entry.insert()
+    await reindex(user_id)
     return entry
 
 
@@ -204,6 +223,7 @@ async def replace_education(
         setattr(entry, field, value)
     entry.updatedAt = datetime.now(UTC)
     await entry.save()
+    await reindex(user_id)
     return entry
 
 
@@ -212,6 +232,7 @@ async def remove_education(user_id: PydanticObjectId, entry_id: PydanticObjectId
     if entry is None:
         raise EducationNotFound(entry_id)
     await entry.delete()
+    await reindex(user_id)
 
 
 # --- skills ------------------------------------------------------------------
@@ -224,6 +245,7 @@ async def list_skills(user_id: PydanticObjectId) -> list[Skill]:
 async def add_skill(user_id: PydanticObjectId, payload: SkillFields) -> Skill:
     entry = Skill(userId=user_id, **payload.model_dump())
     await entry.insert()
+    await reindex(user_id)
     return entry
 
 
@@ -238,6 +260,7 @@ async def replace_skill(
         setattr(entry, field, value)
     entry.updatedAt = datetime.now(UTC)
     await entry.save()
+    await reindex(user_id)
     return entry
 
 
@@ -246,6 +269,7 @@ async def remove_skill(user_id: PydanticObjectId, entry_id: PydanticObjectId) ->
     if entry is None:
         raise SkillNotFound(entry_id)
     await entry.delete()
+    await reindex(user_id)
 
 
 # --- certifications ----------------------------------------------------------
@@ -260,6 +284,7 @@ async def add_certification(
 ) -> Certification:
     entry = Certification(userId=user_id, **payload.model_dump())
     await entry.insert()
+    await reindex(user_id)
     return entry
 
 
@@ -274,6 +299,7 @@ async def replace_certification(
         setattr(entry, field, value)
     entry.updatedAt = datetime.now(UTC)
     await entry.save()
+    await reindex(user_id)
     return entry
 
 
@@ -282,6 +308,7 @@ async def remove_certification(user_id: PydanticObjectId, entry_id: PydanticObje
     if entry is None:
         raise CertificationNotFound(entry_id)
     await entry.delete()
+    await reindex(user_id)
 
 
 # --- everything at once ------------------------------------------------------

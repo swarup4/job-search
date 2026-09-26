@@ -293,7 +293,10 @@ $ring-sizes: (
 
     &__track {
       fill: none;
-      stroke: var(--border);
+      // --border is near-white and vanishes at 3px once no arc covers it — an unscored
+      // 0 would show no ring at all. Mixed from the muted text colour so it holds up
+      // in dark mode too.
+      stroke: color-mix(in oklch, var(--muted-foreground) 30%, var(--card));
     }
 
     &__value {
@@ -331,6 +334,45 @@ $ring-sizes: (
         .match-score__pct { font-size: map.get($cfg, label) * 0.62; }
       }
     }
+  }
+
+  // A job description rendered from markdown. Elements arrive bare from markdown-it,
+  // so they are styled by tag here — the look of the designed Role summary and
+  // Responsibilities panels, applied to whatever headings and lists a posting has.
+  .jd-body {
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--muted-foreground);
+    overflow-wrap: anywhere;
+
+    > :first-child { margin-top: 0; }
+    > :last-child { margin-bottom: 0; }
+
+    h1, h2, h3, h4 {
+      margin: 1.4em 0 0.5em;
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1.35;
+      color: var(--foreground);
+    }
+
+    p { margin: 0 0 0.85em; }
+
+    ul, ol {
+      margin: 0 0 1em;
+      padding-left: 1.25em;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4em;
+    }
+    ul { list-style: disc; }
+    ol { list-style: decimal; }
+    li::marker { color: var(--primary); }
+
+    strong { font-weight: 600; color: var(--foreground); }
+    a { color: var(--primary); text-decoration: underline; text-underline-offset: 2px; }
+    hr { margin: 1.25em 0; border: 0; border-top: 1px solid var(--border); }
+    code { font-family: var(--font-mono, monospace); font-size: 0.92em; }
   }
 
   // ::backdrop is unreachable from a utility class, hence the styles here.

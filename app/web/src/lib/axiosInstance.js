@@ -14,8 +14,20 @@ import { clearSession, readRefreshToken, readToken, writeTokens } from "@/lib/se
  */
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000/api";
 
+/**
+ * The AI tier's own server, for the few things the dashboard starts by hand (Run
+ * discovery). It acts with the same token, so it gets the same interceptors.
+ */
+export const AI_URL = process.env.NEXT_PUBLIC_AI_URL ?? "http://127.0.0.1:8001/api";
+
 export const axiosInstance = axios.create({
     baseURL: API_URL,
+    timeout: 15000,
+    headers: { "Content-Type": "application/json" },
+});
+
+export const aiInstance = axios.create({
+    baseURL: AI_URL,
     timeout: 15000,
     headers: { "Content-Type": "application/json" },
 });
@@ -57,14 +69,14 @@ function messageFrom(error) {
     if (error.code === "ECONNABORTED") return "The API did not respond in time.";
     if (error.response) return `The API returned ${error.response.status}.`;
 
-    return `Cannot reach the API at ${API_URL}. Is the server running?`;
+    return `Cannot reach the API at ${error.config?.baseURL ?? API_URL}. Is the server running?`;
 }
 
-axiosInstance.interceptors.request.use((config) => {
+function attachToken(config) {
     const token = readToken();
     if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
-});
+}
 
 /**
  * A 401 the refresh could not rescue: the session is genuinely over. Dropping it
@@ -120,47 +132,54 @@ function refreshAccessToken() {
     return refreshing;
 }
 
-axiosInstance.interceptors.response.use(
-    (response) => response.data,
-    async (error) => {
-        const request = error.config;
-        const canRetry =
-            error.response?.status === 401 &&
-            request &&
-            !request._retried &&
-            !request.url?.endsWith(REFRESH_PATH);
+/** Unwraps data on success; on failure, refreshes once and replays on the same instance. */
+function handleResponses(instance) {
+    instance.interceptors.request.use(attachToken);
+    instance.interceptors.response.use(
+        (response) => response.data,
+        async (error) => {
+            const request = error.config;
+            const canRetry =
+                error.response?.status === 401 &&
+                request &&
+                !request._retried &&
+                !request.url?.endsWith(REFRESH_PATH);
 
-        if (canRetry) {
-            request._retried = true;
-            const token = await refreshAccessToken();
-            if (token) {
-                request.headers.Authorization = `Bearer ${token}`;
-                return axiosInstance(request);
+            if (canRetry) {
+                request._retried = true;
+                const token = await refreshAccessToken();
+                if (token) {
+                    request.headers.Authorization = `Bearer ${token}`;
+                    return instance(request);
+                }
             }
-        }
 
-        handleExpiry(error.response?.status);
+            handleExpiry(error.response?.status);
 
-        // A `responseType: "blob"` request gets a Blob back even when the server
-        // answered with a JSON error, so the detail has to be read out of it before
-        // `messageFrom` can find it.
-        if (error.response?.data instanceof Blob && error.response.data.type.includes("json")) {
-            try {
-                error.response.data = JSON.parse(await error.response.data.text());
-            } catch {
-                // Not JSON after all — messageFrom falls back to the status.
+            // A `responseType: "blob"` request gets a Blob back even when the server
+            // answered with a JSON error, so the detail has to be read out of it before
+            // `messageFrom` can find it.
+            if (error.response?.data instanceof Blob && error.response.data.type.includes("json")) {
+                try {
+                    error.response.data = JSON.parse(await error.response.data.text());
+                } catch {
+                    // Not JSON after all — messageFrom falls back to the status.
+                }
             }
-        }
 
-        return Promise.reject(
-            new ApiError(messageFrom(error), {
-                status: error.response?.status ?? null,
-                url: error.config?.url ?? null,
-                cause: error,
-            })
-        );
-    }
-);
+            return Promise.reject(
+                new ApiError(messageFrom(error), {
+                    status: error.response?.status ?? null,
+                    url: error.config?.url ?? null,
+                    cause: error,
+                })
+            );
+        }
+    );
+}
+
+handleResponses(axiosInstance);
+handleResponses(aiInstance);
 
 /**
  * For reads whose absence is a normal state rather than a failure — no profile

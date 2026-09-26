@@ -28,6 +28,9 @@ class MissingKeyword(BaseModel):
     label: str
     mentions: int = 1
     evidence: str
+    # A profile span the agent read as this requirement in other words. Advisory: the
+    # keyword stays missing and stays selectable, so FR-2.5 is untouched.
+    nearMiss: str | None = None
 
 
 class RiskFlag(BaseModel):
@@ -111,3 +114,15 @@ class PendingCounts(BaseModel):
     """Feeds the board's "⚠ Pending your review" banner."""
 
     keywordSelections: int
+    # The longest-waiting job at the keyword gate, which "Select keywords" opens.
+    nextJobId: PydanticObjectId | None = None
+
+
+class MatchSummary(BaseModel):
+    """What a board card shows about a match, without the keyword lists behind it."""
+
+    jobId: PydanticObjectId
+    score: int
+    reviewState: ReviewState
+    # The first risk flag's title, if any — a card has room for one.
+    risk: str | None = None

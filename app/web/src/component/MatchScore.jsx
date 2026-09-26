@@ -29,15 +29,18 @@ export function MatchScore({ value, size = "md" }) {
           r={r}
           strokeWidth={stroke}
         />
-        <circle
-          className="match-score__value"
-          cx={box / 2}
-          cy={box / 2}
-          r={r}
-          strokeWidth={stroke}
-          strokeDasharray={circumference}
-          strokeDashoffset={circumference * (1 - value / 100)}
-        />
+        {/* A zero-length arc still paints its round cap as a dot, so 0 draws none. */}
+        {value > 0 ? (
+          <circle
+            className="match-score__value"
+            cx={box / 2}
+            cy={box / 2}
+            r={r}
+            strokeWidth={stroke}
+            strokeDasharray={circumference}
+            strokeDashoffset={circumference * (1 - value / 100)}
+          />
+        ) : null}
       </svg>
       <span className="match-score__label">
         {value}

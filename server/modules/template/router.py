@@ -112,7 +112,7 @@ async def upload_template(
 
 
 @router.get(
-    '/getTemplate/{template_id}',
+    "/getTemplate/{template_id}",
     response_model=TemplateSource,
     dependencies=[Depends(verify_token)],
 )
@@ -122,7 +122,7 @@ async def get_template(template_id: PydanticObjectId) -> TemplateSource:
 
 
 @router.patch(
-    '/updateTemplate/{template_id}',
+    "/updateTemplate/{template_id}",
     response_model=TemplateRead,
     dependencies=[Depends(verify_token)],
 )
