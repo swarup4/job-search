@@ -5,8 +5,14 @@
 
 export { AI_URL, API_URL, ApiError, axiosInstance } from "@/lib/axiosInstance";
 
-export { getJob, listJobs, setShortlisted, updateJob } from "./job";
-export { getMatch, getPendingCounts, recordSelection, skipSelection } from "./match";
+export { getJob, getJobCounts, getJobDetails, listJobs, setShortlisted, updateJob } from "./job";
+export {
+    getMatch,
+    getMatchSummaries,
+    getPendingCounts,
+    recordSelection,
+    skipSelection,
+} from "./match";
 export {
     getBaseResume,
     getBaseResumePdf,
@@ -53,3 +59,4 @@ export {
     updateCareerSource,
 } from "./discovery";
 export { getPreferences, savePreferences } from "./preference";
+export { getAnalysisRun, startAnalysis } from "./analysis";

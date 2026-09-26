@@ -93,9 +93,15 @@ class Job(Document):
 
 
 class JobUpdate(BaseModel):
-    """Every field optional: a PATCH sends only what changed."""
+    """Every field optional: a PATCH sends only what changed. The detail fields are
+    what analysis reads out of the description when the board did not supply them."""
 
     status: JobStatus | None = None
+    shortlisted: bool | None = None
+    jobType: JobType | None = None
+    workMode: WorkMode | None = None
+    experienceBand: str | None = Field(default=None, max_length=60)
+    salaryText: str | None = Field(default=None, max_length=80)
 
 
 class JobRead(BaseModel):
@@ -121,6 +127,56 @@ class JobRead(BaseModel):
     status: JobStatus
     shortlisted: bool
     discoveredAt: datetime
+
+
+class JobDescriptionPart(BaseModel):
+    """The job's description as the details page needs it — the text, not the vector."""
+
+    id: PydanticObjectId
+    url: str
+    pageTitle: str = ""
+    jdText: str
+    requirements: list[str] = Field(default_factory=list)
+    links: list[str] = Field(default_factory=list)
+    capturedAt: datetime
+
+
+class JobDetailRead(BaseModel):
+    """A job and its description in one read, for the Job Details page. `description`
+    is null when the job has none stored."""
+
+    # A response always carries every field, defaults included.
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
+    id: PydanticObjectId
+    refId: str | None = None
+    title: str
+    company: str
+    location: str
+    jobType: JobType | None = None
+    workMode: WorkMode | None = None
+    experienceBand: str | None = None
+    salaryText: str | None = None
+    source: JobSource
+    listingUrl: HttpUrl | None = None
+    postedAt: datetime | None = None
+    deadlineAt: datetime | None = None
+    applicantCount: int | None = None
+    status: JobStatus
+    shortlisted: bool
+    discoveredAt: datetime
+    description: JobDescriptionPart | None = None
+
+
+class JobCounts(BaseModel):
+    """How many jobs sit in each pipeline column — the board's stat cards and column
+    headers. Every status is present, zero included."""
+
+    new: int = 0
+    reviewed: int = 0
+    tailored: int = 0
+    applied: int = 0
+    archived: int = 0
 
 
 class JobCreated(BaseModel):

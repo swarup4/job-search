@@ -114,3 +114,15 @@ class PendingCounts(BaseModel):
     """Feeds the board's "⚠ Pending your review" banner."""
 
     keywordSelections: int
+    # The longest-waiting job at the keyword gate, which "Select keywords" opens.
+    nextJobId: PydanticObjectId | None = None
+
+
+class MatchSummary(BaseModel):
+    """What a board card shows about a match, without the keyword lists behind it."""
+
+    jobId: PydanticObjectId
+    score: int
+    reviewState: ReviewState
+    # The first risk flag's title, if any — a card has room for one.
+    risk: str | None = None

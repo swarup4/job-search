@@ -1,0 +1,16 @@
+[
+  {
+    "id": 0,
+    "key": "jobIds",
+    "value": "",
+    "isEnabled": true,
+    "description": "repeat the key once per job id"
+  },
+  {
+    "id": 1,
+    "key": "jobIds",
+    "value": "",
+    "isEnabled": false,
+    "description": ""
+  }
+]

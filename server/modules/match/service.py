@@ -8,6 +8,7 @@ from modules.match.models import (
     KeywordReview,
     KeywordSelection,
     Match,
+    MatchSummary,
     MatchWrite,
     PendingCounts,
     ReviewState,
@@ -73,8 +74,26 @@ async def record_selection(
 
 
 async def pending_counts(user_id: PydanticObjectId) -> PendingCounts:
+    waiting = Match.find(Match.userId == user_id, Match.review.state == ReviewState.PENDING)
+    oldest = await waiting.clone().sort(+Match.scoredAt).first_or_none()
     return PendingCounts(
-        keywordSelections=await Match.find(
-            Match.userId == user_id, Match.review.state == ReviewState.PENDING
-        ).count()
+        keywordSelections=await waiting.count(),
+        nextJobId=oldest.jobId if oldest else None,
     )
+
+
+async def summaries(
+    user_id: PydanticObjectId, job_ids: list[PydanticObjectId]
+) -> list[MatchSummary]:
+    """The caller's matches for these jobs, in one query. A job with no match is simply
+    absent — unscored is the normal state for a job discovery just found."""
+    matches = await Match.find({"userId": user_id, "jobId": {"$in": job_ids}}).to_list()
+    return [
+        MatchSummary(
+            jobId=match.jobId,
+            score=match.score,
+            reviewState=match.review.state,
+            risk=match.risks[0].title if match.risks else None,
+        )
+        for match in matches
+    ]

@@ -1,76 +1,125 @@
+"use client";
+
 import Link from "next/link";
-import { Briefcase, CheckCheck, FileCheck2, Send, ArrowRight } from "lucide-react";
+import { AlertTriangle, ArrowRight, Briefcase, CheckCheck, FileCheck2, Send } from "lucide-react";
 import { AppShell } from "@/layout/AppShell";
 import { PageHeader } from "@/layout/PageHeader";
 import { StatCard } from "@/component/StatCard";
 import { PipelineColumn } from "@/component/PipelineColumn";
+import { AnalysisProgress, AnalyzeNewJobs, useAnalysis } from "@/component/Analysis";
 import { Panel } from "@/component/ui/panel";
 import { buttonVariants } from "@/component/ui/button";
+import { COLUMNS, usePipeline } from "@/hooks/usePipeline";
 import { ROUTES } from "@/routes";
-import board from "@/data/board.json";
-import search from "@/data/search.json";
 import { cn } from "@/util/helper";
 
+/**
+ * The Pipeline board, on the API: counts per column, each column's newest jobs with
+ * their match scores, and the review gate. A client page because the bearer token
+ * lives in sessionStorage, which a server component cannot read.
+ */
 export default function Page() {
-    const { pending, columns } = board;
-    const total = pending.keywordSelections + pending.applicationsToSubmit;
-    const byKey = Object.fromEntries(columns.map((c) => [c.key, c.count]));
+    const board = usePipeline();
+    // When an analysis finishes, reload: analyzed jobs move to Reviewed with scores.
+    const analysis = useAnalysis(board.reload);
+    const ready = board.status === "ready";
+    const counts = ready ? board.counts : null;
 
     return (
-        <AppShell
-            active={ROUTES.board}
-            counts={{ pending: total, shortlisted: search.shortlistedCount }}
-        >
-            <PageHeader
-                title="Pipeline"
-                subtitle="Every job the agents found, and where each one stands."
-            />
+        <AppShell active={ROUTES.board} counts={ready ? board.shellCounts : {}}>
+            <PageHeader title="Pipeline" subtitle="Every job discovery found, and where each one stands.">
+                {ready ? <AnalyzeNewJobs analysis={analysis} newCount={counts.new} /> : null}
+            </PageHeader>
 
             <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-                <StatCard icon={Briefcase} value={byKey.new} label="New this morning" />
-                <StatCard icon={CheckCheck} value={byKey.reviewed} label="Reviewed" tone="muted" />
-                <StatCard icon={FileCheck2} value={byKey.tailored} label="Resumes tailored" tone="muted" />
-                <StatCard icon={Send} value={byKey.applied} label="Applied" tone="muted" />
+                <StatCard icon={Briefcase} value={counts?.new ?? "—"} label="New" />
+                <StatCard icon={CheckCheck} value={counts?.reviewed ?? "—"} label="Reviewed" tone="muted" />
+                <StatCard icon={FileCheck2} value={counts?.tailored ?? "—"} label="Resumes tailored" tone="muted" />
+                <StatCard icon={Send} value={counts?.applied ?? "—"} label="Applied" tone="muted" />
             </div>
 
-            {/* the approval gate — the one coloured surface on the page */}
-            {total > 0 ? (
-                <Panel className="mt-5 overflow-hidden">
-                    <div className="flex flex-wrap items-center gap-x-5 gap-y-3 bg-attention px-5 py-4">
-                        <div className="grid size-11 shrink-0 place-items-center rounded-md bg-attention-solid text-white">
-                            <span className="text-[18px] font-bold">{total}</span>
-                        </div>
-                        <div className="min-w-0">
-                            <p className="text-[16px] font-semibold text-attention-ink">Pending your review</p>
-                            <p className="mt-0.5 text-[13px] text-attention-muted">
-                                {pending.keywordSelections} keyword selections ·{" "}
-                                {pending.applicationsToSubmit} application to submit. Nothing moves forward
-                                without you.
-                            </p>
-                        </div>
-                        <span className="grow" />
-                        <Link
-                            href={ROUTES.applications}
-                            className={cn(buttonVariants({ variant: "attentionQuiet", size: "sm" }))}
-                        >
-                            Review applications
-                        </Link>
-                        <Link
-                            href={ROUTES.keywords("acme")}
-                            className={cn(buttonVariants({ variant: "attention", size: "sm" }))}
-                        >
-                            Select keywords
-                            <ArrowRight />
-                        </Link>
-                    </div>
+            <AnalysisProgress analysis={analysis} />
+
+            {ready ? <ReviewGate pending={board.pending} /> : null}
+
+            {board.status === "error" ? (
+                <Panel className="mt-6 flex items-start gap-2 px-5 py-4 text-[13px] text-risk-ink">
+                    <AlertTriangle className="mt-0.5 size-[14px] shrink-0" />
+                    {board.error}
                 </Panel>
             ) : null}
 
-            <div className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-5">
-                {columns.map((column) => (
-                    <PipelineColumn key={column.key} column={column} />
-                ))}
-            </div>
+            {board.status === "loading" ? (
+                <p className="mt-6 text-[13px] text-muted-foreground">Loading the pipeline…</p>
+            ) : null}
+
+            {ready ? (
+                <div className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-5">
+                    {COLUMNS.map((column) => {
+                        const data = board.columns[column.key];
+                        return (
+                            <PipelineColumn
+                                key={column.key}
+                                label={column.label}
+                                empty={column.empty}
+                                count={data.count}
+                                cards={data.cards}
+                                loadingMore={data.loadingMore}
+                                error={data.error}
+                                onMore={() => board.loadMore(column.key, data.cards.length)}
+                            />
+                        );
+                    })}
+                </div>
+            ) : null}
         </AppShell>
+    );
+}
+
+/** The approval gate — the one coloured surface on the page. Hidden when nothing waits. */
+function ReviewGate({ pending }) {
+    const total = pending.keywordSelections + pending.staged;
+    if (!total) return null;
+
+    const parts = [];
+    if (pending.keywordSelections) {
+        parts.push(`${pending.keywordSelections} keyword selection${pending.keywordSelections === 1 ? "" : "s"}`);
+    }
+    if (pending.staged) {
+        parts.push(`${pending.staged} application${pending.staged === 1 ? "" : "s"} to submit`);
+    }
+
+    return (
+        <Panel className="mt-5 overflow-hidden">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-3 bg-attention px-5 py-4">
+                <div className="grid size-11 shrink-0 place-items-center rounded-md bg-attention-solid text-white">
+                    <span className="text-[18px] font-bold">{total}</span>
+                </div>
+                <div className="min-w-0">
+                    <p className="text-[16px] font-semibold text-attention-ink">Pending your review</p>
+                    <p className="mt-0.5 text-[13px] text-attention-muted">
+                        {parts.join(" · ")}. Nothing moves forward without you.
+                    </p>
+                </div>
+                <span className="grow" />
+                {pending.staged ? (
+                    <Link
+                        href={ROUTES.applications}
+                        className={cn(buttonVariants({ variant: "attentionQuiet", size: "sm" }))}
+                    >
+                        Review applications
+                    </Link>
+                ) : null}
+                {pending.nextJobId ? (
+                    <Link
+                        href={ROUTES.keywords(pending.nextJobId, "board")}
+                        className={cn(buttonVariants({ variant: "attention", size: "sm" }))}
+                    >
+                        Select keywords
+                        <ArrowRight />
+                    </Link>
+                ) : null}
+            </div>
+        </Panel>
     );
 }

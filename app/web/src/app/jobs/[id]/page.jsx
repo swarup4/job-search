@@ -1,7 +1,11 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useParams, useSearchParams } from "next/navigation";
 import {
-    ArrowRight, Briefcase, Building2, CalendarClock, Clock, ExternalLink,
-    Globe, MapPin, Users, Wallet,
+    AlertTriangle, ArrowRight, Briefcase, Building2, CalendarClock, Clock, ExternalLink,
+    Hash, Laptop, Loader2, MapPin, Sparkles, Users, Wallet,
 } from "lucide-react";
 import { AppShell } from "@/layout/AppShell";
 import { MatchScore } from "@/component/MatchScore";
@@ -9,27 +13,84 @@ import { Signal } from "@/component/Signal";
 import { Badge } from "@/component/ui/badge";
 import { Panel, PanelBody, PanelHeader, PanelTitle } from "@/component/ui/panel";
 import { Button, buttonVariants } from "@/component/ui/button";
+import { Tooltip } from "@/component/ui/tooltip";
 import { ShortlistButton } from "@/component/ShortlistButton";
+import { useAnalysis } from "@/component/Analysis";
+import { ApiError, getJobDetails, getMatch, getShellCounts, setShortlisted } from "@/services";
 import { ROUTES, sectionFor } from "@/routes";
-import matches from "@/data/matches.json";
-import board from "@/data/board.json";
-import search from "@/data/search.json";
+import { renderMarkdown } from "@/util/markdown";
 import { cn } from "@/util/helper";
 
-export default async function Page({ params, searchParams }) {
-  const { id: jobId } = await params;
-  const { from } = await searchParams;
+const JOB_TYPE = { full_time: "Full-time", contract: "Contract", part_time: "Part-time", internship: "Internship" };
+const WORK_MODE = { on_site: "On-site", hybrid: "Hybrid", remote: "Remote" };
+const SOURCE = { career_page: "Career page", linkedin: "LinkedIn", indeed: "Indeed", naukri: "Naukri", serpapi: "Google" };
 
-    const job = matches[jobId] ?? matches.acme;
+/**
+ * Job details, from the database through the API: the job, its stored description
+ * (markdown, rendered here), and the match if the job has been analyzed. A client page
+ * because the bearer token lives in sessionStorage.
+ *
+ * Laid out as designed (see /design/job-details). Where the design showed data that
+ * is not collected — a company profile, a structured summary — the page shows the
+ * full posting instead and says what is missing, rather than filling the gap.
+ */
+export default function Page() {
+    const { id: jobId } = useParams();
+    const from = useSearchParams().get("from") ?? undefined;
+
+    const [data, setData] = useState({ status: "loading" });
+    const fetching = useRef(false);
+
+    const load = useCallback(async () => {
+        try {
+            const [job, match, counts] = await Promise.all([getJobDetails(jobId), getMatch(jobId), getShellCounts()]);
+            setData(
+                job
+                    ? { status: "ready", job, description: job.description, match, counts }
+                    : { status: "missing", counts }
+            );
+        } catch (failure) {
+            setData({ status: "error", error: failure instanceof ApiError ? failure.message : "Could not load this job." });
+        }
+    }, [jobId]);
+
+    useEffect(() => {
+        // A ref, not state: React's development double-mount fires the effect twice.
+        if (fetching.current) return;
+        fetching.current = true;
+        load();
+    }, [load]);
+
+    // An analysis of this job ends with a reload, so its score and details appear.
+    const analysis = useAnalysis(load);
+
+    // Opening a job that was never compared with your resume starts its analysis. Once
+    // per visit: a failed run is left for the Analyze button, not retried in a loop.
+    const autoStarted = useRef(false);
+    useEffect(() => {
+        if (data.status !== "ready" || data.match || autoStarted.current) return;
+        autoStarted.current = true;
+        analysis.start({ jobIds: [jobId] });
+    }, [data, analysis, jobId]);
 
     return (
-        <AppShell
-            active={sectionFor(from)}
-            counts={{
-        pending: board.pending.keywordSelections + board.pending.applicationsToSubmit,
-        shortlisted: search.shortlistedCount,
-      }}
-        >
+        <AppShell active={sectionFor(from)} counts={data.counts ?? {}}>
+            {data.status === "loading" ? <p className="text-[13px] text-muted-foreground">Loading the job…</p> : null}
+            {data.status === "error" ? <Problem>{data.error}</Problem> : null}
+            {data.status === "missing" ? <Problem>This job no longer exists.</Problem> : null}
+            {data.status === "ready" ? <JobDetails {...data} jobId={jobId} from={from} analysis={analysis} /> : null}
+        </AppShell>
+    );
+}
+
+function JobDetails({ job, description, match, jobId, from, analysis }) {
+    const html = useMemo(() => (description?.jdText ? renderMarkdown(description.jdText) : ""), [description]);
+    const analyzing = analysis.running && analysis.run?.jobIds.includes(jobId);
+    const pending = match?.review?.state === "pending";
+    const host = hostOf(job.listingUrl ?? description?.url);
+
+    return (
+        <>
             {/* header panel */}
             <Panel className="p-6">
                 <div className="flex flex-wrap items-start gap-x-6 gap-y-5">
@@ -39,82 +100,106 @@ export default async function Page({ params, searchParams }) {
 
                     <div className="min-w-[260px] grow">
                         <div className="flex flex-wrap items-center gap-3">
-                            <h1 className="text-[26px] font-semibold leading-tight tracking-tight">
-                                {job.role}
-                            </h1>
-                            <Badge variant="soft">{job.type}</Badge>
+                            <h1 className="text-[26px] font-semibold leading-tight tracking-tight">{job.title}</h1>
+                            {job.jobType ? <Badge variant="soft">{JOB_TYPE[job.jobType]}</Badge> : null}
                         </div>
-                        <p className="mt-2 text-[15px] text-muted-foreground">{job.company.name}</p>
+                        <p className="mt-2 text-[15px] text-muted-foreground">{job.company}</p>
                         <div className="mt-3.5 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13.5px] text-muted-foreground">
                             <Meta icon={MapPin}>{job.location}</Meta>
-                            <Meta icon={Clock}>Posted {job.posted}</Meta>
-                            <Meta icon={Wallet}>{job.salary}</Meta>
-                            <Meta icon={Briefcase}>{job.experience}</Meta>
-                            <Badge variant="source">{job.source}</Badge>
+                            <Meta icon={Clock}>
+                                {job.postedAt ? `Posted ${ago(job.postedAt)}` : `Found ${ago(job.discoveredAt)}`}
+                            </Meta>
+                            {job.salaryText ? <Meta icon={Wallet}>{job.salaryText}</Meta> : null}
+                            {job.experienceBand ? <Meta icon={Briefcase}>{job.experienceBand}</Meta> : null}
+                            {job.workMode ? <Meta icon={Laptop}>{WORK_MODE[job.workMode]}</Meta> : null}
+                            <Badge variant="source">{SOURCE[job.source] ?? job.source}</Badge>
                         </div>
                     </div>
 
                     <div className="flex shrink-0 flex-col items-center gap-3">
-                        <MatchScore value={job.match} size="lg" />
+                        {match ? (
+                            <MatchScore value={match.score} size="lg" />
+                        ) : (
+                            <Tooltip content="Not compared with your resume yet" align="end">
+                                <MatchScore value={0} size="lg" />
+                            </Tooltip>
+                        )}
                         <span className="text-[12px] text-muted-foreground">match</span>
                     </div>
                 </div>
 
                 <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-border pt-5">
-                    <Link href={ROUTES.keywords(jobId, from)} className={buttonVariants()}>
-                        Review keywords
-                        <ArrowRight />
-                    </Link>
-                    <Button variant="outline">
-                        <ExternalLink />
-                        Open original posting
-                    </Button>
-                    <ShortlistButton shortlisted={job.shortlisted} />
+                    {match ? (
+                        <Link href={ROUTES.keywords(jobId, from)} className={buttonVariants()}>
+                            Review keywords
+                            <ArrowRight />
+                        </Link>
+                    ) : (
+                        <AnalyzeButton jobId={jobId} analysis={analysis} analyzing={analyzing} />
+                    )}
+                    {job.listingUrl ? (
+                        <a
+                            href={job.listingUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={buttonVariants({ variant: "outline" })}
+                        >
+                            <ExternalLink />
+                            Open original posting
+                        </a>
+                    ) : null}
+                    <ShortlistButton
+                        shortlisted={job.shortlisted}
+                        onToggle={(next) => setShortlisted(jobId, next)}
+                    />
+                    {match ? <AnalyzeButton jobId={jobId} analysis={analysis} analyzing={analyzing} again /> : null}
                     <span className="grow" />
-                    <span className="inline-flex items-center gap-1.5 text-[13px] text-muted-foreground">
-                        <CalendarClock className="size-[14px]" />
-                        Closes {job.deadline}
-                    </span>
+                    {job.deadlineAt ? (
+                        <span className="inline-flex items-center gap-1.5 text-[13px] text-muted-foreground">
+                            <CalendarClock className="size-[14px]" />
+                            Closes {new Date(job.deadlineAt).toLocaleDateString(undefined, { dateStyle: "medium" })}
+                        </span>
+                    ) : null}
                 </div>
+                {analysis.error ? <p className="mt-3 text-[12.5px] text-risk-ink">{analysis.error}</p> : null}
             </Panel>
 
             <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
                 {/* JD body */}
                 <div className="flex flex-col gap-5">
                     <Panel>
-                        <PanelHeader><PanelTitle>Role summary</PanelTitle></PanelHeader>
+                        <PanelHeader>
+                            <PanelTitle>Job description</PanelTitle>
+                        </PanelHeader>
                         <PanelBody>
-                            <p className="text-[14.5px] leading-relaxed text-pretty text-muted-foreground">
-                                {job.summary}
-                            </p>
+                            {html ? (
+                                // Escaped by markdown-it (html: false) — see util/markdown.js.
+                                <div className="jd-body" dangerouslySetInnerHTML={{ __html: html }} />
+                            ) : (
+                                <p className="text-[13.5px] text-muted-foreground">
+                                    No description is stored for this job.
+                                    {job.listingUrl ? " Open the original posting to read it." : ""}
+                                </p>
+                            )}
                         </PanelBody>
                     </Panel>
 
                     <Panel>
-                        <PanelHeader><PanelTitle>Responsibilities</PanelTitle></PanelHeader>
+                        <PanelHeader>
+                            <PanelTitle>Requirements</PanelTitle>
+                        </PanelHeader>
                         <PanelBody>
-                            <ul className="flex flex-col gap-3">
-                                {job.responsibilities.map((r) => (
-                                    <li key={r} className="flex gap-3 text-[14px] leading-relaxed">
-                                        <span className="mt-[7px] size-1.5 shrink-0 rounded-full bg-primary" />
-                                        <span className="text-muted-foreground">{r}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                        </PanelBody>
-                    </Panel>
-
-                    <Panel>
-                        <PanelHeader><PanelTitle>Requirements</PanelTitle></PanelHeader>
-                        <PanelBody>
-                            <ul className="flex flex-col gap-3">
-                                {job.requirements.map((r) => (
-                                    <li key={r} className="flex gap-3 text-[14px] leading-relaxed">
-                                        <span className="mt-[7px] size-1.5 shrink-0 rounded-full bg-primary" />
-                                        <span className="text-muted-foreground">{r}</span>
-                                    </li>
-                                ))}
-                            </ul>
+                            {description?.requirements?.length ? (
+                                <div className="flex flex-wrap gap-1.5">
+                                    {description.requirements.map((item) => (
+                                        <Badge key={item} variant="soft">{item}</Badge>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-[13.5px] text-muted-foreground">
+                                    The skills and tools this posting asks for are extracted when the job is analyzed.
+                                </p>
+                            )}
                         </PanelBody>
                     </Panel>
 
@@ -123,49 +208,25 @@ export default async function Page({ params, searchParams }) {
                         <PanelHeader>
                             <PanelTitle>What the match agent found</PanelTitle>
                             <span className="grow" />
-                            <Link
-                                href={ROUTES.keywords(jobId, from)}
-                                className="text-[13px] font-medium text-primary hover:underline"
-                            >
-                                Review &amp; select
-                            </Link>
+                            {match ? (
+                                <Link
+                                    href={ROUTES.keywords(jobId, from)}
+                                    className="text-[13px] font-medium text-primary hover:underline"
+                                >
+                                    Review &amp; select
+                                </Link>
+                            ) : null}
                         </PanelHeader>
                         <PanelBody className="flex flex-col gap-5">
-                            <div>
-                                <p className="mb-2.5 text-[13px] font-medium">
-                                    In your resume
-                                    <span className="ml-2 text-muted-foreground">{job.present.length}</span>
+                            {match ? (
+                                <MatchFindings match={match} />
+                            ) : (
+                                <p className="text-[13.5px] leading-relaxed text-muted-foreground">
+                                    {analyzing
+                                        ? "Comparing this job with your resume — about a minute."
+                                        : "Not compared with your resume yet. Analyze the job to see which of its requirements your resume covers, which are missing, and any risks."}
                                 </p>
-                                <div className="flex flex-wrap gap-1.5">
-                                    {job.present.slice(0, 12).map((k) => (
-                                        <Badge key={k} variant="soft">{k}</Badge>
-                                    ))}
-                                    {job.present.length > 12 ? (
-                                        <Badge variant="muted">+{job.present.length - 12}</Badge>
-                                    ) : null}
-                                </div>
-                            </div>
-                            <div>
-                                <p className="mb-2.5 text-[13px] font-medium">
-                                    Missing
-                                    <span className="ml-2 text-muted-foreground">{job.missing.length}</span>
-                                    <span className="ml-2 text-[12px] font-normal text-attention-muted">
-                                        nothing is added unless you check it
-                                    </span>
-                                </p>
-                                <div className="flex flex-wrap gap-1.5">
-                                    {job.missing.map((k) => (
-                                        <Badge key={k.id} variant="outline">{k.label}</Badge>
-                                    ))}
-                                </div>
-                            </div>
-                            <div className="flex flex-col gap-2.5">
-                                {job.risks.map((r) => (
-                                    <Signal key={r.id} kind="risk" className="items-start">
-                                        {r.title}
-                                    </Signal>
-                                ))}
-                            </div>
+                            )}
                         </PanelBody>
                     </Panel>
                 </div>
@@ -180,21 +241,19 @@ export default async function Page({ params, searchParams }) {
                                     <Building2 className="size-5" />
                                 </span>
                                 <div className="min-w-0">
-                                    <p className="truncate text-[15px] font-medium">{job.company.name}</p>
-                                    <p className="truncate text-[12.5px] text-muted-foreground">
-                                        {job.company.industry}
-                                    </p>
+                                    <p className="truncate text-[15px] font-medium">{job.company}</p>
+                                    {host ? <p className="truncate text-[12.5px] text-muted-foreground">via {host}</p> : null}
                                 </div>
                             </div>
-                            <p className="text-[13.5px] leading-relaxed text-pretty text-muted-foreground">
-                                {job.company.blurb}
+                            <p className="text-[12.5px] leading-relaxed text-muted-foreground">
+                                Industry, size and a company profile are not collected yet.
                             </p>
                             <dl className="flex flex-col divide-y divide-border">
-                                <Row icon={Users} label="Size">{job.company.size}</Row>
-                                <Row icon={CalendarClock} label="Founded">{job.company.founded}</Row>
-                                <Row icon={Globe} label="Website">{job.company.site}</Row>
-                                <Row icon={MapPin} label="Workplace">{job.workplace}</Row>
-                                <Row icon={Users} label="Applicants">{job.applicants}</Row>
+                                <Row icon={Laptop} label="Workplace">{WORK_MODE[job.workMode] ?? "—"}</Row>
+                                <Row icon={Briefcase} label="Experience">{job.experienceBand ?? "—"}</Row>
+                                <Row icon={Wallet} label="Salary">{job.salaryText ?? "—"}</Row>
+                                <Row icon={Users} label="Applicants">{job.applicantCount ?? "—"}</Row>
+                                {job.refId ? <Row icon={Hash} label="Requisition">{job.refId}</Row> : null}
                             </dl>
                         </PanelBody>
                     </Panel>
@@ -203,20 +262,97 @@ export default async function Page({ params, searchParams }) {
                         <PanelHeader><PanelTitle>Next step</PanelTitle></PanelHeader>
                         <PanelBody className="flex flex-col gap-3">
                             <p className="text-[13.5px] leading-relaxed text-muted-foreground">
-                                Selecting keywords is the only way a resume gets tailored for this job. Nothing
-                                is written without your explicit choice.
+                                {match
+                                    ? "Selecting keywords is the only way a resume gets tailored for this job. Nothing is written without your explicit choice."
+                                    : "Analyze the job first: it is compared with your resume, and the keywords it is missing become yours to choose from."}
                             </p>
-                            <Link
-                                href={ROUTES.keywords(jobId, from)}
-                                className={cn(buttonVariants(), "w-full")}
-                            >
-                                Review {job.missing.length} missing keywords
-                            </Link>
+                            {match ? (
+                                <Link href={ROUTES.keywords(jobId, from)} className={cn(buttonVariants(), "w-full")}>
+                                    {pending
+                                        ? `Review ${match.missing.length} missing keywords`
+                                        : "See your keyword choice"}
+                                </Link>
+                            ) : (
+                                <AnalyzeButton jobId={jobId} analysis={analysis} analyzing={analyzing} wide />
+                            )}
                         </PanelBody>
                     </Panel>
                 </div>
             </div>
-        </AppShell>
+        </>
+    );
+}
+
+function MatchFindings({ match }) {
+    return (
+        <>
+            <div>
+                <p className="mb-2.5 text-[13px] font-medium">
+                    In your resume
+                    <span className="ml-2 text-muted-foreground">{match.present.length}</span>
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                    {match.present.slice(0, 12).map((item) => (
+                        <Badge key={item.label} variant="soft">{item.label}</Badge>
+                    ))}
+                    {match.present.length > 12 ? <Badge variant="muted">+{match.present.length - 12}</Badge> : null}
+                    {!match.present.length ? <span className="text-[12.5px] text-muted-foreground">none</span> : null}
+                </div>
+            </div>
+            <div>
+                <p className="mb-2.5 text-[13px] font-medium">
+                    Missing
+                    <span className="ml-2 text-muted-foreground">{match.missing.length}</span>
+                    <span className="ml-2 text-[12px] font-normal text-attention-muted">
+                        nothing is added unless you check it
+                    </span>
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                    {match.missing.map((item) => (
+                        <Badge key={item.key} variant="outline">{item.label}</Badge>
+                    ))}
+                    {!match.missing.length ? <span className="text-[12.5px] text-muted-foreground">none</span> : null}
+                </div>
+            </div>
+            {match.risks.length ? (
+                <div className="flex flex-col gap-2.5">
+                    {match.risks.map((risk) => (
+                        <Tooltip key={risk.key} content={risk.detail}>
+                            <Signal kind="risk" className="items-start">{risk.title}</Signal>
+                        </Tooltip>
+                    ))}
+                </div>
+            ) : null}
+        </>
+    );
+}
+
+function AnalyzeButton({ jobId, analysis, analyzing, again = false, wide = false }) {
+    const busyElsewhere = analysis.running && !analyzing;
+    return (
+        <Tooltip
+            content={busyElsewhere ? "Another analysis is running — try again when it finishes." : "About a minute and ~$0.001."}
+            className={wide ? "w-full" : undefined}
+        >
+            <Button
+                variant={again ? "ghost" : "default"}
+                className={wide ? "w-full" : undefined}
+                disabled={analysis.running}
+                onClick={() => analysis.start({ jobIds: [jobId] })}
+            >
+                {analyzing ? <Loader2 className="animate-spin" /> : <Sparkles />}
+                {analyzing ? "Analyzing…" : again ? "Re-analyze" : "Analyze this job"}
+            </Button>
+        </Tooltip>
+    );
+}
+
+function Problem({ children }) {
+    return (
+        <Panel className="flex items-start gap-2 px-5 py-4 text-[13px] text-risk-ink">
+            <AlertTriangle className="mt-0.5 size-[14px] shrink-0" />
+            {children}
+        </Panel>
     );
 }
 
@@ -238,4 +374,21 @@ function Row({ icon: Icon, label, children }) {
             <dd className="text-[13px] font-medium">{children}</dd>
         </div>
     );
+}
+
+function hostOf(url) {
+    try {
+        return url ? new URL(url).hostname : null;
+    } catch {
+        return null;
+    }
+}
+
+function ago(timestamp) {
+    if (!timestamp) return "recently";
+    const minutes = Math.round((Date.now() - new Date(timestamp).getTime()) / 60000);
+    if (minutes < 60) return minutes < 1 ? "just now" : `${minutes}m ago`;
+    if (minutes < 60 * 24) return `${Math.round(minutes / 60)}h ago`;
+    if (minutes < 60 * 24 * 30) return `${Math.round(minutes / (60 * 24))}d ago`;
+    return new Date(timestamp).toLocaleDateString(undefined, { dateStyle: "medium" });
 }

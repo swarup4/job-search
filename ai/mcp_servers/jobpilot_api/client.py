@@ -69,6 +69,19 @@ async def get_job(job_id: str) -> dict[str, Any]:
     return await _request("GET", f"/job/getJob/{job_id}")
 
 
+async def list_jobs(status: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
+    """Newest first. `status` is one pipeline column, e.g. `new`."""
+    params: dict[str, Any] = {"limit": limit}
+    if status:
+        params["status"] = status
+    return await _request("GET", "/job", params=params)
+
+
+async def update_job(job_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    """A partial update — only the fields sent change."""
+    return await _request("PATCH", f"/job/updateJob/{job_id}", json=payload)
+
+
 async def create_job(payload: dict[str, Any]) -> dict[str, Any]:
     """`{id, duplicate}` — a repeat posting comes back as the row already stored."""
     return await _request("POST", "/job/createJob", json=payload)
@@ -87,6 +100,13 @@ async def description_stored(url: str) -> bool:
     a posting is stored without fetching it from the board again."""
     rows = await _request("GET", "/job-description", params={"url": url, "limit": 1})
     return bool(rows)
+
+
+async def store_description_embedding(description_id: str, vector: list[float]) -> dict[str, Any]:
+    """The JD's vector, embedded here — the server only stores it and indexes it."""
+    return await _request(
+        "PUT", f"/job-description/embedding/{description_id}", json={"embedding": vector}
+    )
 
 
 async def get_account() -> dict[str, Any]:

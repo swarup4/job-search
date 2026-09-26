@@ -1,5 +1,5 @@
 from beanie import PydanticObjectId
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Query, status
 
 from modules.account import CurrentUser
 from modules.match import service
@@ -7,6 +7,7 @@ from modules.match.models import (
     KeywordSelection,
     Match,
     MatchRead,
+    MatchSummary,
     MatchWrite,
     PendingCounts,
 )
@@ -17,6 +18,13 @@ router = APIRouter(tags=["match"])
 @router.get("/pending", response_model=PendingCounts)
 async def pending(user_id: CurrentUser) -> PendingCounts:
     return await service.pending_counts(user_id)
+
+
+@router.get("/summaries", response_model=list[MatchSummary])
+async def summaries(
+    user_id: CurrentUser, job_ids: list[PydanticObjectId] = Query(alias="jobIds", max_length=200)
+) -> list[MatchSummary]:
+    return await service.summaries(user_id, job_ids)
 
 
 @router.post("/selection/{job_id}", response_model=MatchRead)

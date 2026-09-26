@@ -4,7 +4,15 @@ from datetime import UTC, datetime
 from beanie import PydanticObjectId
 
 from config.errors import NotFound
-from modules.job.models import Job, JobCreate, JobCreated, JobStatus, JobUpdate
+from modules.job.models import (
+    Job,
+    JobCounts,
+    JobCreate,
+    JobCreated,
+    JobDetailRead,
+    JobStatus,
+    JobUpdate,
+)
 
 
 class JobNotFound(NotFound):
@@ -68,6 +76,56 @@ async def count_jobs(status: JobStatus | None = None) -> int:
     if status:
         query["status"] = status
     return await Job.find(query).count()
+
+
+async def get_job_detail(job_id: PydanticObjectId) -> JobDetailRead:
+    """The job and its description in one query.
+
+    This is the one place the job module reads another module's collection: a
+    `$lookup` into `job_descriptions`, so the details page costs one round trip
+    instead of two. The projection leaves out the embedding (~20 KB of floats) and
+    the unused `htmlString`. A job with no description still comes back, with
+    `description` null — "no description" is not "no job"."""
+    rows = await Job.aggregate(
+        [
+            {"$match": {"_id": job_id}},
+            {
+                "$lookup": {
+                    "from": "job_descriptions",
+                    "localField": "_id",
+                    "foreignField": "jobId",
+                    "as": "description",
+                    "pipeline": [
+                        {
+                            "$project": {
+                                "_id": 0,
+                                "id": "$_id",
+                                "url": 1,
+                                "pageTitle": 1,
+                                "jdText": 1,
+                                "requirements": 1,
+                                "links": 1,
+                                "capturedAt": 1,
+                            }
+                        }
+                    ],
+                }
+            },
+            {"$unwind": {"path": "$description", "preserveNullAndEmptyArrays": True}},
+            {"$project": {"dedupHash": 0}},
+        ]
+    ).to_list()
+    if not rows:
+        raise JobNotFound(job_id)
+    row = rows[0]
+    row["id"] = row.pop("_id")
+    return JobDetailRead(**row)
+
+
+async def count_by_status() -> JobCounts:
+    """One aggregation rather than a count per column — the board asks on every load."""
+    rows = await Job.aggregate([{"$group": {"_id": "$status", "n": {"$sum": 1}}}]).to_list()
+    return JobCounts(**{row["_id"]: row["n"] for row in rows if row["_id"] in JobStatus})
 
 
 async def update_job(job_id: PydanticObjectId, payload: JobUpdate) -> Job:

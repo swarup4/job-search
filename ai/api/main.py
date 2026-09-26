@@ -15,7 +15,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 import config  # noqa: F401 — imported for its .env load
-from api import discovery, settings
+from api import analysis, discovery, settings
 
 
 def create_app() -> FastAPI:
@@ -29,6 +29,7 @@ def create_app() -> FastAPI:
     )
     app.include_router(discovery.router, prefix="/api/discovery")
     app.include_router(settings.router, prefix="/api/settings")
+    app.include_router(analysis.router, prefix="/api/analysis")
 
     @app.get("/health")
     async def health() -> dict[str, str]:

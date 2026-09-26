@@ -5,7 +5,21 @@ export function getMatch(jobId) {
     return orNull(axiosInstance.get(`/match/getMatch/${jobId}`));
 }
 
-/** GET /api/match/pending — feeds the "⚠ Pending your review" banner. */
+/**
+ * GET /api/match/summaries — score, review state and first risk for many jobs in one
+ * call. A job with no match is absent from the answer, not an error.
+ */
+export function getMatchSummaries(jobIds) {
+    if (!jobIds.length) return Promise.resolve([]);
+    // Repeated keys (jobIds=a&jobIds=b), which is what FastAPI reads as a list.
+    return axiosInstance.get("/match/summaries", {
+        params: { jobIds },
+        paramsSerializer: { indexes: null },
+    });
+}
+
+/** GET /api/match/pending — feeds the "⚠ Pending your review" banner, and names the
+ * longest-waiting job (`nextJobId`) for its Select keywords link. */
 export function getPendingCounts() {
     return axiosInstance.get("/match/pending");
 }

@@ -5,11 +5,13 @@ import { Bookmark } from "lucide-react";
 import { cn } from "@/util/helper";
 
 /**
- * Toggles a job on and off the shortlist. State is local for now — there is no
- * server yet, so a reload resets it. Swap useState for a POST when `server` lands.
+ * Toggles a job on and off the shortlist. With `onToggle` the change is saved: the
+ * button moves first and snaps back if the save is refused. Without it the state is
+ * local only — the screens still on fixtures use it that way.
  */
-export function ShortlistButton({ shortlisted = false, size = "md", className }) {
+export function ShortlistButton({ shortlisted = false, size = "md", className, onToggle }) {
   const [on, setOn] = useState(shortlisted);
+  const [saving, setSaving] = useState(false);
   const iconOnly = size === "sm";
 
   return (
@@ -18,11 +20,22 @@ export function ShortlistButton({ shortlisted = false, size = "md", className })
       aria-pressed={on}
       aria-label={on ? "Remove from shortlist" : "Add to shortlist"}
       title={on ? "Remove from shortlist" : "Add to shortlist"}
-      onClick={(e) => {
+      disabled={saving}
+      onClick={async (e) => {
         // these sit inside link rows — don't navigate when toggling
         e.preventDefault();
         e.stopPropagation();
-        setOn(!on);
+        const next = !on;
+        setOn(next);
+        if (!onToggle) return;
+        setSaving(true);
+        try {
+          await onToggle(next);
+        } catch {
+          setOn(!next);
+        } finally {
+          setSaving(false);
+        }
       }}
       className={cn(
         "inline-flex shrink-0 items-center justify-center gap-1.5 rounded-pill border transition-colors",

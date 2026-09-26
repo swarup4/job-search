@@ -4,7 +4,7 @@
     <text x="30" y="28" font-family="ui-sans-serif,-apple-system,'Helvetica Neue',Arial,sans-serif" font-size="10.5" font-weight="600" letter-spacing="1.6" fill="#7c8088">MONGODB ATLAS — one store, every collection</text>
     <text x="30" y="56" font-family="ui-sans-serif,-apple-system,'Helvetica Neue',Arial,sans-serif" font-size="10" font-weight="600" letter-spacing="1.4" fill="#7c8088">SHARED CATALOGUE — no owner</text>
     <text x="442" y="56" font-family="ui-sans-serif,-apple-system,'Helvetica Neue',Arial,sans-serif" font-size="10" font-weight="600" letter-spacing="1.4" fill="#7c8088">PER ACCOUNT</text>
-    <rect x="30" y="72" width="176" height="188" rx="4" fill="#f7f8f9" stroke="#e3e6e8"/>
+    <rect x="30" y="72" width="176" height="158" rx="4" fill="#f7f8f9" stroke="#e3e6e8"/>
     <text x="42" y="91" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="600" fill="#3d3a5c">jobs</text>
     <line x1="30" y1="100" x2="206" y2="100" stroke="#e3e6e8"/>
     <text x="42" y="113" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">_id</text>
@@ -17,8 +17,6 @@
     <text x="42" y="203" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">source</text>
     <text x="42" y="218" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">dedupHash</text>
     <text x="194" y="218" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">UK</text>
-    <text x="42" y="233" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">status</text>
-    <text x="42" y="248" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">shortlisted</text>
     <rect x="236" y="72" width="176" height="173" rx="4" fill="#f7f8f9" stroke="#e3e6e8"/>
     <text x="248" y="91" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="600" fill="#3d3a5c">job_descriptions</text>
     <line x1="236" y1="100" x2="412" y2="100" stroke="#e3e6e8"/>
@@ -88,7 +86,7 @@
     <text x="1018" y="218" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">[]</text>
     <text x="866" y="233" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">version</text>
     <text x="1018" y="233" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">UK</text>
-    <rect x="1060" y="72" width="176" height="188" rx="4" fill="#f7f8f9" stroke="#e3e6e8"/>
+    <rect x="1060" y="72" width="176" height="203" rx="4" fill="#f7f8f9" stroke="#e3e6e8"/>
     <text x="1072" y="91" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="600" fill="#3d3a5c">applications</text>
     <line x1="1060" y1="100" x2="1236" y2="100" stroke="#e3e6e8"/>
     <text x="1072" y="113" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">_id</text>
@@ -96,7 +94,7 @@
     <text x="1072" y="128" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">userId</text>
     <text x="1224" y="128" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">FK</text>
     <text x="1072" y="143" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">jobId</text>
-    <text x="1224" y="143" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">FK</text>
+    <text x="1224" y="143" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">FK UK</text>
     <text x="1072" y="158" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#3d3a5c">resumeId</text>
     <text x="1224" y="158" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">FK</text>
     <text x="1072" y="173" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">texPath</text>
@@ -107,6 +105,14 @@
     <text x="1072" y="233" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#3d3a5c">screeningAnswers</text>
     <text x="1224" y="233" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#2F6F6A">[]</text>
     <text x="1072" y="248" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">approvedByUser</text>
+    <text x="1072" y="263" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">shortlistedAt</text>
+    <text x="1256" y="113" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#2F6F6A">one row per user per job,</text>
+    <text x="1256" y="128" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#2F6F6A">created on shortlist.</text>
+    <text x="1256" y="143" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#2F6F6A">status is the board column:</text>
+    <text x="1256" y="158" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#2F6F6A">shortlisted · tailored ·</text>
+    <text x="1256" y="173" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#2F6F6A">staged · applied · interview</text>
+    <text x="1256" y="203" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#2F6F6A">resumeId and texPath stay</text>
+    <text x="1256" y="218" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#2F6F6A">empty until a resume exists.</text>
     <line x1="206" y1="158" x2="236" y2="158" stroke="#cfd4d8"/>
     <line x1="213" y1="153" x2="213" y2="163" stroke="#cfd4d8"/>
     <line x1="231" y1="153" x2="231" y2="163" stroke="#cfd4d8"/>
@@ -130,7 +136,7 @@
     <line x1="1051" y1="158" x2="1060" y2="158" stroke="#cfd4d8"/>
     <line x1="1051" y1="158" x2="1060" y2="163" stroke="#cfd4d8"/>
     <text x="1045" y="72" text-anchor="middle" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">resumeId</text>
-    <path d="M118,260 V312 H1148" fill="none" stroke="#cfd4d8"/>
+    <path d="M118,230 V312 H1148" fill="none" stroke="#cfd4d8"/>
     <line x1="736" y1="312" x2="736" y2="245" stroke="#cfd4d8"/>
     <line x1="736" y1="254" x2="731" y2="245" stroke="#cfd4d8"/>
     <line x1="736" y1="254" x2="736" y2="245" stroke="#cfd4d8"/>
@@ -139,10 +145,10 @@
     <line x1="942" y1="254" x2="937" y2="245" stroke="#cfd4d8"/>
     <line x1="942" y1="254" x2="942" y2="245" stroke="#cfd4d8"/>
     <line x1="942" y1="254" x2="947" y2="245" stroke="#cfd4d8"/>
-    <line x1="1148" y1="312" x2="1148" y2="260" stroke="#cfd4d8"/>
-    <line x1="1148" y1="269" x2="1143" y2="260" stroke="#cfd4d8"/>
-    <line x1="1148" y1="269" x2="1148" y2="260" stroke="#cfd4d8"/>
-    <line x1="1148" y1="269" x2="1153" y2="260" stroke="#cfd4d8"/>
+    <line x1="1148" y1="312" x2="1148" y2="275" stroke="#cfd4d8"/>
+    <line x1="1148" y1="284" x2="1143" y2="275" stroke="#cfd4d8"/>
+    <line x1="1148" y1="284" x2="1148" y2="275" stroke="#cfd4d8"/>
+    <line x1="1148" y1="284" x2="1153" y2="275" stroke="#cfd4d8"/>
     <text x="132" y="328" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#7c8088">jobId — on every pipeline row</text>
     <line x1="428" y1="44" x2="428" y2="158" stroke="#e3e6e8" stroke-dasharray="3 4"/>
     <path d="M428,158 V613" fill="none" stroke="#cfd4d8"/>

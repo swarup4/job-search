@@ -230,6 +230,15 @@ The other ATS adapters, the scheduler and the screen wiring are still open.
   8001): it takes the dashboard's JWT, checks it against `getAccount`, and runs in the background
   with `GET` for progress. One run at a time; the token is used for that run only. 7 tests
 - ⬜ `P3-26` Archive a job that has disappeared from its board since the last run
+- ✅ `P3-28` **Analyze.** `ai/agents/analysis.py` runs three isolated steps per job (HTML
+  conversion was dropped on 2026-09-26 — the job page renders the stored markdown itself):
+  experience / salary / work mode / job type
+  from the text (kept only if stated verbatim or backed by a word in the posting, and never over
+  a board-supplied value), the JD embedding (Voyage), and `rectify` — whose extracted labels are
+  also stored as the description's `requirements`. `POST`/`GET /api/analysis/run` on the AI
+  tier: chosen `jobIds` or the `newest` N in New, max 50, one run at a time; the dashboard
+  polls its status only while a run it started is going, never on page load. `JobUpdate` gained
+  the four detail fields. ~1 min and ~$0.001 per job. 12 tests
 
 **UI**
 - ✅ `P3-08` Job Search screen built (multi-field search + facets)
@@ -240,6 +249,15 @@ The other ATS adapters, the scheduler and the screen wiring are still open.
   **Run discovery** button showing the last run's report. *The button and the live Sources rail
   are built (`DiscoverySources`), replacing the fixture list; adding a company by URL waits on
   `P3-20`*
+- ✅ `P3-29` Analyze on the Pipeline: an **Analyze N new jobs** button (10 per click) with
+  progress, and an Analyze / Re-analyze / Retry action on every card. The board reloads when a
+  run ends, so analyzed jobs move to Reviewed with their scores. Polling is shared with
+  discovery through `usePolledRun`
+- ✅ `P3-30` Pipeline cards cleaned up (2026-09-26): no match ring until a job is scored — a 0
+  meant "not started" and read as a bad match — and the per-card Analyze action removed. Opening
+  a job that was never scored starts its analysis once per visit; a failed run is left for the
+  job page's Analyze button. The header's **Analyze N new jobs** batch stays. *Analysis no longer
+  moves a job to Reviewed once `P4-13` lands — only shortlisting does*
 
 **Infrastructure**
 - ⬜ `P3-12` Redis + Celery for scheduling
@@ -310,18 +328,66 @@ discovery.
   matching. 7 tests. Company preference and the schedule are still open*
 - ⬜ `P4-03` Follow-up draft generation on an interval
 - ⬜ `P4-04` Google Sheet sync
+- ⬜ `P4-11` **`applications` becomes the per-user pipeline record.** A row exists from the
+  moment you shortlist: `status` gains `shortlisted` and `tailored` ahead of `staged`,
+  `resumeId` / `texPath` / `stagedAt` become nullable until a resume exists, `shortlistedAt` is
+  added, and `(userId, jobId)` becomes **unique**
+- ⬜ `P4-12` Shortlist endpoints: `POST /application/shortlist/{jobId}` creates the row at
+  `shortlisted` (a repeat returns the existing row); `DELETE /application/shortlist/{jobId}`
+  deletes it while it is still only shortlisted with no resume, and sets `withdrawn` once work
+  has started
+- ⬜ `P4-13` Move every per-user write off `jobs`: `match/service.py` stops setting
+  `status = reviewed` (a score alone moves nothing); `resume/service.py` upserts the application
+  to `tailored` with `resumeId` / `texPath` instead of setting the job's status; `stage` updates
+  that row to `staged` rather than inserting a second one
+- ⬜ `P4-14` Remove `status` and `shortlisted` from `Job`, `JobUpdate` and `JobRead`; replace the
+  `(status, discoveredAt)` index with `discoveredAt desc`; drop the `status` / `shortlisted`
+  filters from `listJobs`. `P3-26`'s archiving gets its own listing field (`closedAt`) when built
+- ⬜ `P4-15` Board reads: `GET /application/counts` — per status for the signed-in user, plus
+  `new` = jobs with no application of theirs; New lists `jobs` excluding the user's application
+  `jobId`s; every other column lists applications by status, joined to their jobs by id
+- ⬜ `P4-16` Migration `server/migrate_pipeline_to_applications.py`, dry-run by default: an
+  application for each job that is shortlisted or past `new`, for the existing account, then
+  `$unset` both fields from `jobs`
+- ⬜ `P4-17` Tests: shortlisting creates one row and a repeat is a no-op; a second account still
+  sees the job in New; unshortlist deletes vs withdraws; tailoring an unshortlisted job upserts
+  its row at `tailored`
 
 **UI**
 - ✅ `P4-05` Staged Applications screen built
 - ✅ `P4-06` Pipeline board built
 - ✅ `P4-07` "Pending your review" banner built
 - ✅ `P4-08` Settings screen built
-- ⬜ `P4-09` Wire all three screens onto the application API and real counts
+- 🟡 `P4-09` Wire all three screens onto the application API and real counts. *Pipeline board
+  done 2026-09-26: counts from `GET /api/job/counts`, each column's newest jobs with scores from
+  one `GET /api/match/summaries`, Interview read from applications, and the review banner from
+  `GET /api/match/pending`, whose new `nextJobId` is what Select keywords opens. The board's
+  columns left `board.json`; its `pending` stays for the other screens' badges. Staged
+  Applications and the banner's own screen are still open*
 - 🟡 `P4-10` Wire the Settings screen onto that store, once it exists. *Search targets is an
   editable form with Save. Company preference and Applications were taken off the screen on
   2026-09-26 as not needed; a Last run panel shows when discovery was triggered and what it found*
+- ⬜ `P4-18` Shortlist button on the `P4-12` endpoints; Job details reads "shortlisted" from the
+  user's application, not from the job
+- ⬜ `P4-19` Pipeline columns from `P4-15`: New = no application, Reviewed = `shortlisted`,
+  Tailored = `tailored` / `staged`, Applied = `applied` / `viewed`, Interview = `interview`
+- ⬜ `P4-20` The Shortlist screen and the sidebar's shortlisted badge read `shortlisted`
+  applications
 
 **The preferences store is new work, not a wiring job** — that screen has no backend at all today.
+
+### Decisions (2026-09-26)
+
+**A posting belongs to nobody; what you did about it is yours.** `jobs` is a shared catalogue,
+so a per-user fact on it — `status`, `shortlisted` — leaks: one account analyzing or
+shortlisting a job moved it for every account. Where you stand with a job now lives in your
+`applications` row, which exists from the moment you shortlist ("I've started working on this
+job"). `jobs` is written only by discovery and analysis of the listing itself. The ER diagram
+was updated first; `P4-11`…`P4-20` implement it.
+
+**Unshortlisting deletes only an untouched row.** While the row is still `shortlisted` with no
+resume, removing it returns the job to New with nothing left behind. Once a resume or a staged
+application hangs off it, the row is kept as `withdrawn`.
 
 ---
 
@@ -688,7 +754,8 @@ nothing agentic runs yet. The Chrome extension is built (Phase 9).
 
 | Built | Backed by |
 |---|---|
-| Pipeline board · Shortlist · Staged Applications · Job Search · Job Details | `board.json` `search.json` `applications.json` |
+| Shortlist · Staged Applications · Job Search · Job Details | `search.json` `applications.json`; every screen's sidebar badges still read `board.json` |
+| **Pipeline board — stat cards, five columns, review banner, sidebar badges** | **live — `GET /api/job/counts`, `GET /api/job?status=`, `GET /api/match/summaries`, `GET /api/match/pending`, `GET /api/application?status=`. A card opens Job Details, which is still fixture data (`P3-11`)** |
 | Keyword Selection — starts with nothing checked, per FR-2.5 | `matches.json` |
 | Resume Preview — Preview / Diff / Source tabs, `.tex` download | `resume.json` + `templates/base_resume.tex` |
 | **Login · Signup · sign-out · route guard** | **live — `POST /api/account/{signup,login}`, JWT in `sessionStorage`, mirrored into Redux** |
