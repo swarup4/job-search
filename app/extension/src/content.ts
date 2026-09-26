@@ -1,4 +1,5 @@
 import { detect } from "@/features/ats";
+import { capturePage } from "@/features/capture";
 import { attachFile, fillField } from "@/features/fieldFill/fill";
 import { clearMarks, markFilled, markPending, PENDING_CLASS } from "@/features/fieldFill/highlight";
 import { resolve } from "@/features/fieldFill/match";
@@ -13,7 +14,7 @@ import {
     type TabRequest,
     type UserAnswer,
 } from "@/shared/messages";
-import type { FieldFill, ScreeningAnswer } from "@/shared/types";
+import type { CapturePayload, FieldFill, ScreeningAnswer } from "@/shared/types";
 
 /** The last fill, so the panel can be redrawn after the user answers part of it.
  * Module state is safe here — a content script lives as long as its page. */
@@ -232,11 +233,17 @@ declare global {
  */
 function register(): void {
     chrome.runtime.onMessage.addListener(
-    (request: TabRequest, _sender, respond: (reply: Reply<FrameResult | null>) => void) => {
-        const run = async (): Promise<FrameResult | null> => {
+    (
+        request: TabRequest,
+        _sender,
+        respond: (reply: Reply<FrameResult | CapturePayload | null>) => void,
+    ) => {
+        const run = async (): Promise<FrameResult | CapturePayload | null> => {
             switch (request.type) {
                 case "ping":
                     return null;
+                case "capture":
+                    return capturePage();
                 case "panel":
                     if (lastResult) show(lastResult);
                     return null;

@@ -1,11 +1,25 @@
 import { axiosInstance, orNull } from "@/lib/axiosInstance";
 
-/** GET /api/match/{jobId} — null before the matching agent has scored the job. */
+/** GET /api/match/getMatch/{jobId} — null before the matching agent has scored the job. */
 export function getMatch(jobId) {
-    return orNull(axiosInstance.get(`/match/${jobId}`));
+    return orNull(axiosInstance.get(`/match/getMatch/${jobId}`));
 }
 
-/** GET /api/match/pending — feeds the "⚠ Pending your review" banner. */
+/**
+ * GET /api/match/summaries — score, review state and first risk for many jobs in one
+ * call. A job with no match is absent from the answer, not an error.
+ */
+export function getMatchSummaries(jobIds) {
+    if (!jobIds.length) return Promise.resolve([]);
+    // Repeated keys (jobIds=a&jobIds=b), which is what FastAPI reads as a list.
+    return axiosInstance.get("/match/summaries", {
+        params: { jobIds },
+        paramsSerializer: { indexes: null },
+    });
+}
+
+/** GET /api/match/pending — feeds the "⚠ Pending your review" banner, and names the
+ * longest-waiting job (`nextJobId`) for its Select keywords link. */
 export function getPendingCounts() {
     return axiosInstance.get("/match/pending");
 }

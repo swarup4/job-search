@@ -53,8 +53,9 @@ function Select({ className, invalid, ...props }) {
     );
 }
 
-/** Removable token — the reference's tag input, used for roles and locations. */
-function TokenList({ items, tone = "soft" }) {
+/** Removable token — the reference's tag input, used for roles and locations.
+ * `readOnly` drops the remove and add affordances, for a list shown but not edited here. */
+function TokenList({ items, tone = "soft", readOnly = false }) {
     return (
         <div className="flex flex-wrap gap-2">
             {items.map((it) => (
@@ -68,14 +69,18 @@ function TokenList({ items, tone = "soft" }) {
                     )}
                 >
                     {it}
-                    <span className="cursor-pointer text-[15px] leading-none opacity-45 hover:opacity-100">
-                        ×
-                    </span>
+                    {readOnly ? null : (
+                        <span className="cursor-pointer text-[15px] leading-none opacity-45 hover:opacity-100">
+                            ×
+                        </span>
+                    )}
                 </span>
             ))}
-            <span className="inline-flex cursor-pointer items-center gap-1.5 rounded-sm border border-dashed border-border px-2.5 py-1.5 text-[13px] text-muted-foreground hover:border-primary hover:text-primary">
-                + add
-            </span>
+            {readOnly ? null : (
+                <span className="inline-flex cursor-pointer items-center gap-1.5 rounded-sm border border-dashed border-border px-2.5 py-1.5 text-[13px] text-muted-foreground hover:border-primary hover:text-primary">
+                    + add
+                </span>
+            )}
         </div>
     );
 }

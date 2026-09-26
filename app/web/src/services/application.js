@@ -11,7 +11,7 @@ export function getApplicationForJob(jobId) {
 }
 
 export function getApplication(applicationId) {
-    return orNull(axiosInstance.get(`/application/${applicationId}`));
+    return orNull(axiosInstance.get(`/application/getApplication/${applicationId}`));
 }
 
 /**

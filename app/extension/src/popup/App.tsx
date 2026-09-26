@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
+import { Capture } from "@/popup/Capture";
 import { Review } from "@/popup/Review";
 import { SignIn } from "@/popup/SignIn";
 import { askWorker, type FrameResult, type TabContext } from "@/shared/messages";
@@ -175,6 +176,8 @@ export function App() {
                             {busy ? "Filling…" : "Fill this form"}
                         </button>
                     )}
+
+                    {tabId !== null ? <Capture tabId={tabId} /> : null}
                 </div>
             )}
         </main>

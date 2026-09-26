@@ -1,23 +1,9 @@
-% base_resume.tex — the one resume template.
-%
-% Jinja2 renders this with custom delimiters so Jinja never competes with LaTeX
-% braces. The exact delimiter strings are set in the renderer, not here: do NOT
-% write them literally in a comment. Jinja scans the whole file and has no idea
-% that a percent sign starts a LaTeX comment, so a delimiter mentioned in prose
-% is parsed as real syntax and the template fails to compile.
-%
-% Expressions and statements both close on the FIRST closing brace, so an
-% expression must contain no braces of its own.
-%
-% The `tex` filter escapes LaTeX specials and is mandatory on every value coming
-% from profile data — see .claude/rules/resume-templating.md.
-%
-% Note the subscript on group['items']: dotted access would resolve to Python's
-% dict.items method rather than the profile key of that name.
-%
-% The body may only use the custom commands defined below. Nothing here ever
-% receives LLM-written prose.
-
+%% ============================================================
+%%  SWARUP SAHA — Resume (Original Content, v5 Template)
+%%  Design: accent blue #1F5C99, borderless striped table, FA5 icons
+%%  Overleaf: pdflatex (default engine)
+%% ============================================================
+%% !TEX program = pdflatex
 
 \documentclass[10pt, letterpaper]{article}
 
@@ -154,7 +140,7 @@
 \section{\faUser\ Professional Summary}
 
 {\fontsize{9}{13}\color{textmain}
-  Technical Lead and Full Stack / GenAI Engineer with 12.4 years of experience building scalable
+  Technical Lead and Full Stack / GenAI Engineer with 12.5 years of experience building scalable
   web applications and AI-powered systems. Deep expertise in MERN/MEAN stack, LangChain,
   LangGraph, Azure OpenAI, and Agentic AI/RAG pipelines. Proven track record delivering
   multi-tenant SaaS platforms, ML models, and LLM-based products at enterprise scale. Skilled

@@ -2,9 +2,9 @@
   "$schema": "https://assets.requestly.com/local/v1.15.0/metadata.json",
   "type": "api",
   "entryType": "http",
-  "id": "a36ce37e-4580-4ca3-84c3-b0ba6640b21f",
-  "rank": "a0",
-  "url": "{{base_url}}/api/resume",
+  "id": "d95cc9a3-bc2b-4a7b-a313-7f09012ba78c",
+  "rank": "a4",
+  "url": "{{base_url}}/api/resume/storeResume",
   "method": "POST",
   "contentType": "json"
 }

@@ -1,6 +1,7 @@
 import { matchApplication, platformFor } from "@/features/jobContext";
 import * as api from "@/shared/api";
 import type {
+    CaptureOutcome,
     FillData,
     FrameResult,
     Reply,
@@ -10,7 +11,7 @@ import type {
     WorkerRequest,
 } from "@/shared/messages";
 import { clearSession, readAccount } from "@/shared/session";
-import type { FieldFill, JobRead, ScreeningAnswer } from "@/shared/types";
+import type { CapturePayload, FieldFill, JobRead, ScreeningAnswer } from "@/shared/types";
 
 /**
  * The only context with the token and the only one that calls the API. It also
@@ -244,6 +245,38 @@ async function answerTab(
     return result;
 }
 
+/**
+ * Frame 0 only, and deliberately not `broadcast`: a capture is one page, and
+ * merging frames is a fill-shaped operation returning a fill-shaped result.
+ */
+async function captureTab(tabId: number): Promise<CaptureOutcome> {
+    await ensureInjected(tabId);
+
+    let reply: Reply<CapturePayload | null> | undefined;
+    try {
+        reply = (await chrome.tabs.sendMessage(tabId, { type: "capture" } satisfies TabRequest, {
+            frameId: 0,
+        })) as Reply<CapturePayload | null> | undefined;
+    } catch {
+        throw new Error("This page did not respond. Reload the tab and try again.");
+    }
+
+    if (!reply) throw new Error("This page did not respond. Reload the tab and try again.");
+    if (!reply.ok) throw new Error(reply.error);
+    if (!reply.value) throw new Error("Found nothing to capture on this page.");
+
+    const page = reply.value;
+    const created = await api.createCapture(page);
+
+    return {
+        ...created,
+        pageTitle: page.pageTitle,
+        region: page.region,
+        characters: page.markdown.length,
+        links: page.links.length,
+    };
+}
+
 const handlers: {
     [K in WorkerRequest["type"]]: (
         request: Extract<WorkerRequest, { type: K }>,
@@ -263,6 +296,8 @@ const handlers: {
     },
 
     fillTab: (request) => fillTab(request.tabId, request.applicationId),
+
+    captureTab: (request) => captureTab(request.tabId),
 
     answerTab: (request) => answerTab(request.tabId, request.applicationId, request.answers),
 

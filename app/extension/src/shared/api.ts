@@ -5,6 +5,8 @@ import type {
     ApplicantProfile,
     ApplicationRead,
     ApplicationStatus,
+    CaptureCreated,
+    CapturePayload,
     FieldFill,
     JobRead,
     LoginResult,
@@ -132,7 +134,7 @@ export function listStaged(): Promise<ApplicationRead[]> {
 }
 
 export function getJob(jobId: string): Promise<JobRead> {
-    return request<JobRead>(`/job/${jobId}`);
+    return request<JobRead>(`/job/getJob/${jobId}`);
 }
 
 export function recordFill(
@@ -177,4 +179,15 @@ export async function getResumePdf(): Promise<{ name: string; base64: string }> 
     let binary = "";
     for (const byte of bytes) binary += String.fromCharCode(byte);
     return { name, base64: btoa(binary) };
+}
+
+/**
+ * The content script cannot post this itself — its origin is the career page,
+ * which the API's CORS list does not include. Same boundary as the resume fetch.
+ */
+export function createCapture(page: CapturePayload): Promise<CaptureCreated> {
+    return request<CaptureCreated>("/job-description", {
+        method: "POST",
+        body: JSON.stringify(page),
+    });
 }
