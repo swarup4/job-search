@@ -1,0 +1,16 @@
+[
+  {
+    "id": 0,
+    "key": "enabled",
+    "value": "true",
+    "isEnabled": false,
+    "description": "true = only what a run scrapes"
+  },
+  {
+    "id": 1,
+    "key": "platform",
+    "value": "workday",
+    "isEnabled": false,
+    "description": ""
+  }
+]

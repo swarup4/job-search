@@ -1,0 +1,6 @@
+{
+  "$schema": "https://assets.requestly.com/local/v1.15.0/body.json",
+  "contentType": "json",
+  "raw": "{\n  \"name\": \"Accenture\",\n  \"careersUrl\": \"https://accenture.wd103.myworkdayjobs.com/AccentureCareers\",\n  \"platform\": \"workday\",\n  \"config\": {\n    \"tenant\": \"accenture\",\n    \"wd\": \"wd103\",\n    \"site\": \"AccentureCareers\"\n  },\n  \"enabled\": true,\n  \"notes\": null\n}",
+  "rawContentType": "application/json"
+}

@@ -82,6 +82,23 @@ async def get_description(description_id: str) -> dict[str, Any]:
     return await _request("GET", f"/job-description/{description_id}")
 
 
+async def description_stored(url: str) -> bool:
+    """Whether a description already exists for this exact URL — how a re-run learns
+    a posting is stored without fetching it from the board again."""
+    rows = await _request("GET", "/job-description", params={"url": url, "limit": 1})
+    return bool(rows)
+
+
+async def get_account() -> dict[str, Any]:
+    """The signed-in account. Doubles as the check that a forwarded token is real."""
+    return await _request("GET", "/account/getAccount")
+
+
+async def create_description(payload: dict[str, Any]) -> dict[str, Any]:
+    """`{id, duplicate}` — the same url and text twice comes back as the row stored."""
+    return await _request("POST", "/job-description", json=payload)
+
+
 async def list_raw_descriptions(limit: int = 50) -> list[dict[str, Any]]:
     """Captures nobody has turned into a posting yet — the parse queue."""
     return await _request("GET", "/job-description", params={"status": "raw", "limit": limit})
@@ -99,6 +116,21 @@ async def set_description_status(description_id: str, status: str) -> dict[str, 
     return await _request(
         "PATCH", f"/job-description/status/{description_id}", params={"new_status": status}
     )
+
+
+async def get_preferences() -> dict[str, Any]:
+    """The account's saved Search targets — titles, locations, page cap. An account
+    that never saved any gets the server's defaults, never a 404."""
+    return await _request("GET", "/preference")
+
+
+async def list_career_sources(enabled: bool | None = None) -> list[dict[str, Any]]:
+    params = {} if enabled is None else {"enabled": str(enabled).lower()}
+    return await _request("GET", "/career-source", params=params)
+
+
+async def record_source_result(source_id: str, result: dict[str, Any]) -> dict[str, Any]:
+    return await _request("PUT", f"/career-source/result/{source_id}", json=result)
 
 
 async def get_profile() -> dict[str, Any]:

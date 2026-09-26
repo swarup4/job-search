@@ -32,5 +32,16 @@
     "updatedAt": "2026-09-16T18:11:40.146002Z",
     "createdBy": null,
     "updatedBy": null
+  },
+  "ai_base_url": {
+    "id": "dec870e0-bfd8-4ebd-a695-7152f541af0c",
+    "syncValue": "http://127.0.0.1:8001",
+    "type": "string",
+    "isEnabled": true,
+    "rank": "a3",
+    "createdAt": "2026-09-25T18:04:11.936444Z",
+    "updatedAt": "2026-09-25T18:04:11.936444Z",
+    "createdBy": null,
+    "updatedBy": null
   }
 }

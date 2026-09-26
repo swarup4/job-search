@@ -3,7 +3,7 @@
  * reach into a file below it.
  */
 
-export { API_URL, ApiError, axiosInstance } from "@/lib/axiosInstance";
+export { AI_URL, API_URL, ApiError, axiosInstance } from "@/lib/axiosInstance";
 
 export { getJob, listJobs, setShortlisted, updateJob } from "./job";
 export { getMatch, getPendingCounts, recordSelection, skipSelection } from "./match";
@@ -45,3 +45,11 @@ export {
     updateSkill,
 } from "./profile";
 export { getShellCounts } from "./shell";
+export {
+    getDiscoveryRun,
+    getTierSettings,
+    listCareerSources,
+    startDiscovery,
+    updateCareerSource,
+} from "./discovery";
+export { getPreferences, savePreferences } from "./preference";

@@ -1,0 +1,30 @@
+[
+  {
+    "id": 0,
+    "key": "status",
+    "value": "parsed",
+    "isEnabled": false,
+    "description": "raw | parsed | discarded"
+  },
+  {
+    "id": 1,
+    "key": "url",
+    "value": "",
+    "isEnabled": false,
+    "description": "exact listing URL"
+  },
+  {
+    "id": 2,
+    "key": "limit",
+    "value": "50",
+    "isEnabled": true,
+    "description": ""
+  },
+  {
+    "id": 3,
+    "key": "skip",
+    "value": "0",
+    "isEnabled": false,
+    "description": ""
+  }
+]

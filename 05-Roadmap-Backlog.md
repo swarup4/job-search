@@ -4,8 +4,8 @@
 |---|---|
 | **Product** | JobPilot — Agentic AI Job Search Platform |
 | **Owner** | Swarup Saha |
-| **Status** | v1.8 — eleven phases, application first then agents. Phases 1, 5 and 6 done; one Atlas cluster and hosted-only inference as of 2026-09-19 |
-| **Updated** | 2026-09-19 |
+| **Status** | v1.9 — eleven phases, application first then agents. Phases 1, 5 and 6 done; Workday career-page scraping live from Settings as of 2026-09-25 |
+| **Updated** | 2026-09-25 |
 
 ---
 
@@ -24,7 +24,7 @@ anything starts reasoning.
 |---|---|---|
 | [1](#2-phase-1--authentication--profile) | Sign in, and the profile everything hangs off | ✅ done |
 | [2](#3-phase-2--resume-generation--download) | A resume built from that profile, downloadable | 🚧 `.tex` and PDF both download; three tasks left |
-| [3](#4-phase-3--job-scraping-search--shortlist) | Real jobs in the system, searchable and shortlistable | 🚧 capture and parse land; connectors open |
+| [3](#4-phase-3--job-scraping-search--shortlist) | Real jobs in the system, searchable and shortlistable | 🚧 capture, parse and Workday scraping land; other ATS adapters and screen wiring open |
 | [4](#5-phase-4--applications--settings) | Tracking what you applied to, and the preferences driving it | ⬜ API only |
 | [5](#6-phase-5--llm-integration--resume-rectification) | A resume rectified against a specific job | ✅ done |
 | [6](#7-phase-6--rag--retrieval) | Retrieval over your own resume | ✅ done |
@@ -170,9 +170,10 @@ hint. **Invariant 5 and FR-4.4 still forbid this and need amending.**
 ---
 
 ## 4. Phase 3 — Job scraping, search & shortlist
-🚧 **one source works end to end.** Get real jobs into the system so the screens that already
-exist have something to work on. Capture and the parse into a `Job` both land; the connectors,
-the scheduler and the screen wiring are still open.
+🚧 **two sources work end to end.** Get real jobs into the system so the screens that already
+exist have something to work on. Extension capture with its parse into a `Job`, and Workday
+career-page scraping started from Settings, both land — 41 companies registered, 33 enabled.
+The other ATS adapters, the scheduler and the screen wiring are still open.
 
 **API**
 - ✅ `P3-01` `job` module: create with dedup-hash check, list by status, shortlist toggle
@@ -182,7 +183,8 @@ the scheduler and the screen wiring are still open.
   sha256 over `source` + `refId` where the board gives one, else title + company + location.
   The JD prose left `jobs` in the 2026-09-19 split and can no longer be part of the seed
 - ⬜ `P3-05` Adapt the `linkedin-hiring-scraper` skill as a tool
-- ⬜ `P3-06` Naukri and company career-page sources
+- ⬜ `P3-06` Naukri and company career-page sources. *Career pages are broken down as
+  `P3-15`…`P3-27` below; this task is Naukri only from here on*
 - ⬜ `P3-07` Scheduled daily run *(needs Redis + Celery, below)*
 - ✅ `P3-13` **`job_description` module**, renamed from `capture` on 2026-09-19. The
   `job_descriptions` collection holds the page as markdown (`jdText`), the HTML the job page
@@ -197,12 +199,47 @@ the scheduler and the screen wiring are still open.
   page decides: a title or company not present verbatim refuses the parse, a technology the page
   never names is dropped from `requirements`, an unfindable requisition id is dropped, and a page
   that is not one posting is marked `discarded` rather than written. 9 tests in `ai/tests/`
+- ✅ `P3-15` **`career_source` module** — the companies to scrape, one flat document each:
+  `name`, `careersUrl`, `platform`, `config` (tenant / site / board id), `enabled`, `notes`,
+  `lastRunAt`, `lastResult`. CRUD plus `PUT /career-source/result/{id}`. **Seeded 2026-09-25**
+  into Atlas from `server/career_sources_seed.json`: the 41 Workday companies, 33 enabled — 5 off
+  for robots.txt, 3 because their jobs sit inside another company's tenant. 6 tests
+- ✅ `P3-16` `create_description`, `description_stored`, `get_account`, `list_career_sources`
+  and `record_source_result` in `mcp_servers/jobpilot_api/client.py`
+- ✅ `P3-17` **Workday adapter**, `ai/sources/workday.py` — `POST /wday/cxs/{tenant}/{site}/jobs`
+  for the list, one detail call per *new* posting for the JD. The country facet is found by name
+  and applied; titles are matched locally, since Workday's search is loose enough to fill the
+  2,000 cap anyway. A posting already stored is recognised by URL and never re-fetched, which
+  took a full re-run from 137s to 32s. Verified over all 35 then-enabled companies
+- ⬜ `P3-18` **Capgemini adapter** — `GET cg-jobstream-api.azurewebsites.net/api/job-search`. The
+  description comes in the list response, so one call per page and no detail fetch
+- ⬜ `P3-19` Greenhouse, Lever, Ashby and SmartRecruiters adapters over their public board feeds
+- ⬜ `P3-20` ATS detection from a pasted careers URL — host first, then the page's embed script;
+  stored on the `career_source` so it runs once per company
+- ✅ `P3-21` Filter on target title and location **before** any write. Reads the account's saved
+  Search targets (`P4-02`) per run; `SCRAPE_*` in `ai/.env` are only fallbacks
+- ✅ `P3-22` robots.txt checked inside every request, one identifying User-Agent, 2 requests per
+  host, backoff on 429 and transient 5xx. Every unclear robots answer reads as "no" — Workday
+  answers a JSON-accepting robots request with a 406, which a first draft read as permission
+- ⬜ `P3-23` JSON-LD `JobPosting` extractor for custom sites, with a sitemap or listing page to
+  find the detail URLs
+- ⬜ `P3-24` Playwright fallback: render → markdown → `POST /job-description` as `raw` →
+  `parse_description()` from `P3-14`
+- ✅ `P3-25` `POST /discovery/run` — every enabled source, answering new / duplicate / failed /
+  blocked per company. Lives on the AI tier's own server (`ai/api/`, `python -m api.main`, port
+  8001): it takes the dashboard's JWT, checks it against `getAccount`, and runs in the background
+  with `GET` for progress. One run at a time; the token is used for that run only. 7 tests
+- ⬜ `P3-26` Archive a job that has disappeared from its board since the last run
 
 **UI**
 - ✅ `P3-08` Job Search screen built (multi-field search + facets)
 - ✅ `P3-09` Shortlist / Match Review screen built
 - ✅ `P3-10` Job Details screen built
 - ⬜ `P3-11` Wire all three screens off `search.json` and onto the job API
+- 🟡 `P3-27` Settings: add a company by pasting its careers URL, showing the detected ATS; a
+  **Run discovery** button showing the last run's report. *The button and the live Sources rail
+  are built (`DiscoverySources`), replacing the fixture list; adding a company by URL waits on
+  `P3-20`*
 
 **Infrastructure**
 - ⬜ `P3-12` Redis + Celery for scheduling
@@ -223,6 +260,39 @@ filter to maintain. The cost is that it is **one-way** — the earlier design ke
 better extractor could be re-run over old rows, and that is no longer possible. A capture the
 converter mangles is recaptured by hand. `region` and `textLength` exist to make that visible.
 
+### Company career pages (planned 2026-09-24)
+
+**Read the JSON the page reads, not the HTML.** A branded careers site is usually a front end over
+an ATS or its own search API, and that API returns structured postings. Four tiers, cheapest
+first, and the LLM only in the last:
+
+| Tier | When | How | Tasks |
+|---|---|---|---|
+| 1. Known ATS | Hosted on, or embedding, Workday / Greenhouse / Lever / Ashby / SmartRecruiters | One adapter reused across every company on it | `P3-17`, `P3-19` |
+| 2. Company API | A branded site calling its own endpoint | Find it once in DevTools → Network, write a ~50-line adapter | `P3-18` |
+| 3. JSON-LD | Custom site with a `JobPosting` block | One plain fetch per detail page | `P3-23` |
+| 4. Render + parse | None of the above | Playwright, then the `P3-14` parser | `P3-24` |
+
+**Verified by hand on 2026-09-24; Workday built 2026-09-25** — progress per task is tracked in
+[docs/08](docs/08-Career-Page-Scraping.md).   Accenture's `accenture.com/careers` hands
+off to Workday; a Python search returned real postings with requisition ids (`R00334988`).
+accenture.com's robots.txt disallows `*/careers/jobsearch?`, so the adapter never touches that
+site; the Workday host allows `/AccentureCareers/`. Capgemini's search page reads
+`cg-jobstream-api` — 99 Python jobs in India, each with title, location, experience level, ref id,
+full description and apply URL. That API is undocumented and Capgemini's own, so it can change
+without notice; the fixture tests are how we find out.
+
+**Writes reuse what exists.** Tiers 1–3 know the fields, so each posting is `create_job`
+(`source: career_page`, `refId` from the board) → `create_description` → `link_description`,
+with no LLM. The dedup hash is `career_page|company|refId` — the company is in the seed because
+two Workday tenants can both issue `R0001` — so a daily re-run returns `duplicate: true` for
+anything already stored. Runs are triggered from the dashboard, which forwards the JWT — the AI
+tier holds no credentials, so the scheduled run in `P3-07` needs its own answer.
+
+**Scraping costs nothing.** The feeds are public and keyless, Playwright runs locally, and there
+is no scraping service, proxy or CAPTCHA solver in the plan. `P3-21`'s filter is what keeps the
+downstream cost down: Accenture alone lists thousands of openings.
+
 ---
 
 ## 5. Phase 4 — Applications & Settings
@@ -231,9 +301,13 @@ discovery.
 
 **API**
 - ✅ `P4-01` `application` module: stage, record fill, status transitions, answer bank
-- ⬜ `P4-02` **Rebuild a preferences store for Settings.** `profile.preferences` was removed
+- 🟡 `P4-02` **Rebuild a preferences store for Settings.** `profile.preferences` was removed
   on 2026-09-11, so target roles, locations, company preference and discovery schedule have
-  nowhere to live
+  nowhere to live. *Search targets built 2026-09-26: `preference` module, `GET`/`PUT
+  /api/preference`, one per account — `roles`, `locations`, `workMode`, `minExperience`; an
+  unsaved account reads back the defaults. Run discovery reads it at the start of each run and
+  echoes the filters it used; roles and locations filter, work mode and experience are kept for
+  matching. 7 tests. Company preference and the schedule are still open*
 - ⬜ `P4-03` Follow-up draft generation on an interval
 - ⬜ `P4-04` Google Sheet sync
 
@@ -243,7 +317,9 @@ discovery.
 - ✅ `P4-07` "Pending your review" banner built
 - ✅ `P4-08` Settings screen built
 - ⬜ `P4-09` Wire all three screens onto the application API and real counts
-- ⬜ `P4-10` Wire the Settings screen onto that store, once it exists
+- 🟡 `P4-10` Wire the Settings screen onto that store, once it exists. *Search targets is an
+  editable form with Save. Company preference and Applications were taken off the screen on
+  2026-09-26 as not needed; a Last run panel shows when discovery was triggered and what it found*
 
 **The preferences store is new work, not a wiring job** — that screen has no backend at all today.
 
@@ -612,13 +688,14 @@ nothing agentic runs yet. The Chrome extension is built (Phase 9).
 
 | Built | Backed by |
 |---|---|
-| Pipeline board · Shortlist · Staged Applications · Job Search · Job Details · Settings | `board.json` `search.json` `applications.json` `settings.json` |
+| Pipeline board · Shortlist · Staged Applications · Job Search · Job Details | `board.json` `search.json` `applications.json` |
 | Keyword Selection — starts with nothing checked, per FR-2.5 | `matches.json` |
 | Resume Preview — Preview / Diff / Source tabs, `.tex` download | `resume.json` + `templates/base_resume.tex` |
 | **Login · Signup · sign-out · route guard** | **live — `POST /api/account/{signup,login}`, JWT in `sessionStorage`, mirrored into Redux** |
 | **My Details — identity, experience, education, skills, certifications** | **live — `getAccount` + the five profile endpoints on load, one Save writes them all back. The "Indexed for retrieval" panel is live too — `GET /api/resume-chunk/stats` and `POST /api/profile/reindex`. `profile.json` is down to `resumeFile` on this screen** |
 | **Resume — template picker, render, submit as default** | **live — `GET /api/template`, `GET /api/template/render/{id}`, `PUT /api/resume/base`** |
 | **Resume review — stored resume, Regenerate, `.tex` and PDF download** | **live — `GET /api/resume/base`, `GET /api/resume/base/pdf` (pdflatex). The chat panel beside it is layout only** |
+| **Settings — Search targets, Last run, Sources, Models & privacy** | **live — `GET`/`PUT /api/preference` and `GET`/`PATCH /api/career-source` on the API; `POST`/`GET /api/discovery/run` and `GET /api/settings` on the AI tier (port 8001). Company preference, Applications and the old Discovery panel were removed on 2026-09-26; `settings.json` is gone** |
 
 **Six deviations from this document, recorded deliberately:**
 

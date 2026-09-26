@@ -13,9 +13,11 @@ from middleware import REQUEST_ID_HEADER, AccessLogMiddleware, ErrorHandlingMidd
 from modules import (
     account,
     application,
+    career_source,
     job,
     job_description,
     match,
+    preference,
     profile,
     resume,
     resume_chunk,
@@ -32,6 +34,8 @@ MODULES = (
     application,
     profile,
     account,
+    career_source,
+    preference,
 )
 
 

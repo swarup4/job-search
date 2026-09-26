@@ -1,0 +1,6 @@
+{
+  "$schema": "https://assets.requestly.com/local/v1.15.0/body.json",
+  "contentType": "json",
+  "raw": "{\n  \"roles\": [\n    \"Technical Lead\",\n    \"Senior Full-Stack Engineer\",\n    \"GenAI Engineer\",\n    \"Staff Engineer\"\n  ],\n  \"locations\": [\n    \"India\",\n    \"Bengaluru\",\n    \"Pune\",\n    \"Hyderabad\"\n  ],\n  \"workMode\": \"hybrid\",\n  \"minExperience\": 6\n}",
+  "rawContentType": "application/json"
+}

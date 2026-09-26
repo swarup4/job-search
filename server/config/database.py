@@ -7,9 +7,11 @@ from pymongo.operations import SearchIndexModel
 
 from modules.account import Account
 from modules.application import AnswerBank, ApplicantProfile, Application
+from modules.career_source import CareerSource
 from modules.job import Job
 from modules.job_description import JobDescription
 from modules.match import Match
+from modules.preference import Preference
 from modules.profile import Certification, Education, Experience, Profile, Skill
 from modules.resume import BaseResume, TailoredResume
 from modules.resume_chunk import VECTOR_INDEX as CHUNK_INDEX
@@ -43,6 +45,8 @@ def document_models() -> list[type]:
         Certification,
         Account,
         Template,
+        CareerSource,
+        Preference,
     ]
 
 

@@ -1,0 +1,494 @@
+[
+  {
+    "name": "Accenture",
+    "careersUrl": "https://accenture.wd103.myworkdayjobs.com/AccentureCareers",
+    "platform": "workday",
+    "config": {
+      "tenant": "accenture",
+      "wd": "wd103",
+      "site": "AccentureCareers"
+    },
+    "enabled": true,
+    "notes": null
+  },
+  {
+    "name": "Salesforce",
+    "careersUrl": "https://salesforce.wd12.myworkdayjobs.com/External_Career_Site",
+    "platform": "workday",
+    "config": {
+      "tenant": "salesforce",
+      "wd": "wd12",
+      "site": "External_Career_Site"
+    },
+    "enabled": true,
+    "notes": null
+  },
+  {
+    "name": "Informatica",
+    "careersUrl": "https://salesforce.wd12.myworkdayjobs.com/External_Career_Site",
+    "platform": "workday",
+    "config": {
+      "tenant": "salesforce",
+      "wd": "wd12",
+      "site": "External_Career_Site"
+    },
+    "enabled": false,
+    "notes": "Informatica jobs live inside Salesforce's tenant; enabling this re-labels every Salesforce job"
+  },
+  {
+    "name": "Adobe",
+    "careersUrl": "https://adobe.wd5.myworkdayjobs.com/external_experienced",
+    "platform": "workday",
+    "config": {
+      "tenant": "adobe",
+      "wd": "wd5",
+      "site": "external_experienced"
+    },
+    "enabled": true,
+    "notes": null
+  },
+  {
+    "name": "Workday",
+    "careersUrl": "https://workday.wd5.myworkdayjobs.com/Workday",
+    "platform": "workday",
+    "config": {
+      "tenant": "workday",
+      "wd": "wd5",
+      "site": "Workday"
+    },
+    "enabled": true,
+    "notes": null
+  },
+  {
+    "name": "Zendesk",
+    "careersUrl": "https://zendesk.wd1.myworkdayjobs.com/zendesk",
+    "platform": "workday",
+    "config": {
+      "tenant": "zendesk",
+      "wd": "wd1",
+      "site": "zendesk"
+    },
+    "enabled": true,
+    "notes": null
+  },
+  {
+    "name": "Palo Alto Networks",
+    "careersUrl": "https://paloaltonetworks.wd5.myworkdayjobs.com/panwexternalcareers",
+    "platform": "workday",
+    "config": {
+      "tenant": "paloaltonetworks",
+      "wd": "wd5",
+      "site": "panwexternalcareers"
+    },
+    "enabled": false,
+    "notes": "robots.txt disallows /panwexternalcareers/"
+  },
+  {
+    "name": "Cisco",
+    "careersUrl": "https://cisco.wd5.myworkdayjobs.com/Cisco_Careers",
+    "platform": "workday",
+    "config": {
+      "tenant": "cisco",
+      "wd": "wd5",
+      "site": "Cisco_Careers"
+    },
+    "enabled": true,
+    "notes": null
+  },
+  {
+    "name": "Splunk",
+    "careersUrl": "https://cisco.wd5.myworkdayjobs.com/Cisco_Careers",
+    "platform": "workday",
+    "config": {
+      "tenant": "cisco",
+      "wd": "wd5",
+      "site": "Cisco_Careers"
+    },
+    "enabled": false,
+    "notes": "Splunk jobs live inside Cisco's tenant and already arrive as Cisco"
+  },
+  {
+    "name": "Northern Trust",
+    "careersUrl": "https://ntrs.wd1.myworkdayjobs.com/northerntrust",
+    "platform": "workday",
+    "config": {
+      "tenant": "ntrs",
+      "wd": "wd1",
+      "site": "northerntrust"
+    },
+    "enabled": true,
+    "notes": null
+  },
+  {
+    "name": "PayPal",
+    "careersUrl": "https://paypal.wd1.myworkdayjobs.com/jobs",
+    "platform": "workday",
+    "config": {
+      "tenant": "paypal",
+      "wd": "wd1",
+      "site": "jobs"
+    },
+    "enabled": true,
+    "notes": null
+  },
+  {
+    "name": "Fiserv",
+    "careersUrl": "https://fiserv.wd5.myworkdayjobs.com/EXT",
+    "platform": "workday",
+    "config": {
+      "tenant": "fiserv",
+      "wd": "wd5",
+      "site": "EXT"
+    },
+    "enabled": true,
+    "notes": null
+  },
+  {
+    "name": "DXC Technology",
+    "careersUrl": "https://dxctechnology.wd1.myworkdayjobs.com/DXCJobs",
+    "platform": "workday",
+    "config": {
+      "tenant": "dxctechnology",
+      "wd": "wd1",
+      "site": "DXCJobs"
+    },
+    "enabled": true,
+    "notes": null
+  },
+  {
+    "name": "Target",
+    "careersUrl": "https://target.wd5.myworkdayjobs.com/targetcareers",
+    "platform": "workday",
+    "config": {
+      "tenant": "target",
+      "wd": "wd5",
+      "site": "targetcareers"
+    },
+    "enabled": true,
+    "notes": null
+  },
+  {
+    "name": "Lowe's",
+    "careersUrl": "https://lowes.wd5.myworkdayjobs.com/LWS_External_CS",
+    "platform": "workday",
+    "config": {
+      "tenant": "lowes",
+      "wd": "wd5",
+      "site": "LWS_External_CS"
+    },
+    "enabled": false,
+    "notes": "robots.txt disallows /LWS_External_CS/"
+  },
+  {
+    "name": "Booking Holdings",
+    "careersUrl": "https://priceline.wd1.myworkdayjobs.com/BookingHoldings",
+    "platform": "workday",
+    "config": {
+      "tenant": "priceline",
+      "wd": "wd1",
+      "site": "BookingHoldings"
+    },
+    "enabled": true,
+    "notes": null
+  },
+  {
+    "name": "Airbus",
+    "careersUrl": "https://ag.wd3.myworkdayjobs.com/Airbus",
+    "platform": "workday",
+    "config": {
+      "tenant": "ag",
+      "wd": "wd3",
+      "site": "Airbus"
+    },
+    "enabled": true,
+    "notes": null
+  },
+  {
+    "name": "PwC",
+    "careersUrl": "https://pwc.wd3.myworkdayjobs.com/CRM_Experienced_Careers_Site",
+    "platform": "workday",
+    "config": {
+      "tenant": "pwc",
+      "wd": "wd3",
+      "site": "CRM_Experienced_Careers_Site"
+    },
+    "enabled": false,
+    "notes": "robots.txt disallows /CRM_Experienced_Careers_Site/; the allowed PwC sites list no India jobs"
+  },
+  {
+    "name": "Kyndryl",
+    "careersUrl": "https://kyndryl.wd5.myworkdayjobs.com/KyndrylProfessionalCareers",
+    "platform": "workday",
+    "config": {
+      "tenant": "kyndryl",
+      "wd": "wd5",
+      "site": "KyndrylProfessionalCareers"
+    },
+    "enabled": true,
+    "notes": null
+  },
+  {
+    "name": "Genpact",
+    "careersUrl": "https://genpact.wd108.myworkdayjobs.com/External_Careers",
+    "platform": "workday",
+    "config": {
+      "tenant": "genpact",
+      "wd": "wd108",
+      "site": "External_Careers"
+    },
+    "enabled": true,
+    "notes": null
+  },
+  {
+    "name": "State Street",
+    "careersUrl": "https://statestreet.wd1.myworkdayjobs.com/Global",
+    "platform": "workday",
+    "config": {
+      "tenant": "statestreet",
+      "wd": "wd1",
+      "site": "Global"
+    },
+    "enabled": true,
+    "notes": null
+  },
+  {
+    "name": "Citi",
+    "careersUrl": "https://citi.wd5.myworkdayjobs.com/2",
+    "platform": "workday",
+    "config": {
+      "tenant": "citi",
+      "wd": "wd5",
+      "site": "2"
+    },
+    "enabled": false,
+    "notes": "robots.txt disallows /2/, Citi's site id"
+  },
+  {
+    "name": "Discover",
+    "careersUrl": "https://capitalone.wd12.myworkdayjobs.com/Capital_One",
+    "platform": "workday",
+    "config": {
+      "tenant": "capitalone",
+      "wd": "wd12",
+      "site": "Capital_One"
+    },
+    "enabled": false,
+    "notes": "Discover is now inside Capital One's tenant; enabling this labels every Capital One job as Discover"
+  },
+  {
+    "name": "Invesco",
+    "careersUrl": "https://invesco.wd1.myworkdayjobs.com/IVZ",
+    "platform": "workday",
+    "config": {
+      "tenant": "invesco",
+      "wd": "wd1",
+      "site": "IVZ"
+    },
+    "enabled": true,
+    "notes": null
+  },
+  {
+    "name": "Morgan Stanley",
+    "careersUrl": "https://ms.wd5.myworkdayjobs.com/External",
+    "platform": "workday",
+    "config": {
+      "tenant": "ms",
+      "wd": "wd5",
+      "site": "External"
+    },
+    "enabled": true,
+    "notes": null
+  },
+  {
+    "name": "Deutsche Bank",
+    "careersUrl": "https://db.wd3.myworkdayjobs.com/DBWebsite",
+    "platform": "workday",
+    "config": {
+      "tenant": "db",
+      "wd": "wd3",
+      "site": "DBWebsite"
+    },
+    "enabled": true,
+    "notes": null
+  },
+  {
+    "name": "Barclays",
+    "careersUrl": "https://barclays.wd3.myworkdayjobs.com/External_Career_Site_Barclays",
+    "platform": "workday",
+    "config": {
+      "tenant": "barclays",
+      "wd": "wd3",
+      "site": "External_Career_Site_Barclays"
+    },
+    "enabled": true,
+    "notes": null
+  },
+  {
+    "name": "Visa",
+    "careersUrl": "https://visa.wd5.myworkdayjobs.com/Visa",
+    "platform": "workday",
+    "config": {
+      "tenant": "visa",
+      "wd": "wd5",
+      "site": "Visa"
+    },
+    "enabled": true,
+    "notes": null
+  },
+  {
+    "name": "Mastercard",
+    "careersUrl": "https://mastercard.wd1.myworkdayjobs.com/CorporateCareers",
+    "platform": "workday",
+    "config": {
+      "tenant": "mastercard",
+      "wd": "wd1",
+      "site": "CorporateCareers"
+    },
+    "enabled": true,
+    "notes": null
+  },
+  {
+    "name": "Collins Aerospace",
+    "careersUrl": "https://globalhr.wd5.myworkdayjobs.com/REC_RTX_Ext_Gateway",
+    "platform": "workday",
+    "config": {
+      "tenant": "globalhr",
+      "wd": "wd5",
+      "site": "REC_RTX_Ext_Gateway"
+    },
+    "enabled": true,
+    "notes": "RTX-wide board: Pratt & Whitney and Raytheon jobs arrive labelled Collins Aerospace"
+  },
+  {
+    "name": "Applied Materials",
+    "careersUrl": "https://amat.wd1.myworkdayjobs.com/External",
+    "platform": "workday",
+    "config": {
+      "tenant": "amat",
+      "wd": "wd1",
+      "site": "External"
+    },
+    "enabled": true,
+    "notes": null
+  },
+  {
+    "name": "Expedia Group",
+    "careersUrl": "https://expedia.wd108.myworkdayjobs.com/search",
+    "platform": "workday",
+    "config": {
+      "tenant": "expedia",
+      "wd": "wd108",
+      "site": "search"
+    },
+    "enabled": true,
+    "notes": null
+  },
+  {
+    "name": "Rakuten",
+    "careersUrl": "https://rakuten.wd1.myworkdayjobs.com/RakutenAsia",
+    "platform": "workday",
+    "config": {
+      "tenant": "rakuten",
+      "wd": "wd1",
+      "site": "RakutenAsia"
+    },
+    "enabled": true,
+    "notes": null
+  },
+  {
+    "name": "Intel",
+    "careersUrl": "https://intel.wd1.myworkdayjobs.com/External",
+    "platform": "workday",
+    "config": {
+      "tenant": "intel",
+      "wd": "wd1",
+      "site": "External"
+    },
+    "enabled": true,
+    "notes": null
+  },
+  {
+    "name": "Philips",
+    "careersUrl": "https://philips.wd3.myworkdayjobs.com/jobs-and-careers",
+    "platform": "workday",
+    "config": {
+      "tenant": "philips",
+      "wd": "wd3",
+      "site": "jobs-and-careers"
+    },
+    "enabled": true,
+    "notes": null
+  },
+  {
+    "name": "HPE",
+    "careersUrl": "https://hpe.wd5.myworkdayjobs.com/Jobsathpe",
+    "platform": "workday",
+    "config": {
+      "tenant": "hpe",
+      "wd": "wd5",
+      "site": "Jobsathpe"
+    },
+    "enabled": true,
+    "notes": null
+  },
+  {
+    "name": "CrowdStrike",
+    "careersUrl": "https://crowdstrike.wd5.myworkdayjobs.com/crowdstrikecareers",
+    "platform": "workday",
+    "config": {
+      "tenant": "crowdstrike",
+      "wd": "wd5",
+      "site": "crowdstrikecareers"
+    },
+    "enabled": true,
+    "notes": null
+  },
+  {
+    "name": "Zoom",
+    "careersUrl": "https://zoom.wd5.myworkdayjobs.com/Zoom",
+    "platform": "workday",
+    "config": {
+      "tenant": "zoom",
+      "wd": "wd5",
+      "site": "Zoom"
+    },
+    "enabled": false,
+    "notes": "robots.txt disallows /Zoom/"
+  },
+  {
+    "name": "Autodesk",
+    "careersUrl": "https://autodesk.wd1.myworkdayjobs.com/Ext",
+    "platform": "workday",
+    "config": {
+      "tenant": "autodesk",
+      "wd": "wd1",
+      "site": "Ext"
+    },
+    "enabled": true,
+    "notes": null
+  },
+  {
+    "name": "BrowserStack",
+    "careersUrl": "https://browserstack.wd3.myworkdayjobs.com/External",
+    "platform": "workday",
+    "config": {
+      "tenant": "browserstack",
+      "wd": "wd3",
+      "site": "External"
+    },
+    "enabled": true,
+    "notes": null
+  },
+  {
+    "name": "Genesys",
+    "careersUrl": "https://genesys.wd1.myworkdayjobs.com/Genesys",
+    "platform": "workday",
+    "config": {
+      "tenant": "genesys",
+      "wd": "wd1",
+      "site": "Genesys"
+    },
+    "enabled": true,
+    "notes": null
+  }
+]

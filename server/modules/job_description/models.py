@@ -22,6 +22,8 @@ class CaptureRegion(StrEnum):
     ARTICLE = "article"
     HEURISTIC = "heuristic"
     BODY = "body"
+    # Not a DOM pick at all: the posting came from an ATS feed as structured data.
+    FEED = "feed"
 
 
 class DescriptionStatus(StrEnum):
