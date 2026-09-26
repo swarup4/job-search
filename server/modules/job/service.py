@@ -6,11 +6,9 @@ from beanie import PydanticObjectId
 from config.errors import NotFound
 from modules.job.models import (
     Job,
-    JobCounts,
     JobCreate,
     JobCreated,
     JobDetailRead,
-    JobStatus,
     JobUpdate,
 )
 
@@ -54,28 +52,34 @@ async def get_job(job_id: PydanticObjectId) -> Job:
     return job
 
 
+def _query(company: str | None, exclude: list[PydanticObjectId] | None) -> dict[str, object]:
+    query: dict[str, object] = {}
+    if company:
+        query["company"] = company
+    if exclude:
+        query["_id"] = {"$nin": exclude}
+    return query
+
+
 async def list_jobs(
-    status: JobStatus | None = None,
-    shortlisted: bool | None = None,
     company: str | None = None,
     limit: int = 50,
     skip: int = 0,
+    exclude: list[PydanticObjectId] | None = None,
 ) -> list[Job]:
-    query: dict[str, object] = {}
-    if status is not None:
-        query["status"] = status
-    if shortlisted is not None:
-        query["shortlisted"] = shortlisted
-    if company:
-        query["company"] = company
-    return await Job.find(query).sort(-Job.discoveredAt).skip(skip).limit(limit).to_list()
+    """Newest first. `exclude` is how another module asks for the jobs a user has not
+    touched — the ones they applied to, or the ones already scored."""
+    return (
+        await Job.find(_query(company, exclude))
+        .sort(-Job.discoveredAt)
+        .skip(skip)
+        .limit(limit)
+        .to_list()
+    )
 
 
-async def count_jobs(status: JobStatus | None = None) -> int:
-    query: dict[str, object] = {}
-    if status:
-        query["status"] = status
-    return await Job.find(query).count()
+async def count_jobs(exclude: list[PydanticObjectId] | None = None) -> int:
+    return await Job.find(_query(None, exclude)).count()
 
 
 async def get_job_detail(job_id: PydanticObjectId) -> JobDetailRead:
@@ -120,12 +124,6 @@ async def get_job_detail(job_id: PydanticObjectId) -> JobDetailRead:
     row = rows[0]
     row["id"] = row.pop("_id")
     return JobDetailRead(**row)
-
-
-async def count_by_status() -> JobCounts:
-    """One aggregation rather than a count per column — the board asks on every load."""
-    rows = await Job.aggregate([{"$group": {"_id": "$status", "n": {"$sum": 1}}}]).to_list()
-    return JobCounts(**{row["_id"]: row["n"] for row in rows if row["_id"] in JobStatus})
 
 
 async def update_job(job_id: PydanticObjectId, payload: JobUpdate) -> Job:

@@ -1,10 +1,35 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSelector } from "react-redux";
 import { Bell, RefreshCw, Search } from "lucide-react";
 import { Button } from "@/component/ui/button";
 import { SignOutButton } from "@/component/SignOutButton";
+import { useRefreshShell } from "@/hooks/useShellCounts";
 import { ROUTES } from "@/routes";
+import { selectShell } from "@/store/shell/shellSlice";
 
-export function Topbar({ pending = 0 }) {
+export function Topbar() {
+    const { pending, syncedAt } = useSelector(selectShell);
+    const refreshShell = useRefreshShell();
+    const [refreshing, setRefreshing] = useState(false);
+    // Re-render every half minute so "Synced …" keeps counting up.
+    const [, tick] = useState(0);
+    useEffect(() => {
+        const timer = setInterval(() => tick((n) => n + 1), 30_000);
+        return () => clearInterval(timer);
+    }, []);
+
+    async function refresh() {
+        setRefreshing(true);
+        try {
+            await refreshShell();
+        } finally {
+            setRefreshing(false);
+        }
+    }
+
     return (
         <header className="sticky top-0 z-20 border-b border-border bg-card">
             <div className="mx-auto flex h-[68px] max-w-[1560px] items-center gap-5 px-6">
@@ -25,9 +50,11 @@ export function Topbar({ pending = 0 }) {
 
                 <div className="grow" />
 
-                <span className="hidden text-[13px] text-muted-foreground lg:inline">
-                    Synced 4 min ago
-                </span>
+                {syncedAt ? (
+                    <span className="hidden text-[13px] text-muted-foreground lg:inline">
+                        Synced {ago(syncedAt)}
+                    </span>
+                ) : null}
 
                 <button className="relative grid size-10 place-items-center rounded-pill hover:bg-secondary">
                     <Bell className="size-[17px] text-muted-foreground" />
@@ -38,8 +65,8 @@ export function Topbar({ pending = 0 }) {
                     ) : null}
                 </button>
 
-                <Button size="sm" variant="outline">
-                    <RefreshCw />
+                <Button size="sm" variant="outline" onClick={refresh} disabled={refreshing}>
+                    <RefreshCw className={refreshing ? "animate-spin" : undefined} />
                     Refresh
                 </Button>
 
@@ -57,4 +84,11 @@ function Mark() {
             </svg>
         </span>
     );
+}
+
+function ago(timestamp) {
+    const minutes = Math.floor((Date.now() - timestamp) / 60000);
+    if (minutes < 1) return "just now";
+    if (minutes < 60) return `${minutes} min ago`;
+    return `${Math.floor(minutes / 60)}h ago`;
 }

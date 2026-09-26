@@ -1,11 +1,42 @@
 import { axiosInstance, orNull } from "@/lib/axiosInstance";
 
-/** GET /api/application — omit `status` for the whole pipeline. */
+/** GET /api/application — one status, several (an array), or omit it for all. */
 export function listApplications(status) {
-    return axiosInstance.get("/application", { params: { status } });
+    return axiosInstance.get("/application", {
+        params: { status },
+        // Repeated keys (status=a&status=b), which is what FastAPI reads as a list.
+        paramsSerializer: { indexes: null },
+    });
 }
 
-/** GET /api/application/for-job/{jobId} — null when nothing is staged yet. */
+/** GET /api/application/counts — the Pipeline's column totals for you, zeros included. */
+export function getBoardCounts() {
+    return axiosInstance.get("/application/counts");
+}
+
+/** GET /api/application/unstarted — the New column: jobs you have no application for. */
+export function listUnstartedJobs({ limit = 50, skip = 0 } = {}) {
+    return axiosInstance.get("/application/unstarted", { params: { limit, skip } });
+}
+
+/** POST /api/application/shortlist/{jobId} — starts your application; a repeat is a no-op. */
+export function shortlistJob(jobId) {
+    return axiosInstance.post(`/application/shortlist/${jobId}`);
+}
+
+/**
+ * DELETE /api/application/shortlist/{jobId} — deletes an untouched application (the job
+ * goes back to New), withdraws one with a resume, and is refused (409) once submitted.
+ */
+export function unshortlistJob(jobId) {
+    return axiosInstance.delete(`/application/shortlist/${jobId}`);
+}
+
+export function setShortlisted(jobId, shortlisted) {
+    return shortlisted ? shortlistJob(jobId) : unshortlistJob(jobId);
+}
+
+/** GET /api/application/for-job/{jobId} — null until you shortlist or tailor for the job. */
 export function getApplicationForJob(jobId) {
     return orNull(axiosInstance.get(`/application/for-job/${jobId}`));
 }

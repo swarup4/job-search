@@ -4,7 +4,6 @@ from beanie import PydanticObjectId
 
 from config.errors import Conflict, Invalid, NotFound
 from modules.application import ApplicationStage, stage_application
-from modules.job import JobStatus, JobUpdate, update_job
 from modules.match import ReviewState, get_match
 from modules.resume.models import BaseResume, BaseResumeStore, ResumeStore, TailoredResume
 from modules.template import get_template
@@ -59,7 +58,6 @@ async def store_resume(user_id: PydanticObjectId, payload: ResumeStore) -> Tailo
     )
     await resume.insert()
 
-    await update_job(payload.jobId, JobUpdate(status=JobStatus.TAILORED))
     await stage_application(
         user_id,
         ApplicationStage(jobId=payload.jobId, resumeId=resume.id, texPath=resume.filePath),

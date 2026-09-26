@@ -8,13 +8,13 @@ import { Panel } from "@/component/ui/panel";
 import { Button } from "@/component/ui/button";
 import { Tooltip } from "@/component/ui/tooltip";
 
-/** How many jobs one "Analyze new jobs" click takes from the New column. */
+/** How many unscored jobs one "Analyze new jobs" click takes. */
 export const BATCH = 10;
 
 const PER_JOB = "About a minute and ~$0.001 per job.";
 
 /**
- * An Analyze run: starting one — a single job, or the newest few in New — and polling
+ * An Analyze run: starting one — a single job, or the newest few unscored — and polling
  * it until it ends, when `onFinished` reloads the page's data from the database.
  *
  * Nothing is asked on page load: analysis results live in the database and every
@@ -36,13 +36,13 @@ export function useAnalysis(onFinished) {
     return { ...poll, start };
 }
 
-/** The header button: analyze the newest jobs in the New column. */
-export function AnalyzeNewJobs({ analysis, newCount }) {
-    const take = Math.min(BATCH, newCount);
+/** The header button: analyze the newest jobs you have not scored yet. */
+export function AnalyzeNewJobs({ analysis, unscored }) {
+    const take = Math.min(BATCH, unscored);
     return (
         <Tooltip
             align="end"
-            content={`Renders, embeds, reads experience / salary / work mode / job type, and scores the newest ${take || BATCH} jobs in New. ${PER_JOB}`}
+            content={`Renders, embeds, reads experience / salary / work mode / job type, and scores the newest ${take || BATCH} jobs you have not scored yet. ${PER_JOB}`}
         >
             <Button
                 size="sm"

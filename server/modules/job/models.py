@@ -6,16 +6,6 @@ from beanie import Document, PydanticObjectId
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 
-class JobStatus(StrEnum):
-    """Pipeline column on the dashboard board."""
-
-    NEW = "new"
-    REVIEWED = "reviewed"
-    TAILORED = "tailored"
-    APPLIED = "applied"
-    ARCHIVED = "archived"
-
-
 class JobSource(StrEnum):
     LINKEDIN = "linkedin"
     INDEED = "indeed"
@@ -76,8 +66,6 @@ class Job(Document):
     applicantCount: int | None = None
     # FR-1.4 — discovery hashes the normalized posting and refuses a repeat.
     dedupHash: str
-    status: JobStatus = JobStatus.NEW
-    shortlisted: bool = False
     discoveredAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updatedAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
@@ -85,19 +73,16 @@ class Job(Document):
         name = "jobs"
         indexes = [
             pymongo.IndexModel([("dedupHash", pymongo.ASCENDING)], unique=True),
-            # Every list and count is this shape: optionally one column, newest first.
-            pymongo.IndexModel(
-                [("status", pymongo.ASCENDING), ("discoveredAt", pymongo.DESCENDING)]
-            ),
+            # Every list is newest first.
+            pymongo.IndexModel([("discoveredAt", pymongo.DESCENDING)]),
         ]
 
 
 class JobUpdate(BaseModel):
     """Every field optional: a PATCH sends only what changed. The detail fields are
-    what analysis reads out of the description when the board did not supply them."""
+    what analysis reads out of the description when the board did not supply them.
+    Nothing per-user belongs here — a job is shared by every account."""
 
-    status: JobStatus | None = None
-    shortlisted: bool | None = None
     jobType: JobType | None = None
     workMode: WorkMode | None = None
     experienceBand: str | None = Field(default=None, max_length=60)
@@ -124,8 +109,6 @@ class JobRead(BaseModel):
     postedAt: datetime | None = None
     deadlineAt: datetime | None = None
     applicantCount: int | None = None
-    status: JobStatus
-    shortlisted: bool
     discoveredAt: datetime
 
 
@@ -162,21 +145,8 @@ class JobDetailRead(BaseModel):
     postedAt: datetime | None = None
     deadlineAt: datetime | None = None
     applicantCount: int | None = None
-    status: JobStatus
-    shortlisted: bool
     discoveredAt: datetime
     description: JobDescriptionPart | None = None
-
-
-class JobCounts(BaseModel):
-    """How many jobs sit in each pipeline column — the board's stat cards and column
-    headers. Every status is present, zero included."""
-
-    new: int = 0
-    reviewed: int = 0
-    tailored: int = 0
-    applied: int = 0
-    archived: int = 0
 
 
 class JobCreated(BaseModel):

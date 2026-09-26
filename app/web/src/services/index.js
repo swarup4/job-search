@@ -5,11 +5,12 @@
 
 export { AI_URL, API_URL, ApiError, axiosInstance } from "@/lib/axiosInstance";
 
-export { getJob, getJobCounts, getJobDetails, listJobs, setShortlisted, updateJob } from "./job";
+export { getJob, getJobDetails, listJobs, updateJob } from "./job";
 export {
     getMatch,
     getMatchSummaries,
     getPendingCounts,
+    getUnscoredJobs,
     recordSelection,
     skipSelection,
 } from "./match";
@@ -24,8 +25,13 @@ export { getTemplatePreview, listTemplates, renderTemplate } from "./template";
 export {
     getApplication,
     getApplicationForJob,
+    getBoardCounts,
     listApplications,
+    listUnstartedJobs,
     setApplicationStatus,
+    setShortlisted,
+    shortlistJob,
+    unshortlistJob,
 } from "./application";
 export { listEvents } from "./event";
 export { getIndexStats, reindexProfile } from "./retrieval";

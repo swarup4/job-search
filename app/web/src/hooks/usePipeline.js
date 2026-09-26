@@ -4,32 +4,37 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
     ApiError,
+    getBoardCounts,
     getJob,
-    getJobCounts,
     getMatchSummaries,
     getPendingCounts,
-    getResume,
+    getUnscoredJobs,
     listApplications,
-    listJobs,
+    listUnstartedJobs,
 } from "@/services";
 
 /** Cards loaded per column at a time; "Show more" fetches the next page. */
 const PAGE = 5;
 
 /**
- * Four columns are job statuses. Interview is an application status — a job stays
- * `applied` while its application moves on — so that column is read from
- * applications and each card's job looked up.
+ * New is every job you have no application for. The other columns are your
+ * applications by status — shortlisting is what moves a job out of New. Column keys
+ * are the count keys `GET /application/counts` answers with.
  */
 export const COLUMNS = [
     { key: "new", label: "New", empty: "Run discovery from Settings to find jobs." },
-    { key: "reviewed", label: "Reviewed", empty: "Jobs you have looked at land here." },
-    { key: "tailored", label: "Tailored", empty: "Jobs with a tailored resume." },
+    { key: "shortlisted", label: "Reviewed", empty: "Jobs you shortlist land here." },
+    { key: "staged", label: "Tailored", empty: "Jobs with a tailored resume." },
     { key: "applied", label: "Applied", empty: "Jobs you have applied to." },
     { key: "interview", label: "Interview", empty: "Applications that reached an interview." },
 ];
 
-const JOB_COLUMNS = ["new", "reviewed", "tailored", "applied"];
+const APPLICATION_STATUSES = {
+    shortlisted: ["shortlisted"],
+    staged: ["staged"],
+    applied: ["applied", "viewed"],
+    interview: ["interview"],
+};
 
 const SOURCE_LABEL = {
     career_page: "Career page",
@@ -41,49 +46,45 @@ const SOURCE_LABEL = {
 
 /**
  * Everything the Pipeline screen shows, from the API: per-column counts, the first
- * cards of each column with their match scores, the pending-review banner and the
- * sidebar badges. Match scores for all the cards being added come from one request.
+ * cards of each column with their match scores, the pending-review banner, and how
+ * many jobs are still unscored for the Analyze button.
  */
 export function usePipeline() {
     const [state, setState] = useState({ status: "loading" });
-    // Interview applications are listed once; "Show more" pages through this copy.
-    const interviews = useRef([]);
+    // Each application column is listed once; "Show more" pages through this copy.
+    const applications = useRef({});
     const loading = useRef(false);
 
     const load = useCallback(async () => {
         try {
-            const [counts, pending, staged, shortlisted, interviewApps, ...firstPages] = await Promise.all([
-                getJobCounts(),
+            const keys = Object.keys(APPLICATION_STATUSES);
+            const [counts, pending, unscored, firstNew, ...lists] = await Promise.all([
+                getBoardCounts(),
                 getPendingCounts(),
-                listApplications("staged"),
-                listJobs({ shortlisted: true, limit: 200 }),
-                listApplications("interview"),
-                ...JOB_COLUMNS.map((status) => listJobs({ status, limit: PAGE })),
+                getUnscoredJobs(0),
+                listUnstartedJobs({ limit: PAGE }),
+                ...keys.map((key) => listApplications(APPLICATION_STATUSES[key])),
             ]);
-            interviews.current = interviewApps;
+            applications.current = Object.fromEntries(keys.map((key, i) => [key, lists[i]]));
 
-            const columns = {};
+            const columns = { new: { count: counts.new, cards: await jobCards(firstNew) } };
             await Promise.all(
-                JOB_COLUMNS.map(async (key, i) => {
-                    columns[key] = { count: counts[key], cards: await cardsFor(key, firstPages[i]) };
+                keys.map(async (key) => {
+                    columns[key] = {
+                        count: applications.current[key].length,
+                        cards: await applicationCards(key, applications.current[key].slice(0, PAGE)),
+                    };
                 })
             );
-            columns.interview = {
-                count: interviewApps.length,
-                cards: await interviewCards(interviewApps.slice(0, PAGE)),
-            };
 
             setState({
                 status: "ready",
                 counts,
+                unscored: unscored.total,
                 pending: {
                     keywordSelections: pending.keywordSelections,
                     nextJobId: pending.nextJobId,
-                    staged: staged.length,
-                },
-                shellCounts: {
-                    pending: pending.keywordSelections + staged.length,
-                    shortlisted: shortlisted.length,
+                    staged: counts.staged,
                 },
                 columns,
             });
@@ -104,9 +105,9 @@ export function usePipeline() {
         setState((current) => patchColumn(current, key, { loadingMore: true, error: null }));
         try {
             const more =
-                key === "interview"
-                    ? await interviewCards(interviews.current.slice(shown, shown + PAGE))
-                    : await cardsFor(key, await listJobs({ status: key, limit: PAGE, skip: shown }));
+                key === "new"
+                    ? await jobCards(await listUnstartedJobs({ limit: PAGE, skip: shown }))
+                    : await applicationCards(key, applications.current[key].slice(shown, shown + PAGE));
             setState((current) =>
                 patchColumn(current, key, {
                     loadingMore: false,
@@ -123,26 +124,30 @@ export function usePipeline() {
     return { ...state, loadMore, reload: load };
 }
 
-/** Jobs as cards, with their match summaries and — in Tailored — the resume file. */
-async function cardsFor(key, jobs) {
-    const [summaries, resumes] = await Promise.all([
-        getMatchSummaries(jobs.map((job) => job.id)),
-        key === "tailored" ? Promise.all(jobs.map((job) => getResume(job.id))) : [],
-    ]);
-    const byJob = new Map(summaries.map((summary) => [summary.jobId, summary]));
-    return jobs.map((job, i) => toCard(job, byJob.get(job.id), { file: fileName(resumes[i]) }));
+async function summariesFor(jobs) {
+    const summaries = await getMatchSummaries(jobs.map((job) => job.id));
+    return new Map(summaries.map((summary) => [summary.jobId, summary]));
 }
 
-/** Interview applications as cards: each one's job, and its latest activity. */
-async function interviewCards(applications) {
-    const jobs = await Promise.all(applications.map((application) => getJob(application.jobId)));
-    const pairs = applications.map((application, i) => [application, jobs[i]]).filter(([, job]) => job);
-    const summaries = await getMatchSummaries(pairs.map(([, job]) => job.id));
-    const byJob = new Map(summaries.map((summary) => [summary.jobId, summary]));
+async function jobCards(jobs) {
+    const byJob = await summariesFor(jobs);
+    return jobs.map((job) => toCard(job, byJob.get(job.id)));
+}
+
+/** Applications as cards: each one's job, and what the column needs to say about it. */
+async function applicationCards(key, rows) {
+    const jobs = await Promise.all(rows.map((application) => getJob(application.jobId)));
+    const pairs = rows.map((application, i) => [application, jobs[i]]).filter(([, job]) => job);
+    const byJob = await summariesFor(pairs.map(([, job]) => job));
     return pairs.map(([application, job]) =>
         toCard(job, byJob.get(job.id), {
-            when: application.lastActivityNote || `Interview · ${ago(application.lastActivityAt ?? application.stagedAt)}`,
-            strong: true,
+            file: key === "staged" ? fileName(application.texPath) : null,
+            when:
+                key === "interview"
+                    ? application.lastActivityNote ||
+                      `Interview · ${ago(application.lastActivityAt ?? application.stagedAt)}`
+                    : null,
+            strong: key === "interview",
         })
     );
 }
@@ -179,8 +184,8 @@ function patchColumn(state, key, changes) {
     return { ...state, columns: { ...state.columns, [key]: { ...state.columns[key], ...changes } } };
 }
 
-function fileName(resume) {
-    return resume?.filePath ? resume.filePath.split("/").pop() : null;
+function fileName(path) {
+    return path ? path.split("/").pop() : null;
 }
 
 function ago(timestamp) {

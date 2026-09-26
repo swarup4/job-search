@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from beanie import PydanticObjectId
 
 from config.errors import Invalid, NotFound
-from modules.job import JobStatus, JobUpdate, get_job, update_job
+from modules.job import JobRead, count_jobs, get_job, list_jobs
 from modules.match.models import (
     KeywordReview,
     KeywordSelection,
@@ -12,6 +12,7 @@ from modules.match.models import (
     MatchWrite,
     PendingCounts,
     ReviewState,
+    UnscoredJobs,
 )
 
 
@@ -42,7 +43,6 @@ async def write_match(user_id: PydanticObjectId, payload: MatchWrite) -> Match:
         match.scoredAt = datetime.now(UTC)
 
     await match.save()
-    await update_job(payload.jobId, JobUpdate(status=JobStatus.REVIEWED))
     return match
 
 
@@ -94,6 +94,18 @@ async def summaries(
             score=match.score,
             reviewState=match.review.state,
             risk=match.risks[0].title if match.risks else None,
+            riskCount=len(match.risks),
+            presentCount=len(match.present),
+            missingCount=len(match.missing),
         )
         for match in matches
     ]
+
+
+async def unscored(user_id: PydanticObjectId, limit: int) -> UnscoredJobs:
+    scored = [match.jobId for match in await Match.find(Match.userId == user_id).to_list()]
+    jobs = await list_jobs(limit=limit, exclude=scored) if limit else []
+    return UnscoredJobs(
+        total=await count_jobs(exclude=scored),
+        jobs=[JobRead.model_validate(job, from_attributes=True) for job in jobs],
+    )

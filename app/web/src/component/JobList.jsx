@@ -8,7 +8,12 @@ import { Panel } from "@/component/ui/panel";
 import { buttonVariants } from "@/component/ui/button";
 import { ROUTES } from "@/routes";
 
-export function JobList({ jobs, view = "list", from }) {
+/**
+ * `onShortlist(job, next)`, if given, saves the bookmark; without it the bookmark is
+ * local only, as on the screens still on fixtures. A job with `scored: false` shows no
+ * match ring and no Review link — there is nothing to review yet.
+ */
+export function JobList({ jobs, view = "list", from, onShortlist }) {
   const Item = view === "grid" ? GridCard : ListRow;
   return (
     <div
@@ -19,13 +24,13 @@ export function JobList({ jobs, view = "list", from }) {
       }
     >
       {jobs.map((job) => (
-        <Item key={job.id} job={job} from={from} />
+        <Item key={job.id} job={job} from={from} onShortlist={onShortlist} />
       ))}
     </div>
   );
 }
 
-function ListRow({ job, from }) {
+function ListRow({ job, from, onShortlist }) {
   return (
     <Panel hover className="p-5">
       <div className="flex flex-wrap items-center gap-x-5 gap-y-4">
@@ -52,10 +57,12 @@ function ListRow({ job, from }) {
           </div>
         </div>
 
-        <MatchScore value={job.match} size="lg" />
+        {job.scored === false ? null : <MatchScore value={job.match} size="lg" />}
 
         <div className="flex shrink-0 flex-col items-end gap-2.5">
-          {job.risks > 0 ? (
+          {job.scored === false ? (
+            <span className="text-[12px] text-muted-foreground">not scored yet</span>
+          ) : job.risks > 0 ? (
             <Signal kind="risk">
               {job.risks} risk {job.risks === 1 ? "flag" : "flags"}
             </Signal>
@@ -63,13 +70,19 @@ function ListRow({ job, from }) {
             <span className="text-[12px] text-muted-foreground">no risk flags</span>
           )}
           <div className="flex items-center gap-2">
-            <ShortlistButton shortlisted={job.shortlisted} size="sm" />
-            <Link
-              href={ROUTES.keywords(job.id, from)}
-              className={buttonVariants({ size: "sm" })}
-            >
-              Review
-            </Link>
+            <ShortlistButton
+              shortlisted={job.shortlisted}
+              size="sm"
+              onToggle={onShortlist ? (next) => onShortlist(job, next) : undefined}
+            />
+            {job.scored === false ? null : (
+              <Link
+                href={ROUTES.keywords(job.id, from)}
+                className={buttonVariants({ size: "sm" })}
+              >
+                Review
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -77,7 +90,7 @@ function ListRow({ job, from }) {
   );
 }
 
-function GridCard({ job, from }) {
+function GridCard({ job, from, onShortlist }) {
   return (
     <Panel hover className="flex flex-col p-5">
       <div className="flex items-start gap-3">
@@ -93,7 +106,7 @@ function GridCard({ job, from }) {
           </Link>
           <p className="mt-1 truncate text-[12.5px] text-muted-foreground">{job.company}</p>
         </div>
-        <MatchScore value={job.match} size="sm" />
+        {job.scored === false ? null : <MatchScore value={job.match} size="sm" />}
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-[12.5px] text-muted-foreground">
@@ -123,16 +136,22 @@ function GridCard({ job, from }) {
 
       <div className="mt-4 flex items-center gap-2 border-t border-border pt-4">
         <span className="text-[12.5px] text-muted-foreground">
-          {job.present} present · {job.missing} missing
+          {job.scored === false ? "not scored yet" : `${job.present} present · ${job.missing} missing`}
         </span>
         <span className="grow" />
-        <ShortlistButton shortlisted={job.shortlisted} size="sm" />
-        <Link
-          href={ROUTES.keywords(job.id, from)}
-          className={buttonVariants({ variant: "soft", size: "sm" })}
-        >
-          Review
-        </Link>
+        <ShortlistButton
+          shortlisted={job.shortlisted}
+          size="sm"
+          onToggle={onShortlist ? (next) => onShortlist(job, next) : undefined}
+        />
+        {job.scored === false ? null : (
+          <Link
+            href={ROUTES.keywords(job.id, from)}
+            className={buttonVariants({ variant: "soft", size: "sm" })}
+          >
+            Review
+          </Link>
+        )}
       </div>
     </Panel>
   );

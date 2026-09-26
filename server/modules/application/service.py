@@ -11,8 +11,13 @@ from modules.application.models import (
     ApplicationFill,
     ApplicationStage,
     ApplicationStatus,
+    BoardCounts,
     StatusTransition,
 )
+from modules.job import Job, count_jobs, get_job, list_jobs
+
+# Before the user reports a submit. Past these, the row records what was actually sent.
+PRE_SUBMIT = (ApplicationStatus.SHORTLISTED, ApplicationStatus.STAGED, ApplicationStatus.WITHDRAWN)
 
 
 class ApplicationNotFound(NotFound):
@@ -24,20 +29,63 @@ class SubmitNotConfirmed(Conflict):
     """FR-5.3 / NFR-7 — nothing may report itself as submitted on its own."""
 
 
-async def stage_application(user_id: PydanticObjectId, payload: ApplicationStage) -> Application:
-    """Re-tailoring a job updates the staged application rather than adding a second one."""
-    application = await Application.find_one(
-        Application.userId == user_id,
-        Application.jobId == payload.jobId,
-        Application.status == ApplicationStatus.STAGED,
-    )
+class AlreadySubmitted(Conflict):
+    """A submitted application leaves the shortlist through its own status, not the bookmark."""
+
+
+async def shortlist(user_id: PydanticObjectId, job_id: PydanticObjectId) -> Application:
+    """Starts the user's work on a job. A repeat returns the row as it is; a withdrawn
+    row comes back as shortlisted."""
+    await get_job(job_id)
+    application = await get_for_job(user_id, job_id)
     if application is None:
-        application = Application(**payload.model_dump(), userId=user_id)
+        application = Application(userId=user_id, jobId=job_id)
         await application.insert()
+        return application
+
+    if application.status is ApplicationStatus.WITHDRAWN:
+        application.status = ApplicationStatus.SHORTLISTED
+        application.shortlistedAt = datetime.now(UTC)
+        await application.save()
+    return application
+
+
+async def unshortlist(user_id: PydanticObjectId, job_id: PydanticObjectId) -> Application | None:
+    """An untouched row is deleted, so the job goes back to New. Once a resume hangs off
+    it the row is kept, withdrawn. None means it was deleted, or never existed."""
+    application = await get_for_job(user_id, job_id)
+    if application is None:
+        return None
+    if application.status not in PRE_SUBMIT:
+        raise AlreadySubmitted(
+            f"job {job_id} was submitted; change the application's status instead"
+        )
+
+    if application.status is ApplicationStatus.SHORTLISTED and application.resumeId is None:
+        await application.delete()
+        return None
+
+    application.status = ApplicationStatus.WITHDRAWN
+    application.lastActivityAt = datetime.now(UTC)
+    application.lastActivityNote = "Removed from shortlist"
+    await application.save()
+    return application
+
+
+async def stage_application(user_id: PydanticObjectId, payload: ApplicationStage) -> Application:
+    """A tailored resume stages the user's one row for this job, creating it when the job
+    was never shortlisted. Re-tailoring after a submit stores the resume version only:
+    the row keeps the .tex that was actually sent."""
+    application = await get_for_job(user_id, payload.jobId)
+    if application is None:
+        application = Application(userId=user_id, jobId=payload.jobId)
+    elif application.status not in PRE_SUBMIT:
         return application
 
     for field, value in payload.model_dump().items():
         setattr(application, field, value)
+    application.status = ApplicationStatus.STAGED
+    application.stagedAt = datetime.now(UTC)
     await application.save()
     return application
 
@@ -54,20 +102,45 @@ async def get_application(
 
 
 async def get_for_job(user_id: PydanticObjectId, job_id: PydanticObjectId) -> Application | None:
-    return (
-        await Application.find(Application.userId == user_id, Application.jobId == job_id)
-        .sort(-Application.stagedAt)
-        .first_or_none()
-    )
+    return await Application.find_one(Application.userId == user_id, Application.jobId == job_id)
 
 
 async def list_applications(
-    user_id: PydanticObjectId, status: ApplicationStatus | None = None
+    user_id: PydanticObjectId, statuses: list[ApplicationStatus] | None = None
 ) -> list[Application]:
     query: dict[str, object] = {"userId": user_id}
-    if status:
-        query["status"] = status
-    return await Application.find(query).sort(-Application.stagedAt).to_list()
+    if statuses:
+        query["status"] = {"$in": statuses}
+    return (
+        await Application.find(query)
+        .sort(-Application.stagedAt, -Application.shortlistedAt)
+        .to_list()
+    )
+
+
+async def _started_job_ids(user_id: PydanticObjectId) -> list[PydanticObjectId]:
+    rows = await Application.find(Application.userId == user_id).to_list()
+    return [row.jobId for row in rows]
+
+
+async def unstarted_jobs(user_id: PydanticObjectId, limit: int, skip: int) -> list[Job]:
+    """The New column: jobs this user has no application for, newest first."""
+    return await list_jobs(limit=limit, skip=skip, exclude=await _started_job_ids(user_id))
+
+
+async def board_counts(user_id: PydanticObjectId) -> BoardCounts:
+    rows = await Application.aggregate(
+        [{"$match": {"userId": user_id}}, {"$group": {"_id": "$status", "n": {"$sum": 1}}}]
+    ).to_list()
+    by_status = {row["_id"]: row["n"] for row in rows}
+    return BoardCounts(
+        new=await count_jobs(exclude=await _started_job_ids(user_id)),
+        shortlisted=by_status.get(ApplicationStatus.SHORTLISTED, 0),
+        staged=by_status.get(ApplicationStatus.STAGED, 0),
+        applied=by_status.get(ApplicationStatus.APPLIED, 0)
+        + by_status.get(ApplicationStatus.VIEWED, 0),
+        interview=by_status.get(ApplicationStatus.INTERVIEW, 0),
+    )
 
 
 async def record_fill(
