@@ -13,8 +13,11 @@ from modules.application.models import (
     ApplicationRead,
     ApplicationStage,
     ApplicationStatus,
+    Badges,
+    BoardCounts,
     StatusTransition,
 )
+from modules.job import Job, JobRead
 
 router = APIRouter(tags=["application"])
 
@@ -36,6 +39,34 @@ async def save_applicant(payload: ApplicantFields, user_id: CurrentUser) -> Appl
 async def answer_bank(user_id: CurrentUser) -> list[AnswerBank]:
     """Read by the extension's background worker for screening questions."""
     return await service.list_answer_bank(user_id)
+
+
+@router.get("/badges", response_model=Badges)
+async def badges(user_id: CurrentUser) -> Badges:
+    """The header and sidebar badges, and the Pipeline's review banner, in one call."""
+    return await service.badges(user_id)
+
+
+@router.get("/counts", response_model=BoardCounts)
+async def board_counts(user_id: CurrentUser) -> BoardCounts:
+    return await service.board_counts(user_id)
+
+
+@router.get("/unstarted", response_model=list[JobRead])
+async def unstarted_jobs(
+    user_id: CurrentUser, limit: int = Query(default=50, le=200), skip: int = 0
+) -> list[Job]:
+    return await service.unstarted_jobs(user_id, limit, skip)
+
+
+@router.post("/shortlist/{job_id}", response_model=ApplicationRead)
+async def shortlist(job_id: PydanticObjectId, user_id: CurrentUser) -> Application:
+    return await service.shortlist(user_id, job_id)
+
+
+@router.delete("/shortlist/{job_id}", response_model=ApplicationRead | None)
+async def unshortlist(job_id: PydanticObjectId, user_id: CurrentUser) -> Application | None:
+    return await service.unshortlist(user_id, job_id)
 
 
 @router.get("/for-job/{job_id}", response_model=ApplicationRead | None)
@@ -60,9 +91,9 @@ async def set_status(
 @router.get("", response_model=list[ApplicationRead])
 async def list_applications(
     user_id: CurrentUser,
-    application_status: ApplicationStatus | None = Query(default=None, alias="status"),
+    statuses: list[ApplicationStatus] | None = Query(default=None, alias="status"),
 ) -> list[Application]:
-    return await service.list_applications(user_id, application_status)
+    return await service.list_applications(user_id, statuses)
 
 
 @router.post(

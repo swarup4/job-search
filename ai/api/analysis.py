@@ -1,4 +1,4 @@
-"""The Analyze buttons: one job from its card, or the newest few in the New column.
+"""The Analyze buttons: one job from its page, or the newest few you have not scored yet.
 
 Same shape as a discovery run — the dashboard's token is used for this run only,
 the work happens in the background, and the dashboard polls for progress. One run
@@ -33,7 +33,7 @@ EXPIRED = "Your session expired mid-run. Run again — finished jobs keep their 
 
 
 class AnalysisRequest(BaseModel):
-    """Exactly one of the two: specific jobs, or the newest `newest` in New."""
+    """Exactly one of the two: specific jobs, or the newest `newest` unscored ones."""
 
     jobIds: list[str] | None = Field(default=None, min_length=1, max_length=MAX_PER_RUN)
     newest: int | None = Field(default=None, ge=1, le=MAX_PER_RUN)
@@ -78,7 +78,7 @@ async def start_run(body: AnalysisRequest, who: Caller) -> AnalysisRun:
         job_ids = list(dict.fromkeys(body.jobIds))
     else:
         try:
-            newest = await client.list_jobs(status="new", limit=body.newest or 1)
+            newest = await client.list_unscored_jobs(limit=body.newest or 1)
         except (JobPilotApiError, httpx.HTTPError) as error:
             raise HTTPException(
                 status.HTTP_502_BAD_GATEWAY, f"could not list jobs: {error}"

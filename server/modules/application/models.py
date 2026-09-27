@@ -7,8 +7,9 @@ from pydantic import BaseModel, ConfigDict, Field, HttpUrl, computed_field
 
 
 class ApplicationStatus(StrEnum):
-    """STAGED is pre-submit. Everything after it is a human's doing."""
+    """SHORTLISTED and STAGED are pre-submit. Everything after STAGED is a human's doing."""
 
+    SHORTLISTED = "shortlisted"
     STAGED = "staged"
     APPLIED = "applied"
     VIEWED = "viewed"
@@ -53,14 +54,18 @@ class ApplicationStage(BaseModel):
 
 
 class Application(Document):
+    """Where one user stands with one job. `jobs` is shared, so this row — created on
+    shortlist, or by tailoring a job never shortlisted — is the only per-user record."""
+
     userId: PydanticObjectId
     jobId: PydanticObjectId
-    resumeId: PydanticObjectId
-    texPath: str
+    # Empty until a tailored resume exists.
+    resumeId: PydanticObjectId | None = None
+    texPath: str | None = None
     ats: AtsPlatform = AtsPlatform.OTHER
     applyUrl: HttpUrl | None = None
 
-    status: ApplicationStatus = ApplicationStatus.STAGED
+    status: ApplicationStatus = ApplicationStatus.SHORTLISTED
     fieldsFilled: list[FieldFill] = Field(default_factory=list)
     screeningAnswers: list[ScreeningAnswer] = Field(default_factory=list)
 
@@ -68,7 +73,8 @@ class Application(Document):
     # confirmation through the dashboard or the extension popup does.
     approvedByUser: bool = False
 
-    stagedAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    shortlistedAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    stagedAt: datetime | None = None
     submittedAt: datetime | None = None
     lastActivityAt: datetime | None = None
     lastActivityNote: str | None = None
@@ -78,7 +84,9 @@ class Application(Document):
     class Settings:
         name = "applications"
         indexes = [
-            pymongo.IndexModel([("userId", pymongo.ASCENDING), ("jobId", pymongo.ASCENDING)]),
+            pymongo.IndexModel(
+                [("userId", pymongo.ASCENDING), ("jobId", pymongo.ASCENDING)], unique=True
+            ),
             pymongo.IndexModel(
                 [
                     ("userId", pymongo.ASCENDING),
@@ -219,15 +227,16 @@ class ApplicationRead(BaseModel):
 
     id: PydanticObjectId
     jobId: PydanticObjectId
-    resumeId: PydanticObjectId
-    texPath: str
+    resumeId: PydanticObjectId | None = None
+    texPath: str | None = None
     ats: AtsPlatform = AtsPlatform.OTHER
     applyUrl: HttpUrl | None = None
-    status: ApplicationStatus = ApplicationStatus.STAGED
+    status: ApplicationStatus = ApplicationStatus.SHORTLISTED
     fieldsFilled: list[FieldFill] = Field(default_factory=list)
     screeningAnswers: list[ScreeningAnswer] = Field(default_factory=list)
     approvedByUser: bool = False
-    stagedAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    shortlistedAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    stagedAt: datetime | None = None
     submittedAt: datetime | None = None
     lastActivityAt: datetime | None = None
     lastActivityNote: str | None = None
@@ -238,3 +247,25 @@ class ApplicationRead(BaseModel):
     @property
     def needs_answer(self) -> int:
         return sum(1 for answer in self.screeningAnswers if not answer.answer)
+
+
+class BoardCounts(BaseModel):
+    """The Pipeline's column totals for one user. `new` is every job with no application
+    of theirs; `applied` folds in `viewed`, which the board does not show apart."""
+
+    new: int = 0
+    shortlisted: int = 0
+    staged: int = 0
+    applied: int = 0
+    interview: int = 0
+
+
+class Badges(BaseModel):
+    """Every number the header and sidebar show, in one read. The Applications badge is
+    `keywordSelections` + `staged`; `nextJobId` is the longest-waiting keyword choice,
+    which the Pipeline's review banner opens."""
+
+    keywordSelections: int
+    nextJobId: PydanticObjectId | None = None
+    staged: int
+    shortlisted: int

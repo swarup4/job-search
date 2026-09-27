@@ -36,7 +36,7 @@ edited by hand.
 erDiagram
     JOBS   ||--o| MATCHES      : "scored by matching agent"
     JOBS   ||--o{ RESUMES      : "tailored, versioned per job"
-    JOBS   ||--o{ APPLICATIONS : "staged from a tailored .tex"
+    JOBS   ||--o{ APPLICATIONS : "one per user, from shortlist on"
     JOBS   ||--o{ EVENTS       : "audit trail"
 
     MATCHES      ||--o{ RESUMES      : "selection set that produced the file"
@@ -69,8 +69,6 @@ erDiagram
         datetime deadline_at
         int      applicant_count
         string   dedup_hash UK "FR-1.4 content hash"
-        enum     status "new | reviewed | tailored | applied | archived"
-        bool     shortlisted
         datetime discovered_at
         datetime updated_at
     }
@@ -103,16 +101,18 @@ erDiagram
 
     APPLICATIONS {
         ObjectId _id PK
-        ObjectId job_id FK
-        ObjectId resume_id FK
-        string   tex_path
+        ObjectId user_id FK
+        ObjectId job_id FK "unique with user_id"
+        ObjectId resume_id FK "null until a resume exists"
+        string   tex_path "null until a resume exists"
         enum     ats "workday | greenhouse | lever | linkedin_easy_apply | other"
         url      apply_url
-        enum     status "staged | applied | viewed | interview | offer | rejected | withdrawn"
+        enum     status "shortlisted | staged | applied | viewed | interview | offer | rejected | withdrawn"
         array    fields_filled "embedded FieldFill: selector, label, value, source, highlighted"
         array    screening_answers "embedded ScreeningAnswer: question, answer, answered_by_user"
         bool     approved_by_user "FR-5.3 — only a human sets this"
-        datetime staged_at
+        datetime shortlisted_at
+        datetime staged_at "null until staged"
         datetime submitted_at
         datetime last_activity_at
         string   last_activity_note
@@ -210,14 +210,14 @@ A module queries only its own collections. Cross-module reads go through the oth
 | Collection | Index | Why |
 |---|---|---|
 | `jobs` | `dedup_hash` **unique** | FR-1.4 — the same posting from two boards collapses to one row |
-| `jobs` | `(status, discovered_at desc)` | the pipeline board reads one column at a time |
-| `jobs` | `shortlisted` · `company.name` | Shortlist screen; company filter |
+| `jobs` | `discovered_at desc` | every list is newest first; New excludes the user's application job ids |
 | `jobs` | text on `(title, jd_text)` | the Search screen's keyword field |
 | `matches` | `job_id` **unique** | one live match per job; a re-score replaces it |
 | `matches` | `review.state` | the "⚠ Pending your review" count |
 | `matches` | `score desc` | minimum-match filter |
 | `resumes` | `(job_id, version desc)` **unique** | per-job `.tex` versioning |
-| `applications` | `job_id` · `(status, staged_at desc)` · `follow_up_due_at` | Applications screen, follow-up sweep |
+| `applications` | `(user_id, job_id)` **unique** | one row per user per job — the pipeline's per-user record |
+| `applications` | `(user_id, status, staged_at desc)` · `follow_up_due_at` | board columns, Applications screen, follow-up sweep |
 | `answer_bank` | `key` **unique** | one answer per question key |
 | `events` | `(job_id, occurred_at desc)` · `event_type` · `occurred_at desc` | timeline reads |
 | `profile` | `email` **unique** | mandatory, and the profile's key |
@@ -246,8 +246,8 @@ enforce.
 
 | Screen | Reads |
 |---|---|
-| Pipeline board | `jobs` grouped by `status`, `matches.review.state` and staged `applications` for the pending banner |
-| Search / Shortlist | `jobs` + `matches` (score, present/missing/risk counts), `jobs.shortlisted` |
+| Pipeline board | New: `jobs` with no `applications` row of yours; other columns: your `applications` by `status`; `matches` for scores and the pending banner |
+| Search / Shortlist | Shortlist: your `shortlisted` `applications` → `jobs` + `matches` (score, present/missing/risk counts) |
 | Job details | `jobs` (incl. embedded `company`) + `matches` |
 | Keyword Selection ⚠ | `matches.missing` / `.risks`; writes `matches.review` |
 | `.tex` Preview | `resumes` (`changes`, `incorporated`, `declined`) over the template |

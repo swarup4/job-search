@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Bookmark } from "lucide-react";
+import { Tooltip } from "@/component/ui/tooltip";
 import { cn } from "@/util/helper";
 
 /**
@@ -14,12 +15,12 @@ export function ShortlistButton({ shortlisted = false, size = "md", className, o
   const [saving, setSaving] = useState(false);
   const iconOnly = size === "sm";
 
-  return (
+  const label = on ? "Remove from shortlist" : "Add to shortlist";
+  const button = (
     <button
       type="button"
       aria-pressed={on}
-      aria-label={on ? "Remove from shortlist" : "Add to shortlist"}
-      title={on ? "Remove from shortlist" : "Add to shortlist"}
+      aria-label={label}
       disabled={saving}
       onClick={async (e) => {
         // these sit inside link rows — don't navigate when toggling
@@ -49,5 +50,14 @@ export function ShortlistButton({ shortlisted = false, size = "md", className, o
       <Bookmark className={cn(iconOnly ? "size-4" : "size-[15px]", on && "fill-current")} />
       {iconOnly ? null : on ? "Shortlisted" : "Shortlist"}
     </button>
+  );
+
+  // The labelled size says it already; only the bare icon needs the explanation.
+  return iconOnly ? (
+    <Tooltip content={label} align="end" className="shrink-0">
+      {button}
+    </Tooltip>
+  ) : (
+    button
   );
 }

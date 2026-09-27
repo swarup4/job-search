@@ -1,34 +1,20 @@
 [
   {
     "id": 0,
-    "key": "status",
-    "value": "",
-    "isEnabled": false,
-    "description": ""
-  },
-  {
-    "id": 1,
-    "key": "shortlisted",
-    "value": "",
-    "isEnabled": false,
-    "description": ""
-  },
-  {
-    "id": 2,
     "key": "company",
     "value": "",
     "isEnabled": false,
     "description": ""
   },
   {
-    "id": 3,
+    "id": 1,
     "key": "limit",
     "value": "50",
     "isEnabled": false,
     "description": ""
   },
   {
-    "id": 4,
+    "id": 2,
     "key": "skip",
     "value": "0",
     "isEnabled": false,

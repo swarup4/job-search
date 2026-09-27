@@ -35,6 +35,7 @@ class FakeClient:
             "jobType": "full_time",
         }
         self.description = description if description is not None else {"id": "d1", "jdText": JD}
+        self.match: dict[str, Any] | None = None
         self.job_updates: list[dict[str, Any]] = []
         self.description_updates: list[dict[str, Any]] = []
         self.embeddings: list[list[float]] = []
@@ -44,6 +45,11 @@ class FakeClient:
 
     async def get_description_for_job(self, job_id: str) -> dict[str, Any] | None:
         return self.description or None
+
+    async def get_match(self, job_id: str) -> dict[str, Any]:
+        if self.match is None:
+            raise JobPilotApiError(404, "no match")
+        return self.match
 
     async def update_job(self, job_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         self.job_updates.append(payload)
@@ -130,6 +136,36 @@ async def test_details_never_overwrite_what_the_board_gave(fake: FakeClient) -> 
     assert fake.job_updates == [{"experienceBand": "6-10 years", "workMode": "hybrid"}]
 
 
+async def test_a_job_already_matched_is_skipped_whole(fake: FakeClient) -> None:
+    fake.match = {"score": 64}
+    outcome = await analysis.analyze("j1")
+    assert outcome.skipped == "already analyzed"
+    assert outcome.score == 64
+    assert outcome.steps == {}
+    assert fake.embeddings == [] and fake.job_updates == [] and fake.description_updates == []
+
+
+async def test_an_embedded_description_keeps_its_vector(fake: FakeClient) -> None:
+    fake.description = {"id": "d1", "jdText": JD, "hasEmbedding": True}
+    outcome = await analysis.analyze("j1")
+    assert fake.embeddings == []
+    assert outcome.steps["embedding"].note == "already embedded"
+    assert outcome.steps["match"].ok
+
+
+async def test_known_details_skip_the_model(
+    fake: FakeClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fake.job.update(experienceBand="8 years", salaryText="₹40 LPA", workMode="remote")
+
+    async def must_not_run(*args: Any, **kwargs: Any) -> JobDetails:
+        raise AssertionError("the details model was called")
+
+    monkeypatch.setattr(analysis, "generate", must_not_run)
+    outcome = await analysis.analyze("j1")
+    assert outcome.steps["details"].note == "all details already known"
+
+
 async def test_a_job_without_a_description_is_reported_not_analyzed(fake: FakeClient) -> None:
     fake.description = {}
     outcome = await analysis.analyze("j1")
@@ -178,7 +214,7 @@ class ApiFake:
             raise JobPilotApiError(401, "invalid token")
         return {"id": "u1" if self.token == "good" else "u2"}
 
-    async def list_jobs(self, status: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
+    async def list_unscored_jobs(self, limit: int) -> list[dict[str, Any]]:
         return self.new_jobs[:limit]
 
 

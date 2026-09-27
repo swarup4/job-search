@@ -7,6 +7,8 @@ import pymongo
 from beanie import Document, PydanticObjectId
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from modules.job import JobRead
+
 
 class ReviewState(StrEnum):
     """FR-7.3 — the keyword gate. A match leaves PENDING only by user action."""
@@ -126,3 +128,14 @@ class MatchSummary(BaseModel):
     reviewState: ReviewState
     # The first risk flag's title, if any — a card has room for one.
     risk: str | None = None
+    riskCount: int = 0
+    presentCount: int = 0
+    missingCount: int = 0
+
+
+class UnscoredJobs(BaseModel):
+    """Jobs this user has no match for, newest first — what "Analyze new jobs" takes.
+    `total` counts all of them; `jobs` is the first `limit`."""
+
+    total: int
+    jobs: list[JobRead]
