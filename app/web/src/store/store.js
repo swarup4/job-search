@@ -2,6 +2,7 @@ import { configureStore } from "@reduxjs/toolkit";
 
 import auth from "./auth/authSlice";
 import profile from "./profile/profileSlice";
+import shell from "./shell/shellSlice";
 
 /**
  * A factory, not a singleton. A module-level store is shared between requests on
@@ -9,5 +10,5 @@ import profile from "./profile/profileSlice";
  * provider builds its own per client.
  */
 export function makeStore() {
-    return configureStore({ reducer: { auth, profile } });
+    return configureStore({ reducer: { auth, profile, shell } });
 }

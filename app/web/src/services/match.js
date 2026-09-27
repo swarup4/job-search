@@ -18,10 +18,9 @@ export function getMatchSummaries(jobIds) {
     });
 }
 
-/** GET /api/match/pending — feeds the "⚠ Pending your review" banner, and names the
- * longest-waiting job (`nextJobId`) for its Select keywords link. */
-export function getPendingCounts() {
-    return axiosInstance.get("/match/pending");
+/** GET /api/match/unscored — `total` jobs you have not scored yet, and the newest `limit`. */
+export function getUnscoredJobs(limit = 0) {
+    return axiosInstance.get("/match/unscored", { params: { limit } });
 }
 
 /**

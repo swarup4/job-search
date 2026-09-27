@@ -5,12 +5,12 @@ from modules.account import CurrentUser
 from modules.job import service
 from modules.job.models import (
     Job,
-    JobCounts,
     JobCreate,
     JobCreated,
     JobDetailRead,
     JobRead,
-    JobStatus,
+    JobSearch,
+    JobSearchResult,
     JobUpdate,
 )
 
@@ -20,18 +20,16 @@ router = APIRouter(tags=["job"])
 @router.get("", response_model=list[JobRead])
 async def list_jobs(
     _: CurrentUser,
-    job_status: JobStatus | None = Query(default=None, alias="status"),
-    shortlisted: bool | None = None,
     company: str | None = None,
     limit: int = Query(default=50, le=200),
     skip: int = 0,
 ) -> list[Job]:
-    return await service.list_jobs(job_status, shortlisted, company, limit, skip)
+    return await service.list_jobs(company, limit, skip)
 
 
-@router.get("/counts", response_model=JobCounts)
-async def count_jobs(_: CurrentUser) -> JobCounts:
-    return await service.count_by_status()
+@router.post("/search", response_model=JobSearchResult)
+async def search_jobs(filters: JobSearch, user_id: CurrentUser) -> JobSearchResult:
+    return await service.search_jobs(user_id, filters)
 
 
 @router.post("/createJob", response_model=JobCreated, status_code=status.HTTP_201_CREATED)

@@ -1,9 +1,10 @@
 from datetime import UTC, datetime
 from enum import StrEnum
+from typing import Any
 
 import pymongo
 from beanie import Document, PydanticObjectId
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 # A posting as markdown is a few kilobytes. This is a backstop against something
 # that is not a posting, not a limit any real capture should approach.
@@ -136,6 +137,17 @@ class JobDescriptionDetail(JobDescriptionRead):
     htmlString: str = ""
     links: list[str] = Field(default_factory=list)
     requirements: list[str] = Field(default_factory=list)
+    # Whether the AI tier has embedded it, so Analyze can skip that step.
+    hasEmbedding: bool = False
+
+    @model_validator(mode="before")
+    @classmethod
+    def _embedded(cls, data: Any) -> Any:
+        if isinstance(data, BaseModel):
+            data = data.model_dump()
+        if isinstance(data, dict):
+            return {**data, "hasEmbedding": data.get("embedding") is not None}
+        return data
 
 
 class JobDescriptionUpdate(BaseModel):

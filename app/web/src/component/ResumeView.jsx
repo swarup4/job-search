@@ -6,6 +6,7 @@ import { AlertTriangle, Download, Expand, Eye, FileCode2, Loader2 } from "lucide
 import { Panel, PanelBody, PanelHeader } from "@/component/ui/panel";
 import { Button, buttonVariants } from "@/component/ui/button";
 import { Dialog } from "@/component/ui/dialog";
+import { Tooltip } from "@/component/ui/tooltip";
 import { ResumeDocument } from "@/component/ResumeDocument";
 import { texToResume } from "@/util/texResume";
 import { cn } from "@/util/helper";
@@ -75,29 +76,22 @@ export function ResumeView({
                         {/* Only on Preview: from the Source tab a full-size *page*
                             is not what the button appears to promise. */}
                         {tab === "preview" ? (
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setFull(true)}
-                                title="View full size"
-                            >
-                                <Expand />
-                                Fullscreen
-                            </Button>
+                            <Tooltip content="View full size" align="end" className="shrink-0">
+                                <Button variant="outline" size="sm" onClick={() => setFull(true)}>
+                                    <Expand />
+                                    Fullscreen
+                                </Button>
+                            </Tooltip>
                         ) : null}
                         {/* Each tab offers the thing it is showing: the page as a PDF,
                             the source as the .tex it is. */}
                         {tab === "preview" ? (
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={savePdf}
-                                disabled={compiling}
-                                title="Compile and download as PDF"
-                            >
-                                {compiling ? <Loader2 className="animate-spin" /> : <Download />}
-                                .pdf
-                            </Button>
+                            <Tooltip content="Compile and download as PDF" align="end" className="shrink-0">
+                                <Button variant="outline" size="sm" onClick={savePdf} disabled={compiling}>
+                                    {compiling ? <Loader2 className="animate-spin" /> : <Download />}
+                                    .pdf
+                                </Button>
+                            </Tooltip>
                         ) : (
                             /* A real anchor, not a synthesised click — this codebase never fakes one. */
                             <a

@@ -14,6 +14,9 @@ The details step follows the parser's rule: the model proposes, the page decides
 experience or salary figure not present in the posting verbatim is dropped, and a
 work mode or job type needs a word in the text that says so. A field the board
 already supplied is never overwritten.
+
+Nothing is paid for twice: a job you already have a match for is skipped whole, a JD
+already embedded keeps its vector, and a job with all four details skips the LLM.
 """
 
 from __future__ import annotations
@@ -30,6 +33,8 @@ from config.llm import generate
 from mcp_servers.jobpilot_api import client
 from mcp_servers.jobpilot_api.client import JobPilotApiError
 from rag.embeddings import VoyageEmbeddings
+
+DETAIL_FIELDS = ("experienceBand", "salaryText", "workMode", "jobType")
 
 # The same ceiling the match step uses. Past this a JD is boilerplate and legal text.
 MAX_JD_CHARS = 12_000
@@ -81,11 +86,19 @@ class AnalysisOutcome(BaseModel):
     steps: dict[str, StepResult] = Field(default_factory=dict)
     # Set when nothing could run at all — no description to analyze.
     error: str | None = None
+    # Set when nothing needed to run — the job was analyzed before.
+    skipped: str | None = None
 
 
 async def analyze(job_id: str) -> AnalysisOutcome:
     job = await client.get_job(job_id)
     outcome = AnalysisOutcome(jobId=job_id, title=job["title"], company=job["company"])
+
+    existing = await _existing_match(job_id)
+    if existing is not None:
+        outcome.score = existing.get("score")
+        outcome.skipped = "already analyzed"
+        return outcome
 
     description = await client.get_description_for_job(job_id)
     text = (description or {}).get("jdText", "").strip()
@@ -94,7 +107,12 @@ async def analyze(job_id: str) -> AnalysisOutcome:
         return outcome
 
     outcome.steps["details"] = await _step(_details(job, text[:MAX_JD_CHARS]))
-    outcome.steps["embedding"] = await _step(_embedding(description["id"], text[:MAX_JD_CHARS]))
+    if description.get("hasEmbedding"):
+        outcome.steps["embedding"] = StepResult(ok=True, note="already embedded")
+    else:
+        outcome.steps["embedding"] = await _step(
+            _embedding(description["id"], text[:MAX_JD_CHARS])
+        )
 
     match: dict[str, Any] = {}
     outcome.steps["match"] = await _step(_match(job_id, description["id"], match))
@@ -124,6 +142,15 @@ async def analyze_many(
 # --- the steps -----------------------------------------------------------------
 
 
+async def _existing_match(job_id: str) -> dict[str, Any] | None:
+    try:
+        return await client.get_match(job_id)
+    except JobPilotApiError as error:
+        if error.status == 404:
+            return None
+        raise
+
+
 async def _step(work: Any) -> StepResult:
     """Run one step; a failure is recorded, not raised — except a dead token, which
     fails every later call the same way and so ends the whole run."""
@@ -139,6 +166,8 @@ async def _step(work: Any) -> StepResult:
 
 
 async def _details(job: dict[str, Any], text: str) -> str:
+    if all(job.get(field) for field in DETAIL_FIELDS):
+        return "all details already known"
     proposed = await generate(JobDetails, text, system=DETAILS_SYSTEM, max_tokens=512)
     found = verify_details(proposed, text)
     # The board's own values win: only fields the job does not have yet are written.

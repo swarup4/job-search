@@ -1,9 +1,15 @@
+"use client";
+
+import { Suspense } from "react";
 import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useSelector } from "react-redux";
 import {
     Columns3, FileText, ListFilter, Search, Send, Settings2, UserRound, Database, Cpu,
 } from "lucide-react";
 import { SidebarIdentity } from "@/component/SidebarIdentity";
-import { NAV } from "@/routes";
+import { NAV, sectionFor } from "@/routes";
+import { selectShell } from "@/store/shell/shellSlice";
 import { cn } from "@/util/helper";
 
 const ICON = {
@@ -16,46 +22,16 @@ const ICON = {
     settings: Settings2,
 };
 
-export function Sidebar({ active, counts = {} }) {
+export function Sidebar() {
     return (
         <aside className="hidden w-[248px] shrink-0 flex-col gap-5 lg:flex">
             <div className="panel overflow-hidden">
                 <SidebarIdentity />
 
-                <nav className="p-2">
-                    {NAV.map((item) => {
-                        const Icon = ICON[item.icon];
-                        const isActive = active === item.href;
-                        const badge = item.badgeKey ? counts[item.badgeKey] : null;
-                        return (
-                            <Link
-                                key={item.href}
-                                href={item.href}
-                                className={cn(
-                                    "flex items-center gap-3 rounded-md px-3 py-[10px] text-[14px] transition-colors",
-                                    isActive
-                                        ? "bg-primary-tint font-medium text-accent-foreground"
-                                        : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                                )}
-                            >
-                                <Icon className={cn("size-[17px] shrink-0", isActive && "text-primary")} />
-                                <span className="grow">{item.label}</span>
-                                {badge ? (
-                                    <span
-                                        className={cn(
-                                            "grid h-5 min-w-5 place-items-center rounded-pill px-1.5 text-[11px] font-semibold",
-                                            item.badgeKey === "pending"
-                                                ? "bg-attention-solid text-white"
-                                                : "bg-primary text-primary-foreground"
-                                        )}
-                                    >
-                                        {badge}
-                                    </span>
-                                ) : null}
-                            </Link>
-                        );
-                    })}
-                </nav>
+                {/* useSearchParams needs a boundary, or a static page cannot prerender. */}
+                <Suspense fallback={<Nav active={null} />}>
+                    <RoutedNav />
+                </Suspense>
             </div>
 
             {/* agent health — the template's dot-status idiom, given something real to say */}
@@ -98,5 +74,60 @@ export function Sidebar({ active, counts = {} }) {
                 </div>
             </div>
         </aside>
+    );
+}
+
+/** A job page highlights the section it was opened from; every other page, its own. */
+function RoutedNav() {
+    const pathname = usePathname();
+    const from = useSearchParams().get("from");
+    return <Nav active={activeHref(pathname, from)} />;
+}
+
+function activeHref(pathname, from) {
+    if (pathname.startsWith("/jobs/")) return sectionFor(from);
+    const item = NAV.find(({ href }) =>
+        href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`)
+    );
+    return item?.href ?? null;
+}
+
+function Nav({ active }) {
+    const counts = useSelector(selectShell);
+    return (
+        <nav className="p-2">
+            {NAV.map((item) => {
+                const Icon = ICON[item.icon];
+                const isActive = active === item.href;
+                const badge = item.badgeKey ? counts[item.badgeKey] : null;
+                return (
+                    <Link
+                        key={item.href}
+                        href={item.href}
+                        className={cn(
+                            "flex items-center gap-3 rounded-md px-3 py-[10px] text-[14px] transition-colors",
+                            isActive
+                                ? "bg-primary-tint font-medium text-accent-foreground"
+                                : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                        )}
+                    >
+                        <Icon className={cn("size-[17px] shrink-0", isActive && "text-primary")} />
+                        <span className="grow">{item.label}</span>
+                        {badge ? (
+                            <span
+                                className={cn(
+                                    "grid h-5 min-w-5 place-items-center rounded-pill px-1.5 text-[11px] font-semibold",
+                                    item.badgeKey === "pending"
+                                        ? "bg-attention-solid text-white"
+                                        : "bg-primary text-primary-foreground"
+                                )}
+                            >
+                                {badge}
+                            </span>
+                        ) : null}
+                    </Link>
+                );
+            })}
+        </nav>
     );
 }

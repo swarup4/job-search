@@ -69,12 +69,15 @@ async def get_job(job_id: str) -> dict[str, Any]:
     return await _request("GET", f"/job/getJob/{job_id}")
 
 
-async def list_jobs(status: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
-    """Newest first. `status` is one pipeline column, e.g. `new`."""
-    params: dict[str, Any] = {"limit": limit}
-    if status:
-        params["status"] = status
-    return await _request("GET", "/job", params=params)
+async def list_jobs(limit: int = 50) -> list[dict[str, Any]]:
+    """Newest first."""
+    return await _request("GET", "/job", params={"limit": limit})
+
+
+async def list_unscored_jobs(limit: int) -> list[dict[str, Any]]:
+    """The caller's newest jobs with no match yet — what "Analyze new jobs" takes."""
+    body = await _request("GET", "/match/unscored", params={"limit": limit})
+    return body["jobs"]
 
 
 async def update_job(job_id: str, payload: dict[str, Any]) -> dict[str, Any]:

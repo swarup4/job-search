@@ -109,8 +109,8 @@
     <text x="1256" y="113" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#2F6F6A">one row per user per job,</text>
     <text x="1256" y="128" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#2F6F6A">created on shortlist.</text>
     <text x="1256" y="143" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#2F6F6A">status is the board column:</text>
-    <text x="1256" y="158" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#2F6F6A">shortlisted · tailored ·</text>
-    <text x="1256" y="173" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#2F6F6A">staged · applied · interview</text>
+    <text x="1256" y="158" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#2F6F6A">shortlisted · staged ·</text>
+    <text x="1256" y="173" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#2F6F6A">applied · viewed · interview</text>
     <text x="1256" y="203" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#2F6F6A">resumeId and texPath stay</text>
     <text x="1256" y="218" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#2F6F6A">empty until a resume exists.</text>
     <line x1="206" y1="158" x2="236" y2="158" stroke="#cfd4d8"/>

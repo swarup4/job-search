@@ -1,13 +1,19 @@
 import { axiosInstance, orNull } from "@/lib/axiosInstance";
 
-/** GET /api/job — the Search, Shortlist and Pipeline screens. */
-export function listJobs({ status, shortlisted, company, limit = 50, skip = 0 } = {}) {
-    return axiosInstance.get("/job", { params: { status, shortlisted, company, limit, skip } });
+/** GET /api/job — the shared catalogue, newest first. Nothing on a job is per-user. */
+export function listJobs({ company, limit = 50, skip = 0 } = {}) {
+    return axiosInstance.get("/job", { params: { company, limit, skip } });
 }
 
-/** GET /api/job/counts — how many jobs sit in each pipeline column, zeros included. */
-export function getJobCounts() {
-    return axiosInstance.get("/job/counts");
+/**
+ * POST /api/job/search — the Search screen. Empty fields are dropped; `total` counts every
+ * match and `jobs` is one page of them, newest first.
+ */
+export function searchJobs(filters, { limit = 20, skip = 0 } = {}) {
+    const body = Object.fromEntries(
+        Object.entries(filters).filter(([, value]) => value !== "" && value != null)
+    );
+    return axiosInstance.post("/job/search", { ...body, limit, skip });
 }
 
 /**
@@ -24,11 +30,7 @@ export function getJob(jobId) {
     return orNull(axiosInstance.get(`/job/getJob/${jobId}`));
 }
 
-/** PATCH /api/job/updateJob/{id} — the shortlist toggle and pipeline moves. */
+/** PATCH /api/job/updateJob/{id} — listing details only; where you stand is an application. */
 export function updateJob(jobId, changes) {
     return axiosInstance.patch(`/job/updateJob/${jobId}`, changes);
-}
-
-export function setShortlisted(jobId, shortlisted) {
-    return updateJob(jobId, { shortlisted });
 }

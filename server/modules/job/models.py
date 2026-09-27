@@ -6,16 +6,6 @@ from beanie import Document, PydanticObjectId
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 
-class JobStatus(StrEnum):
-    """Pipeline column on the dashboard board."""
-
-    NEW = "new"
-    REVIEWED = "reviewed"
-    TAILORED = "tailored"
-    APPLIED = "applied"
-    ARCHIVED = "archived"
-
-
 class JobSource(StrEnum):
     LINKEDIN = "linkedin"
     INDEED = "indeed"
@@ -76,8 +66,6 @@ class Job(Document):
     applicantCount: int | None = None
     # FR-1.4 — discovery hashes the normalized posting and refuses a repeat.
     dedupHash: str
-    status: JobStatus = JobStatus.NEW
-    shortlisted: bool = False
     discoveredAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updatedAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
@@ -85,19 +73,16 @@ class Job(Document):
         name = "jobs"
         indexes = [
             pymongo.IndexModel([("dedupHash", pymongo.ASCENDING)], unique=True),
-            # Every list and count is this shape: optionally one column, newest first.
-            pymongo.IndexModel(
-                [("status", pymongo.ASCENDING), ("discoveredAt", pymongo.DESCENDING)]
-            ),
+            # Every list is newest first.
+            pymongo.IndexModel([("discoveredAt", pymongo.DESCENDING)]),
         ]
 
 
 class JobUpdate(BaseModel):
     """Every field optional: a PATCH sends only what changed. The detail fields are
-    what analysis reads out of the description when the board did not supply them."""
+    what analysis reads out of the description when the board did not supply them.
+    Nothing per-user belongs here — a job is shared by every account."""
 
-    status: JobStatus | None = None
-    shortlisted: bool | None = None
     jobType: JobType | None = None
     workMode: WorkMode | None = None
     experienceBand: str | None = Field(default=None, max_length=60)
@@ -124,8 +109,6 @@ class JobRead(BaseModel):
     postedAt: datetime | None = None
     deadlineAt: datetime | None = None
     applicantCount: int | None = None
-    status: JobStatus
-    shortlisted: bool
     discoveredAt: datetime
 
 
@@ -162,21 +145,8 @@ class JobDetailRead(BaseModel):
     postedAt: datetime | None = None
     deadlineAt: datetime | None = None
     applicantCount: int | None = None
-    status: JobStatus
-    shortlisted: bool
     discoveredAt: datetime
     description: JobDescriptionPart | None = None
-
-
-class JobCounts(BaseModel):
-    """How many jobs sit in each pipeline column — the board's stat cards and column
-    headers. Every status is present, zero included."""
-
-    new: int = 0
-    reviewed: int = 0
-    tailored: int = 0
-    applied: int = 0
-    archived: int = 0
 
 
 class JobCreated(BaseModel):
@@ -184,3 +154,59 @@ class JobCreated(BaseModel):
 
     id: PydanticObjectId
     duplicate: bool
+
+
+class JobSearch(BaseModel):
+    """The Search screen's fields. Text fields match case-insensitively anywhere in the
+    value; every one of `keywords` must appear in the job description text."""
+
+    # A field of only spaces then arrives empty, and is skipped like one left blank.
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    keywords: list[str] = Field(default_factory=list, max_length=10)
+    company: str | None = None
+    location: str | None = None
+    title: str | None = None
+    # Posted (or, when the board gave no date, found) within this many days.
+    postedWithin: int | None = Field(default=None, ge=1, le=365)
+    limit: int = Field(default=20, ge=1, le=100)
+    skip: int = Field(default=0, ge=0)
+
+
+class JobSearchHit(BaseModel):
+    """One search result: the shared job, plus what is the caller's own about it — their
+    match, if they have one, and whether they shortlisted it."""
+
+    # A response always carries every field, defaults included.
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
+    id: PydanticObjectId
+    refId: str | None = None
+    title: str
+    company: str
+    location: str
+    jobType: JobType | None = None
+    workMode: WorkMode | None = None
+    experienceBand: str | None = None
+    salaryText: str | None = None
+    source: JobSource
+    listingUrl: HttpUrl | None = None
+    postedAt: datetime | None = None
+    deadlineAt: datetime | None = None
+    applicantCount: int | None = None
+    discoveredAt: datetime
+    # Null until the job is scored against the caller's resume.
+    score: int | None = None
+    riskCount: int = 0
+    presentCount: int = 0
+    missingCount: int = 0
+    shortlisted: bool = False
+
+
+class JobSearchResult(BaseModel):
+    """`indexed` is every job stored; `total` is how many pass the filters; `jobs` is
+    one page of them, newest first."""
+
+    indexed: int
+    total: int
+    jobs: list[JobSearchHit]
