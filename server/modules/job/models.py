@@ -154,3 +154,59 @@ class JobCreated(BaseModel):
 
     id: PydanticObjectId
     duplicate: bool
+
+
+class JobSearch(BaseModel):
+    """The Search screen's fields. Text fields match case-insensitively anywhere in the
+    value; every one of `keywords` must appear in the job description text."""
+
+    # A field of only spaces then arrives empty, and is skipped like one left blank.
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    keywords: list[str] = Field(default_factory=list, max_length=10)
+    company: str | None = None
+    location: str | None = None
+    title: str | None = None
+    # Posted (or, when the board gave no date, found) within this many days.
+    postedWithin: int | None = Field(default=None, ge=1, le=365)
+    limit: int = Field(default=20, ge=1, le=100)
+    skip: int = Field(default=0, ge=0)
+
+
+class JobSearchHit(BaseModel):
+    """One search result: the shared job, plus what is the caller's own about it — their
+    match, if they have one, and whether they shortlisted it."""
+
+    # A response always carries every field, defaults included.
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
+    id: PydanticObjectId
+    refId: str | None = None
+    title: str
+    company: str
+    location: str
+    jobType: JobType | None = None
+    workMode: WorkMode | None = None
+    experienceBand: str | None = None
+    salaryText: str | None = None
+    source: JobSource
+    listingUrl: HttpUrl | None = None
+    postedAt: datetime | None = None
+    deadlineAt: datetime | None = None
+    applicantCount: int | None = None
+    discoveredAt: datetime
+    # Null until the job is scored against the caller's resume.
+    score: int | None = None
+    riskCount: int = 0
+    presentCount: int = 0
+    missingCount: int = 0
+    shortlisted: bool = False
+
+
+class JobSearchResult(BaseModel):
+    """`indexed` is every job stored; `total` is how many pass the filters; `jobs` is
+    one page of them, newest first."""
+
+    indexed: int
+    total: int
+    jobs: list[JobSearchHit]

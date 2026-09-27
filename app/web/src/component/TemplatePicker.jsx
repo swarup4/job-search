@@ -5,6 +5,7 @@ import { Check, ImageOff, Star } from "lucide-react";
 
 import { getTemplatePreview } from "@/services";
 import { cn } from "@/util/helper";
+import { Tooltip } from "@/component/ui/tooltip";
 
 /** The templates as cards. Picking one is picking the preference. */
 export function TemplatePicker({ templates, selected, preferred, onSelect, disabled }) {
@@ -64,13 +65,12 @@ function TemplateCard({ template, active, preferred, onSelect, disabled }) {
             <div className="flex items-center gap-2 border-t border-border px-4 py-3">
                 <span className="truncate text-[13.5px] font-medium">{template.name}</span>
                 {preferred ? (
-                    <span
-                        title="Your current preference"
-                        className="inline-flex items-center gap-1 rounded-pill bg-primary-tint px-2 py-0.5 text-[11px] text-accent-foreground"
-                    >
-                        <Star className="size-[11px]" />
-                        current
-                    </span>
+                    <Tooltip content="Your current preference" className="shrink-0">
+                        <span className="inline-flex items-center gap-1 rounded-pill bg-primary-tint px-2 py-0.5 text-[11px] text-accent-foreground">
+                            <Star className="size-[11px]" />
+                            current
+                        </span>
+                    </Tooltip>
                 ) : null}
                 <span className="grow" />
                 <span className="shrink-0 text-[11.5px] text-muted-foreground">

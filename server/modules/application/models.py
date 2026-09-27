@@ -258,3 +258,14 @@ class BoardCounts(BaseModel):
     staged: int = 0
     applied: int = 0
     interview: int = 0
+
+
+class Badges(BaseModel):
+    """Every number the header and sidebar show, in one read. The Applications badge is
+    `keywordSelections` + `staged`; `nextJobId` is the longest-waiting keyword choice,
+    which the Pipeline's review banner opens."""
+
+    keywordSelections: int
+    nextJobId: PydanticObjectId | None = None
+    staged: int
+    shortlisted: int

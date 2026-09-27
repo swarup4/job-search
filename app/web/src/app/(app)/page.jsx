@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import { useSelector } from "react-redux";
 import Link from "next/link";
 import { AlertTriangle, ArrowRight, Briefcase, CheckCheck, FileCheck2, Send } from "lucide-react";
 import { PageHeader } from "@/layout/PageHeader";
@@ -12,6 +13,7 @@ import { buttonVariants } from "@/component/ui/button";
 import { COLUMNS, usePipeline } from "@/hooks/usePipeline";
 import { useRefreshShell } from "@/hooks/useShellCounts";
 import { ROUTES } from "@/routes";
+import { selectShell } from "@/store/shell/shellSlice";
 import { cn } from "@/util/helper";
 
 /**
@@ -49,7 +51,7 @@ export default function Page() {
 
             <AnalysisProgress analysis={analysis} />
 
-            {ready ? <ReviewGate pending={board.pending} /> : null}
+            <ReviewGate />
 
             {board.status === "error" ? (
                 <Panel className="mt-6 flex items-start gap-2 px-5 py-4 text-[13px] text-risk-ink">
@@ -86,7 +88,9 @@ export default function Page() {
 }
 
 /** The approval gate — the one coloured surface on the page. Hidden when nothing waits. */
-function ReviewGate({ pending }) {
+function ReviewGate() {
+    // The same numbers the header and sidebar show, loaded once by the shell.
+    const pending = useSelector(selectShell);
     const total = pending.keywordSelections + pending.staged;
     if (!total) return null;
 

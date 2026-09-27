@@ -1,10 +1,8 @@
-import { getPendingCounts } from "./match";
-import { listApplications } from "./application";
+import { getBadges } from "./application";
 
 /**
- * The two badges AppShell renders on every screen. There is no aggregate endpoint
- * for them, so the client composes: keyword selections awaiting review plus
- * applications staged for submit, and the shortlist count.
+ * The badges AppShell renders on every screen, from one call. `pending` is the
+ * Applications badge: keyword choices waiting plus applications staged for submit.
  *
  * Chrome must not take a screen down — if the API is unreachable this answers null,
  * the badges keep their last numbers and the page still renders. This is the one
@@ -13,15 +11,8 @@ import { listApplications } from "./application";
  */
 export async function getShellCounts() {
     try {
-        const [pending, staged, shortlisted] = await Promise.all([
-            getPendingCounts(),
-            listApplications("staged"),
-            listApplications("shortlisted"),
-        ]);
-        return {
-            pending: pending.keywordSelections + staged.length,
-            shortlisted: shortlisted.length,
-        };
+        const badges = await getBadges();
+        return { ...badges, pending: badges.keywordSelections + badges.staged };
     } catch {
         return null;
     }

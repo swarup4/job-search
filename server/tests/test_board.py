@@ -113,17 +113,32 @@ async def test_summaries_return_only_scored_jobs(signed_in: AsyncClient) -> None
     ]
 
 
-async def test_pending_names_the_longest_waiting_job(signed_in: AsyncClient) -> None:
-    empty = (await signed_in.get("/match/pending")).json()
-    assert empty == {"keywordSelections": 0, "nextJobId": None}
+async def test_badges_name_the_longest_waiting_job(signed_in: AsyncClient) -> None:
+    empty = (await signed_in.get("/application/badges")).json()
+    assert empty == {"keywordSelections": 0, "nextJobId": None, "staged": 0, "shortlisted": 0}
 
     older = await make_job(signed_in, "LLM Engineer", "R1")
     newer = await make_job(signed_in, "GenAI Engineer", "R2")
     await score(signed_in, older, 70)
     await score(signed_in, newer, 90)
 
-    pending = (await signed_in.get("/match/pending")).json()
-    assert pending == {"keywordSelections": 2, "nextJobId": older}
+    badges = (await signed_in.get("/application/badges")).json()
+    assert badges["keywordSelections"] == 2
+    assert badges["nextJobId"] == older
+
+
+async def test_badges_count_staged_and_shortlisted(signed_in: AsyncClient) -> None:
+    shortlisted = await make_job(signed_in, "LLM Engineer", "R1")
+    staged = await make_job(signed_in, "GenAI Engineer", "R2")
+    await signed_in.post(f"/application/shortlist/{shortlisted}")
+    await stage(signed_in, staged)
+
+    badges = (await signed_in.get("/application/badges")).json()
+    assert badges["shortlisted"] == 1 and badges["staged"] == 1
+
+
+async def test_badges_need_a_token(client: AsyncClient) -> None:
+    assert (await client.get("/application/badges")).status_code == 401
 
 
 async def test_analysis_details_can_be_written_to_a_job(signed_in: AsyncClient) -> None:

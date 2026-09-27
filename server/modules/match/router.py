@@ -9,7 +9,6 @@ from modules.match.models import (
     MatchRead,
     MatchSummary,
     MatchWrite,
-    PendingCounts,
     UnscoredJobs,
 )
 
@@ -17,13 +16,10 @@ router = APIRouter(tags=["match"])
 
 
 @router.get("/unscored", response_model=UnscoredJobs)
-async def unscored(user_id: CurrentUser, limit: int = Query(default=10, ge=0, le=50)) -> UnscoredJobs:
+async def unscored(
+    user_id: CurrentUser, limit: int = Query(default=10, ge=0, le=50)
+) -> UnscoredJobs:
     return await service.unscored(user_id, limit)
-
-
-@router.get("/pending", response_model=PendingCounts)
-async def pending(user_id: CurrentUser) -> PendingCounts:
-    return await service.pending_counts(user_id)
 
 
 @router.get("/summaries", response_model=list[MatchSummary])

@@ -9,6 +9,15 @@ export function listApplications(status) {
     });
 }
 
+/**
+ * GET /api/application/badges — every number the header and sidebar show, and the
+ * Pipeline's review banner: keyword choices waiting (and the oldest one's job), staged
+ * applications, shortlisted jobs. One call for all of them.
+ */
+export function getBadges() {
+    return axiosInstance.get("/application/badges");
+}
+
 /** GET /api/application/counts — the Pipeline's column totals for you, zeros included. */
 export function getBoardCounts() {
     return axiosInstance.get("/application/counts");

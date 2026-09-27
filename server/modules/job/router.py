@@ -9,6 +9,8 @@ from modules.job.models import (
     JobCreated,
     JobDetailRead,
     JobRead,
+    JobSearch,
+    JobSearchResult,
     JobUpdate,
 )
 
@@ -23,6 +25,11 @@ async def list_jobs(
     skip: int = 0,
 ) -> list[Job]:
     return await service.list_jobs(company, limit, skip)
+
+
+@router.post("/search", response_model=JobSearchResult)
+async def search_jobs(filters: JobSearch, user_id: CurrentUser) -> JobSearchResult:
+    return await service.search_jobs(user_id, filters)
 
 
 @router.post("/createJob", response_model=JobCreated, status_code=status.HTTP_201_CREATED)

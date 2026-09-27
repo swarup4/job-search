@@ -1,5 +1,7 @@
 import hashlib
-from datetime import UTC, datetime
+import re
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from beanie import PydanticObjectId
 
@@ -9,6 +11,9 @@ from modules.job.models import (
     JobCreate,
     JobCreated,
     JobDetailRead,
+    JobSearch,
+    JobSearchHit,
+    JobSearchResult,
     JobUpdate,
 )
 
@@ -85,8 +90,8 @@ async def count_jobs(exclude: list[PydanticObjectId] | None = None) -> int:
 async def get_job_detail(job_id: PydanticObjectId) -> JobDetailRead:
     """The job and its description in one query.
 
-    This is the one place the job module reads another module's collection: a
-    `$lookup` into `job_descriptions`, so the details page costs one round trip
+    One of two places the job module reads other modules' collections (search, which
+    joins matches and applications, is the other): a `$lookup` into `job_descriptions`, so the details page costs one round trip
     instead of two. The projection leaves out the embedding (~20 KB of floats) and
     the unused `htmlString`. A job with no description still comes back, with
     `description` null — "no description" is not "no job"."""
@@ -137,3 +142,92 @@ async def update_job(job_id: PydanticObjectId, payload: JobUpdate) -> Job:
     job.updatedAt = datetime.now(UTC)
     await job.save()
     return job
+
+
+async def search_jobs(user_id: PydanticObjectId, filters: JobSearch) -> JobSearchResult:
+    """Each filled field adds one Mongo condition. The description text lives in
+    `job_descriptions`, so keywords first ask it which job ids mention every word.
+
+    Each job on the page then joins the caller's own match and application, so the
+    screen gets the score and the shortlist in the same answer."""
+    db = Job.get_pymongo_collection().database
+    conditions: list[dict[str, object]] = []
+
+    keywords = [word for word in filters.keywords if word]
+    if keywords:
+        # "Python" and "MongoDB": a description must mention both.
+        described = await db.job_descriptions.distinct(
+            "jobId", {"$and": [{"jdText": like(word)} for word in keywords]}
+        )
+        conditions.append({"_id": {"$in": described}})
+    if filters.company:
+        conditions.append({"company": like(filters.company)})
+    if filters.location:
+        conditions.append({"location": like(filters.location)})
+    if filters.title:
+        conditions.append({"title": like(filters.title)})
+    if filters.postedWithin:
+        since = datetime.now(UTC) - timedelta(days=filters.postedWithin)
+        # A board that gave no posting date is judged by when discovery found the job.
+        conditions.append(
+            {
+                "$or": [
+                    {"postedAt": {"$gte": since}},
+                    {"postedAt": None, "discoveredAt": {"$gte": since}},
+                ]
+            }
+        )
+
+    query = {"$and": conditions} if conditions else {}
+    # Paged before the joins, so they run for this page's jobs only.
+    rows = await Job.aggregate(
+        [
+            {"$match": query},
+            {"$sort": {"discoveredAt": -1}},
+            {"$skip": filters.skip},
+            {"$limit": filters.limit},
+            {
+                "$lookup": {
+                    "from": "matches",
+                    "localField": "_id",
+                    "foreignField": "jobId",
+                    "pipeline": [{"$match": {"userId": user_id}}],
+                    "as": "match",
+                }
+            },
+            {
+                "$lookup": {
+                    "from": "applications",
+                    "localField": "_id",
+                    "foreignField": "jobId",
+                    "pipeline": [{"$match": {"userId": user_id}}],
+                    "as": "application",
+                }
+            },
+        ]
+    ).to_list()
+    return JobSearchResult(
+        indexed=await Job.find().count(),
+        total=await Job.find(query).count(),
+        jobs=[_hit(row) for row in rows],
+    )
+
+
+def _hit(row: dict[str, Any]) -> JobSearchHit:
+    match = row["match"][0] if row["match"] else None
+    application = row["application"][0] if row["application"] else None
+    return JobSearchHit(
+        **{key: value for key, value in row.items() if key in JobSearchHit.model_fields},
+        id=row["_id"],
+        score=match["score"] if match else None,
+        riskCount=len(match["risks"]) if match else 0,
+        presentCount=len(match["present"]) if match else 0,
+        missingCount=len(match["missing"]) if match else 0,
+        shortlisted=application is not None and application["status"] != "withdrawn",
+    )
+
+
+def like(text: str) -> dict[str, str]:
+    """A case-insensitive SQL-style LIKE '%text%'. `re.escape` keeps "C++" a literal
+    rather than a broken pattern Mongo would refuse."""
+    return {"$regex": re.escape(text), "$options": "i"}

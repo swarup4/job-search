@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, Bookmark, Search } from "lucide-react";
 import { PageHeader } from "@/layout/PageHeader";
-import { JobList } from "@/component/JobList";
+import { JobList, toListItem } from "@/component/JobList";
 import { ViewToggle } from "@/component/ViewToggle";
 import { Panel, PanelBody } from "@/component/ui/panel";
 import { buttonVariants } from "@/component/ui/button";
@@ -18,10 +18,6 @@ import {
 } from "@/services";
 import { useRefreshShell } from "@/hooks/useShellCounts";
 import { ROUTES } from "@/routes";
-
-const SOURCE = { career_page: "Career page", linkedin: "LinkedIn", indeed: "Indeed", naukri: "Naukri", serpapi: "Google" };
-const JOB_TYPE = { full_time: "Full time", contract: "Contract", part_time: "Part time", internship: "Internship" };
-const WORK_MODE = { on_site: "On-site", hybrid: "Hybrid", remote: "Remote" };
 
 /**
  * Your shortlisted applications, each with its job and match. Jobs you tailored or
@@ -40,7 +36,10 @@ export default function Page() {
       const jobs = (await Promise.all(applications.map((row) => getJob(row.jobId)))).filter(Boolean);
       const summaries = await getMatchSummaries(jobs.map((job) => job.id));
       const byJob = new Map(summaries.map((summary) => [summary.jobId, summary]));
-      setData({ status: "ready", saved: jobs.map((job) => toItem(job, byJob.get(job.id))) });
+      setData({
+        status: "ready",
+        saved: jobs.map((job) => toListItem(job, byJob.get(job.id), { shortlisted: true })),
+      });
     } catch (failure) {
       setData({
         status: "error",
@@ -146,34 +145,4 @@ export default function Page() {
       ) : null}
     </>
   );
-}
-
-/** The shape JobList reads. */
-function toItem(job, summary) {
-  return {
-    id: job.id,
-    role: job.title,
-    company: job.company,
-    location: job.location,
-    posted: ago(job.postedAt ?? job.discoveredAt),
-    source: SOURCE[job.source] ?? job.source,
-    type: JOB_TYPE[job.jobType] ?? null,
-    mode: WORK_MODE[job.workMode] ?? null,
-    salary: job.salaryText,
-    match: summary?.score ?? 0,
-    scored: Boolean(summary),
-    risks: summary?.riskCount ?? 0,
-    present: summary?.presentCount ?? 0,
-    missing: summary?.missingCount ?? 0,
-    shortlisted: true,
-  };
-}
-
-function ago(timestamp) {
-  if (!timestamp) return "recently";
-  const minutes = Math.round((Date.now() - new Date(timestamp).getTime()) / 60000);
-  if (minutes < 60) return minutes < 1 ? "just now" : `${minutes}m ago`;
-  if (minutes < 60 * 24) return `${Math.round(minutes / 60)}h ago`;
-  if (minutes < 60 * 24 * 30) return `${Math.round(minutes / (60 * 24))}d ago`;
-  return new Date(timestamp).toLocaleDateString(undefined, { dateStyle: "medium" });
 }

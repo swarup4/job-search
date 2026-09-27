@@ -36,8 +36,7 @@ const SOURCE = { career_page: "Career page", linkedin: "LinkedIn", indeed: "Inde
  * (markdown, rendered here), and the match if the job has been analyzed. A client page
  * because the bearer token lives in sessionStorage.
  *
- * Laid out as designed (see /design/job-details). Where the design showed data that
- * is not collected — a company profile, a structured summary — the page shows the
+ * Laid out as designed. Where the design showed data that is not collected — a company profile, a structured summary — the page shows the
  * full posting instead and says what is missing, rather than filling the gap.
  */
 export default function Page() {

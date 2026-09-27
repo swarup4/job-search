@@ -11,10 +11,12 @@ from modules.application.models import (
     ApplicationFill,
     ApplicationStage,
     ApplicationStatus,
+    Badges,
     BoardCounts,
     StatusTransition,
 )
 from modules.job import Job, count_jobs, get_job, list_jobs
+from modules.match import pending_counts
 
 # Before the user reports a submit. Past these, the row records what was actually sent.
 PRE_SUBMIT = (ApplicationStatus.SHORTLISTED, ApplicationStatus.STAGED, ApplicationStatus.WITHDRAWN)
@@ -242,3 +244,17 @@ async def save_applicant(user_id: PydanticObjectId, payload: ApplicantFields) ->
     stored.updatedAt = datetime.now(UTC)
     await stored.save()
     return stored
+
+
+async def badges(user_id: PydanticObjectId) -> Badges:
+    waiting = await pending_counts(user_id)
+    return Badges(
+        keywordSelections=waiting.keywordSelections,
+        nextJobId=waiting.nextJobId,
+        staged=await Application.find(
+            Application.userId == user_id, Application.status == ApplicationStatus.STAGED
+        ).count(),
+        shortlisted=await Application.find(
+            Application.userId == user_id, Application.status == ApplicationStatus.SHORTLISTED
+        ).count(),
+    )

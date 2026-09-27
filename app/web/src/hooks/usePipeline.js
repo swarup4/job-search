@@ -7,7 +7,6 @@ import {
     getBoardCounts,
     getJob,
     getMatchSummaries,
-    getPendingCounts,
     getUnscoredJobs,
     listApplications,
     listUnstartedJobs,
@@ -46,8 +45,8 @@ const SOURCE_LABEL = {
 
 /**
  * Everything the Pipeline screen shows, from the API: per-column counts, the first
- * cards of each column with their match scores, the pending-review banner, and how
- * many jobs are still unscored for the Analyze button.
+ * cards of each column with their match scores, and how many jobs are still unscored
+ * for the Analyze button. The review banner reads the shell's badges instead.
  */
 export function usePipeline() {
     const [state, setState] = useState({ status: "loading" });
@@ -58,9 +57,8 @@ export function usePipeline() {
     const load = useCallback(async () => {
         try {
             const keys = Object.keys(APPLICATION_STATUSES);
-            const [counts, pending, unscored, firstNew, ...lists] = await Promise.all([
+            const [counts, unscored, firstNew, ...lists] = await Promise.all([
                 getBoardCounts(),
-                getPendingCounts(),
                 getUnscoredJobs(0),
                 listUnstartedJobs({ limit: PAGE }),
                 ...keys.map((key) => listApplications(APPLICATION_STATUSES[key])),
@@ -81,11 +79,6 @@ export function usePipeline() {
                 status: "ready",
                 counts,
                 unscored: unscored.total,
-                pending: {
-                    keywordSelections: pending.keywordSelections,
-                    nextJobId: pending.nextJobId,
-                    staged: counts.staged,
-                },
                 columns,
             });
         } catch (failure) {

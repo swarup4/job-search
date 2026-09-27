@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useSelector } from "react-redux";
 import { Bell, RefreshCw, Search } from "lucide-react";
 import { Button } from "@/component/ui/button";
@@ -13,6 +14,8 @@ import { selectShell } from "@/store/shell/shellSlice";
 export function Topbar() {
     const { pending, syncedAt } = useSelector(selectShell);
     const refreshShell = useRefreshShell();
+    const router = useRouter();
+    const [term, setTerm] = useState("");
     const [refreshing, setRefreshing] = useState(false);
     // Re-render every half minute so "Synced …" keeps counting up.
     const [, tick] = useState(0);
@@ -40,13 +43,25 @@ export function Topbar() {
                     </span>
                 </Link>
 
-                <div className="ml-4 hidden max-w-[420px] grow items-center gap-2.5 rounded-pill bg-secondary px-4 py-2.5 md:flex">
+                {/* Hands the words to the Search page as one keyword; the page does the rest. */}
+                <form
+                    role="search"
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        const keyword = term.trim();
+                        router.push(keyword ? `${ROUTES.search}?keywords=${encodeURIComponent(keyword)}` : ROUTES.search);
+                    }}
+                    className="ml-4 hidden max-w-[420px] grow items-center gap-2.5 rounded-pill bg-secondary px-4 py-2.5 md:flex"
+                >
                     <Search className="size-[15px] shrink-0 text-muted-foreground" />
                     <input
+                        value={term}
+                        onChange={(e) => setTerm(e.target.value)}
                         placeholder="Search roles, companies, keywords"
+                        aria-label="Search jobs"
                         className="w-full bg-transparent text-[14px] outline-none placeholder:text-muted-foreground"
                     />
-                </div>
+                </form>
 
                 <div className="grow" />
 

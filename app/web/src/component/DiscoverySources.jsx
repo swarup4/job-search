@@ -6,6 +6,7 @@ import { useDiscovery } from "@/component/DiscoveryContext";
 import { Panel, PanelHeader, PanelTitle } from "@/component/ui/panel";
 import { Button } from "@/component/ui/button";
 import { Toggle } from "@/component/ui/toggle";
+import { Tooltip } from "@/component/ui/tooltip";
 import { cn } from "@/util/helper";
 
 /**
@@ -60,12 +61,12 @@ export function DiscoverySources() {
                             <p className={cn("truncate text-[14px]", !source.enabled && "text-muted-foreground")}>
                                 {source.name}
                             </p>
-                            <p
-                                className="mt-0.5 truncate text-[12px] text-muted-foreground"
-                                title={source.notes ?? source.lastResult?.error ?? undefined}
-                            >
-                                {describe(source, live, running)}
-                            </p>
+                            {/* The notes, or the last error, say why — shown only when there are some. */}
+                            <Detail note={source.notes ?? source.lastResult?.error}>
+                                <p className="mt-0.5 truncate text-[12px] text-muted-foreground">
+                                    {describe(source, live, running)}
+                                </p>
+                            </Detail>
                             {source.enabled && source.lastRunAt && !live.has(source.name) ? (
                                 <p className="mt-0.5 text-[11.5px] text-muted-foreground/80">
                                     {ago(source.lastRunAt)}
@@ -119,4 +120,8 @@ function ago(timestamp) {
     if (minutes < 60) return `run ${minutes} min ago`;
     if (minutes < 60 * 24) return `run ${Math.round(minutes / 60)} h ago`;
     return `run ${new Date(timestamp).toLocaleDateString(undefined, { dateStyle: "medium" })}`;
+}
+
+function Detail({ note, children }) {
+    return note ? <Tooltip content={note}>{children}</Tooltip> : children;
 }

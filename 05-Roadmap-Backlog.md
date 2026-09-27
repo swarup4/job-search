@@ -4,8 +4,8 @@
 |---|---|
 | **Product** | JobPilot — Agentic AI Job Search Platform |
 | **Owner** | Swarup Saha |
-| **Status** | v1.9 — eleven phases, application first then agents. Phases 1, 5 and 6 done; Workday career-page scraping live from Settings as of 2026-09-25 |
-| **Updated** | 2026-09-25 |
+| **Status** | v1.10 — eleven phases, application first then agents. Phases 1, 5 and 6 done; Workday scraping live from Settings; the pipeline is per-user in `applications`, and every screen but Staged Applications reads the API |
+| **Updated** | 2026-09-27 |
 
 ---
 
@@ -24,8 +24,8 @@ anything starts reasoning.
 |---|---|---|
 | [1](#2-phase-1--authentication--profile) | Sign in, and the profile everything hangs off | ✅ done |
 | [2](#3-phase-2--resume-generation--download) | A resume built from that profile, downloadable | 🚧 `.tex` and PDF both download; three tasks left |
-| [3](#4-phase-3--job-scraping-search--shortlist) | Real jobs in the system, searchable and shortlistable | 🚧 capture, parse and Workday scraping land; other ATS adapters and screen wiring open |
-| [4](#5-phase-4--applications--settings) | Tracking what you applied to, and the preferences driving it | ⬜ API only |
+| [3](#4-phase-3--job-scraping-search--shortlist) | Real jobs in the system, searchable and shortlistable | 🚧 capture, Workday scraping, analysis, Search, Shortlist and Job details live; other sources and the scheduler open |
+| [4](#5-phase-4--applications--settings) | Tracking what you applied to, and the preferences driving it | 🚧 per-user pipeline, board and badges live; Staged Applications screen, follow-ups and sheet sync open |
 | [5](#6-phase-5--llm-integration--resume-rectification) | A resume rectified against a specific job | ✅ done |
 | [6](#7-phase-6--rag--retrieval) | Retrieval over your own resume | ✅ done |
 | [7](#8-phase-7--mcp-tool-servers) | The tool servers agents reach the world through | ⬜ not started |
@@ -170,10 +170,11 @@ hint. **Invariant 5 and FR-4.4 still forbid this and need amending.**
 ---
 
 ## 4. Phase 3 — Job scraping, search & shortlist
-🚧 **two sources work end to end.** Get real jobs into the system so the screens that already
-exist have something to work on. Extension capture with its parse into a `Job`, and Workday
-career-page scraping started from Settings, both land — 41 companies registered, 33 enabled.
-The other ATS adapters, the scheduler and the screen wiring are still open.
+🚧 **two sources work end to end, and the screens read them.** Get real jobs into the system so
+the screens that already exist have something to work on. Extension capture with its parse into a
+`Job`, and Workday career-page scraping started from Settings, both land — 41 companies
+registered, 33 enabled, 419 jobs stored. Analyze, Search, Shortlist and Job details all run on
+the API. The other sources, archiving and the scheduler are still open.
 
 **API**
 - ✅ `P3-01` `job` module: create with dedup-hash check, list by status, shortlist toggle.
@@ -237,23 +238,35 @@ The other ATS adapters, the scheduler and the screen wiring are still open.
   from the text (kept only if stated verbatim or backed by a word in the posting, and never over
   a board-supplied value), the JD embedding (Voyage), and `rectify` — whose extracted labels are
   also stored as the description's `requirements`. `POST`/`GET /api/analysis/run` on the AI
-  tier: chosen `jobIds` or the `newest` N in New, max 50, one run at a time; the dashboard
-  polls its status only while a run it started is going, never on page load. `JobUpdate` gained
-  the four detail fields. ~1 min and ~$0.001 per job. 12 tests
+  tier: chosen `jobIds` or the `newest` N jobs you have no match for (`GET /match/unscored`),
+  max 50, one run at a time; the dashboard polls its status only while a run it started is
+  going, never on page load. `JobUpdate` gained the four detail fields. Nothing is paid for
+  twice — see `P3-30`. ~1 min and ~$0.001 per job. 15 tests
 
 **UI**
 - ✅ `P3-08` Job Search screen built (multi-field search + facets)
 - ✅ `P3-09` Shortlist / Match Review screen built
 - ✅ `P3-10` Job Details screen built
-- ⬜ `P3-11` Wire all three screens off `search.json` and onto the job API
+- ✅ `P3-11` Wire all three screens off `search.json` and onto the API. *Job details, Shortlist
+  and Search all read the API as of 2026-09-27.* **Search** is `POST /api/job/search` with a JSON
+  body: `keywords` (a list — the description must mention every one), `company`, `location` and
+  `title` (case-insensitive contains, via one `like()` helper) and `postedWithin` — plain Mongo
+  conditions joined with `$and`, paged 20, newest first. Each row joins the caller's own match
+  (score, risk / present / missing counts) and application (shortlisted), after paging, so the
+  screen makes one request. The page starts empty and runs only on Search or Enter; the submitted
+  search lives in the URL, so Back from a job reruns it and the header's search box opens it.
+  Keywords is a token input, like Settings' Target roles. Dropped from the design: the
+  experience band (free text, cannot be bucketed honestly) and, on 2026-09-27, must-mention
+  skill, job type, work mode, source and minimum match. The designed screen is frozen at
+  `/design/search` for comparison. 12 tests in `server/tests/test_search.py`
 - 🟡 `P3-27` Settings: add a company by pasting its careers URL, showing the detected ATS; a
   **Run discovery** button showing the last run's report. *The button and the live Sources rail
   are built (`DiscoverySources`), replacing the fixture list; adding a company by URL waits on
   `P3-20`*
 - ✅ `P3-29` Analyze on the Pipeline: an **Analyze N new jobs** button (10 per click) with
-  progress, and an Analyze / Re-analyze / Retry action on every card. The board reloads when a
-  run ends, so analyzed jobs move to Reviewed with their scores. Polling is shared with
-  discovery through `usePolledRun`
+  progress. The board reloads when a run ends so the scores appear. Polling is shared with
+  discovery through `usePolledRun`. *The per-card Analyze / Re-analyze / Retry actions went in
+  `P3-30`, and a score no longer moves a job to Reviewed — only shortlisting does (`P4-13`)*
 - ✅ `P3-30` Pipeline cards cleaned up (2026-09-26): no match ring until a job is scored — a 0
   meant "not started" and read as a bad match — and the per-card Analyze action removed.
   Analysis is always a click: **Analyze this job** on the job page, shown only while the job has
@@ -318,8 +331,10 @@ downstream cost down: Accenture alone lists thousands of openings.
 ---
 
 ## 5. Phase 4 — Applications & Settings
-⬜ **API only.** The tracking half of the product, plus the preferences that will later drive
-discovery.
+🚧 **the pipeline is live and per-user.** The tracking half of the product, plus the preferences
+that drive discovery. Where you stand with each job lives in your `applications` row, and the
+Pipeline board, Shortlist and badges read it. The Staged Applications screen, follow-ups and
+sheet sync are still open.
 
 **API**
 - ✅ `P4-01` `application` module: stage, record fill, status transitions, answer bank
@@ -356,12 +371,12 @@ discovery.
   `jobId`s (`GET /application/unstarted`); every other column lists applications by status,
   joined to their jobs by id. `GET /application` takes several `status` values, for Applied's
   `applied` + `viewed`
-- 🟡 `P4-16` Migration `server/migrate_pipeline_to_applications.py`, dry-run by default: an
+- ✅ `P4-16` Migration `server/migrate_pipeline_to_applications.py`, dry-run by default: an
   application for each job that is shortlisted, for the existing account, then `$unset` both
   fields from `jobs`, drop `jobs.status_1_discoveredAt_-1`, and rebuild `userId_1_jobId_1` as
-  unique. `reviewed` is not migrated — analysis set it, not you. *Written and dry-run against
-  Atlas 2026-09-26 (0 to create, 419 jobs to unset); `--apply` not yet run. It must run before
-  the server restarts on this code, or `init_beanie` fails on the index*
+  unique. `reviewed` is not migrated — analysis set it, not you. *Applied to Atlas 2026-09-26:
+  419 jobs unset, the old jobs index dropped, `userId_1_jobId_1` rebuilt unique. It had to run
+  before the server restarted on this code — `init_beanie` refused the index until it did*
 - ✅ `P4-17` Tests: shortlisting creates one row and a repeat is a no-op; a second account still
   sees the job in New; unshortlist deletes vs withdraws; tailoring an unshortlisted job upserts
   its row at `staged`; a submitted row refuses unshortlist; scoring moves nothing; unscored
@@ -373,11 +388,11 @@ discovery.
 - ✅ `P4-07` "Pending your review" banner built
 - ✅ `P4-08` Settings screen built
 - 🟡 `P4-09` Wire all three screens onto the application API and real counts. *Pipeline board
-  done 2026-09-26: counts from `GET /api/job/counts`, each column's newest jobs with scores from
-  one `GET /api/match/summaries`, Interview read from applications, and the review banner from
-  `GET /api/match/pending`, whose new `nextJobId` is what Select keywords opens. The board's
-  columns left `board.json`; its `pending` stays for the other screens' badges. Staged
-  Applications and the banner's own screen are still open*
+  and review banner live: column totals from `GET /api/application/counts`, New from
+  `GET /api/application/unstarted`, the other columns from `GET /api/application?status=` with
+  scores from `GET /api/match/summaries`, and the banner from the shell's
+  `GET /api/application/badges` (`P4-21`), whose `nextJobId` is what Select keywords opens.
+  Staged Applications still reads `applications.json`*
 - 🟡 `P4-10` Wire the Settings screen onto that store, once it exists. *Search targets is an
   editable form with Save. Company preference and Applications were taken off the screen on
   2026-09-26 as not needed; a Last run panel shows when discovery was triggered and what it found*
@@ -395,9 +410,15 @@ discovery.
   the numbers differed between screens. The badges live in a Redux `shell` slice loaded once
   and refreshed after a shortlist toggle, a keyword choice or a finished analysis; the sidebar
   works out its active item from the URL (a job page from `?from=`). The header's "Synced …"
-  is now real and **Refresh** re-reads the badges. The Agents panel is still static text
+  is now real and **Refresh** re-reads the badges. The Agents panel is still static text.
+  *2026-09-27: the badges come from one call, `GET /api/application/badges` (keyword choices
+  waiting and the oldest one's job, staged, shortlisted), replacing `/match/pending` and two
+  application listings; the Pipeline's review banner reads the same store. `/match/pending`
+  was removed*
 
-**The preferences store is new work, not a wiring job** — that screen has no backend at all today.
+**Staged Applications is the last screen on a fixture.** Its API exists (`P4-01`, `P4-15`); what is
+left is the screen, the submit confirmation (`confirmedByUser`) and the fill report from the
+extension.
 
 ### Decisions (2026-09-26)
 
@@ -750,37 +771,40 @@ above is unprovable until this exists.
 - ✅ `CC-02` Beanie documents for every local collection, `ObjectId` keys
 - ✅ `CC-03` React frontend, built in v1 instead of Streamlit/Gradio *(closed — see
   deviation 1)*
-- ⬜ `CC-04` **Test suite for the API and its guardrails.** Removed on request; blocks the §15
-  Definition of Done in every phase above
+- ✅ `CC-04` **Test suite for the API and its guardrails.** 73 tests in `server/tests/`, run
+  against a throwaway local MongoDB (`jobpilot_test`), never Atlas — including
+  `test_no_fabrication.py` for the keyword gate. 127 in `ai/tests/`, with the model and the API
+  faked. Counted 2026-09-27
 - ⬜ `CC-05` CI/CD via GitHub Actions (lint and test on push)
 
-**The test suite is now the one that should not wait.** Server-side token enforcement closed in
-Phase 1; the suite does not block building the next feature, but it should close before this is
-used against real job applications — nothing above is verified by anything that runs on its own.
+**CI is now the one that should not wait.** The suites exist but run only when someone runs
+them; `CC-05` makes them run on every push before this is used against real job applications.
 
 ---
 
 ## 14. Implementation status
 
-The dashboard UI was built ahead of the backend. `server/` is now built — eight modules, 63
-endpoints, 15 collections, every one of them behind a bearer token. Sign-in and My Details run
-against it end to end and hold real data; **the other eight screens still render from a JSON
-fixture** in `app/web/src/data/`. No story meets the §10 Definition of Done, because the §15
-test-case requirement is unmet everywhere: `server/` has no tests and there is no CI.
+The dashboard UI was built ahead of the backend. `server/` now has 11 modules, 83 endpoints and 18
+collections, every endpoint behind a bearer token; the AI tier (`ai/api/`, port 8001) adds
+discovery, analysis and settings. Every signed-in screen shares one header and sidebar
+(`app/(app)/layout.jsx`) and reads the API, except **Staged Applications** (`applications.json`)
+and the per-job **Resume Preview** (`resume.json`); My Details keeps one fixture field,
+`resumeFile`. Tests: 73 in `server/tests/`, 127 in `ai/tests/` (`CC-04`). There is still no CI
+(`CC-05`). Recounted against the codebase on 2026-09-27.
 
-Audited against the codebase on 2026-09-13; Phase 2 re-audited 2026-09-14, and again on
-2026-09-17 for `P2-07`, `P2-08` and `P2-12`. Counts predate the Phase 2 additions
-(`P2-13`…`P2-17`) and the two download endpoints, and are due a recount.
-
-`ai/` exists as of 2026-09-18 but holds no graph: Phase 5's two capabilities are called by hand, so
-nothing agentic runs yet. The Chrome extension is built (Phase 9).
+`ai/` runs discovery and analysis on request but holds no graph — nothing agentic runs yet
+(Phase 8). The Chrome extension is built (Phase 9).
 
 | Built | Backed by |
 |---|---|
-| Shortlist · Staged Applications · Job Search · Job Details | `search.json` `applications.json`; every screen's sidebar badges still read `board.json` |
-| **Pipeline board — stat cards, five columns, review banner, sidebar badges** | **live — `GET /api/job/counts`, `GET /api/job?status=`, `GET /api/match/summaries`, `GET /api/match/pending`, `GET /api/application?status=`. A card opens Job Details, which is still fixture data (`P3-11`)** |
-| Keyword Selection — starts with nothing checked, per FR-2.5 | `matches.json` |
-| Resume Preview — Preview / Diff / Source tabs, `.tex` download | `resume.json` + `templates/base_resume.tex` |
+| **Header and sidebar — badges, "Synced …", Refresh** | **live — one `GET /api/application/badges`, loaded once per session and refreshed after a shortlist toggle, a keyword choice or a finished analysis** |
+| **Pipeline board — stat cards, five columns, review banner, Analyze N new jobs** | **live — `GET /api/application/counts`, `/unstarted`, `?status=`, `GET /api/match/summaries`, `GET /api/match/unscored`; Analyze on the AI tier** |
+| **Job Search** | **live — `POST /api/job/search`: filters, your score and your shortlist in one call** |
+| **Shortlist** | **live — `GET /api/application?status=shortlisted`, each job and its match summary; removing a bookmark saves** |
+| **Job Details — posting, match findings, Shortlist, Analyze this job** | **live — `GET /api/job/getJobDetails/{id}`, `GET /api/match/getMatch/{id}`, `GET /api/application/for-job/{id}`, the shortlist endpoints; Analyze on the AI tier, shown only while the job is unscored** |
+| **Keyword Selection — starts with nothing checked, per FR-2.5** | **live — `GET /api/job/getJob/{id}`, `GET /api/match/getMatch/{id}`, `POST /api/match/selection/{id}`** |
+| Staged Applications | `applications.json` (`P4-09`) |
+| Resume Preview for a job — Preview / Diff / Source tabs, `.tex` download | `resume.json` + `templates/base_resume.tex` |
 | **Login · Signup · sign-out · route guard** | **live — `POST /api/account/{signup,login}`, JWT in `sessionStorage`, mirrored into Redux** |
 | **My Details — identity, experience, education, skills, certifications** | **live — `getAccount` + the five profile endpoints on load, one Save writes them all back. The "Indexed for retrieval" panel is live too — `GET /api/resume-chunk/stats` and `POST /api/profile/reindex`. `profile.json` is down to `resumeFile` on this screen** |
 | **Resume — template picker, render, submit as default** | **live — `GET /api/template`, `GET /api/template/render/{id}`, `PUT /api/resume/base`** |

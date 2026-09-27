@@ -8,8 +8,13 @@ import { signedOut } from "@/store/auth/authSlice";
  * what made the numbers differ from one screen to the next.
  */
 const initialState = {
+    // The Applications badge: keywordSelections + staged.
     pending: 0,
     shortlisted: 0,
+    keywordSelections: 0,
+    staged: 0,
+    // The longest-waiting keyword choice, which the Pipeline's review banner opens.
+    nextJobId: null,
     // When the counts were last read, for the header's "Synced …"; null before the first.
     syncedAt: null,
 };
@@ -21,6 +26,9 @@ const shellSlice = createSlice({
         shellCountsLoaded(state, action) {
             state.pending = action.payload.pending;
             state.shortlisted = action.payload.shortlisted;
+            state.keywordSelections = action.payload.keywordSelections;
+            state.staged = action.payload.staged;
+            state.nextJobId = action.payload.nextJobId;
             state.syncedAt = Date.now();
         },
     },

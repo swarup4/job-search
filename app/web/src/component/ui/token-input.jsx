@@ -7,9 +7,10 @@ import { cn } from "@/util/helper";
 /**
  * An editable token list: type and press Enter (or a comma) to add, × to remove,
  * Backspace in an empty box to drop the last one. Repeats are ignored regardless of
- * case, matching how the server stores them.
+ * case, matching how the server stores them. `onEnterEmpty`, if given, is what Enter
+ * does when there is nothing typed to add — a search box submits with it.
  */
-function TokenInput({ items, onChange, placeholder, tone = "soft", disabled = false }) {
+function TokenInput({ items, onChange, placeholder, tone = "soft", disabled = false, onEnterEmpty }) {
     const [draft, setDraft] = useState("");
 
     function add(raw) {
@@ -20,7 +21,10 @@ function TokenInput({ items, onChange, placeholder, tone = "soft", disabled = fa
     }
 
     function onKeyDown(event) {
-        if (event.key === "Enter" || event.key === ",") {
+        if (event.key === "Enter" && !draft.trim() && onEnterEmpty) {
+            event.preventDefault();
+            onEnterEmpty();
+        } else if (event.key === "Enter" || event.key === ",") {
             event.preventDefault();
             add(draft);
         } else if (event.key === "Backspace" && !draft && items.length) {

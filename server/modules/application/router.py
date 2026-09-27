@@ -13,6 +13,7 @@ from modules.application.models import (
     ApplicationRead,
     ApplicationStage,
     ApplicationStatus,
+    Badges,
     BoardCounts,
     StatusTransition,
 )
@@ -38,6 +39,12 @@ async def save_applicant(payload: ApplicantFields, user_id: CurrentUser) -> Appl
 async def answer_bank(user_id: CurrentUser) -> list[AnswerBank]:
     """Read by the extension's background worker for screening questions."""
     return await service.list_answer_bank(user_id)
+
+
+@router.get("/badges", response_model=Badges)
+async def badges(user_id: CurrentUser) -> Badges:
+    """The header and sidebar badges, and the Pipeline's review banner, in one call."""
+    return await service.badges(user_id)
 
 
 @router.get("/counts", response_model=BoardCounts)
