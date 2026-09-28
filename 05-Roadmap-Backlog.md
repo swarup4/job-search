@@ -4,7 +4,7 @@
 |---|---|
 | **Product** | JobPilot — Agentic AI Job Search Platform |
 | **Owner** | Swarup Saha |
-| **Status** | v1.10 — eleven phases, application first then agents. Phases 1, 5 and 6 done; Workday scraping live from Settings; the pipeline is per-user in `applications`, and every screen but Staged Applications reads the API |
+| **Status** | v1.10 — eleven phases, application first then agents. Phases 1, 5 and 6 done; Workday scraping live from Settings; the pipeline is per-user in `applications`, and every screen but the per-job Resume Preview reads the API |
 | **Updated** | 2026-09-27 |
 
 ---
@@ -25,7 +25,7 @@ anything starts reasoning.
 | [1](#2-phase-1--authentication--profile) | Sign in, and the profile everything hangs off | ✅ done |
 | [2](#3-phase-2--resume-generation--download) | A resume built from that profile, downloadable | 🚧 `.tex` and PDF both download; three tasks left |
 | [3](#4-phase-3--job-scraping-search--shortlist) | Real jobs in the system, searchable and shortlistable | 🚧 capture, Workday scraping, analysis, Search, Shortlist and Job details live; other sources and the scheduler open |
-| [4](#5-phase-4--applications--settings) | Tracking what you applied to, and the preferences driving it | 🚧 per-user pipeline, board and badges live; Staged Applications screen, follow-ups and sheet sync open |
+| [4](#5-phase-4--applications--settings) | Tracking what you applied to, and the preferences driving it | 🚧 per-user pipeline, board, badges and Applications screen live; follow-ups and sheet sync open |
 | [5](#6-phase-5--llm-integration--resume-rectification) | A resume rectified against a specific job | ✅ done |
 | [6](#7-phase-6--rag--retrieval) | Retrieval over your own resume | ✅ done |
 | [7](#8-phase-7--mcp-tool-servers) | The tool servers agents reach the world through | ⬜ not started |
@@ -257,8 +257,9 @@ the API. The other sources, archiving and the scheduler are still open.
   search lives in the URL, so Back from a job reruns it and the header's search box opens it.
   Keywords is a token input, like Settings' Target roles. Dropped from the design: the
   experience band (free text, cannot be bucketed honestly) and, on 2026-09-27, must-mention
-  skill, job type, work mode, source and minimum match. The designed screen is frozen at
-  `/design/search` for comparison. 12 tests in `server/tests/test_search.py`
+  skill, job type, work mode, source and minimum match. The designed screen was kept at
+  `/design/search` for comparison until the live page matched, then deleted on 2026-09-27.
+  12 tests in `server/tests/test_search.py`
 - 🟡 `P3-27` Settings: add a company by pasting its careers URL, showing the detected ATS; a
   **Run discovery** button showing the last run's report. *The button and the live Sources rail
   are built (`DiscoverySources`), replacing the fixture list; adding a company by URL waits on
@@ -333,8 +334,8 @@ downstream cost down: Accenture alone lists thousands of openings.
 ## 5. Phase 4 — Applications & Settings
 🚧 **the pipeline is live and per-user.** The tracking half of the product, plus the preferences
 that drive discovery. Where you stand with each job lives in your `applications` row, and the
-Pipeline board, Shortlist and badges read it. The Staged Applications screen, follow-ups and
-sheet sync are still open.
+Pipeline board, Shortlist, Applications screen and badges read it. Follow-up drafts and sheet
+sync are still open.
 
 **API**
 - ✅ `P4-01` `application` module: stage, record fill, status transitions, answer bank
@@ -387,12 +388,21 @@ sheet sync are still open.
 - ✅ `P4-06` Pipeline board built
 - ✅ `P4-07` "Pending your review" banner built
 - ✅ `P4-08` Settings screen built
-- 🟡 `P4-09` Wire all three screens onto the application API and real counts. *Pipeline board
-  and review banner live: column totals from `GET /api/application/counts`, New from
+- ✅ `P4-09` Wire all three screens onto the application API and real counts. *Pipeline board
+  and review banner: column totals from `GET /api/application/counts`, New from
   `GET /api/application/unstarted`, the other columns from `GET /api/application?status=` with
   scores from `GET /api/match/summaries`, and the banner from the shell's
   `GET /api/application/badges` (`P4-21`), whose `nextJobId` is what Select keywords opens.
-  Staged Applications still reads `applications.json`*
+  **Applications** (2026-09-27): one `GET /api/application/tracker` — shortlisted, staged and
+  submitted, in the order an application moves, each row with its job's title, company and
+  location joined by `$lookup`. Shortlisted rows (added 2026-09-28) link to the job to prepare it,
+  and removing the bookmark there takes the row off; a row withdrawn before it
+  was ever submitted is an undone shortlist and is left out. Several staged applications can
+  show, each with fields filled, questions waiting, the `.tex` to attach, and **Open & autofill**
+  to the apply or listing URL. Last activity and follow-up ("Nudge in 3d", "Nudge today", "Sent
+  2d ago") come from the stored dates. The design's **Sync sheet** button and "synced 4 min ago"
+  were left out — `P4-04` is not built. The designed screen is frozen at `/design/applications`.
+  6 tests in `server/tests/test_tracker.py`*
 - 🟡 `P4-10` Wire the Settings screen onto that store, once it exists. *Search targets is an
   editable form with Save. Company preference and Applications were taken off the screen on
   2026-09-26 as not needed; a Last run panel shows when discovery was triggered and what it found*
@@ -416,9 +426,9 @@ sheet sync are still open.
   application listings; the Pipeline's review banner reads the same store. `/match/pending`
   was removed*
 
-**Staged Applications is the last screen on a fixture.** Its API exists (`P4-01`, `P4-15`); what is
-left is the screen, the submit confirmation (`confirmedByUser`) and the fill report from the
-extension.
+**A row reaches Submitted only through the extension.** The dashboard has no "I submitted it"
+button: the extension's popup sends the `confirmedByUser` transition (FR-5.3). Interview, offer
+and rejected are not set from the screen yet either — the status endpoint exists for them.
 
 ### Decisions (2026-09-26)
 
@@ -771,7 +781,7 @@ above is unprovable until this exists.
 - ✅ `CC-02` Beanie documents for every local collection, `ObjectId` keys
 - ✅ `CC-03` React frontend, built in v1 instead of Streamlit/Gradio *(closed — see
   deviation 1)*
-- ✅ `CC-04` **Test suite for the API and its guardrails.** 73 tests in `server/tests/`, run
+- ✅ `CC-04` **Test suite for the API and its guardrails.** 81 tests in `server/tests/`, run
   against a throwaway local MongoDB (`jobpilot_test`), never Atlas — including
   `test_no_fabrication.py` for the keyword gate. 127 in `ai/tests/`, with the model and the API
   faked. Counted 2026-09-27
@@ -787,9 +797,9 @@ them; `CC-05` makes them run on every push before this is used against real job 
 The dashboard UI was built ahead of the backend. `server/` now has 11 modules, 83 endpoints and 18
 collections, every endpoint behind a bearer token; the AI tier (`ai/api/`, port 8001) adds
 discovery, analysis and settings. Every signed-in screen shares one header and sidebar
-(`app/(app)/layout.jsx`) and reads the API, except **Staged Applications** (`applications.json`)
-and the per-job **Resume Preview** (`resume.json`); My Details keeps one fixture field,
-`resumeFile`. Tests: 73 in `server/tests/`, 127 in `ai/tests/` (`CC-04`). There is still no CI
+(`app/(app)/layout.jsx`) and reads the API, except the per-job **Resume Preview**
+(`resume.json`); My Details keeps one fixture field, `resumeFile`. Tests: 81 in `server/tests/`,
+127 in `ai/tests/` (`CC-04`). There is still no CI
 (`CC-05`). Recounted against the codebase on 2026-09-27.
 
 `ai/` runs discovery and analysis on request but holds no graph — nothing agentic runs yet
@@ -803,7 +813,7 @@ and the per-job **Resume Preview** (`resume.json`); My Details keeps one fixture
 | **Shortlist** | **live — `GET /api/application?status=shortlisted`, each job and its match summary; removing a bookmark saves** |
 | **Job Details — posting, match findings, Shortlist, Analyze this job** | **live — `GET /api/job/getJobDetails/{id}`, `GET /api/match/getMatch/{id}`, `GET /api/application/for-job/{id}`, the shortlist endpoints; Analyze on the AI tier, shown only while the job is unscored** |
 | **Keyword Selection — starts with nothing checked, per FR-2.5** | **live — `GET /api/job/getJob/{id}`, `GET /api/match/getMatch/{id}`, `POST /api/match/selection/{id}`** |
-| Staged Applications | `applications.json` (`P4-09`) |
+| **Applications — shortlisted, staged and submitted** | **live — one `GET /api/application/tracker`, jobs joined in; Open & autofill to the apply or listing URL** |
 | Resume Preview for a job — Preview / Diff / Source tabs, `.tex` download | `resume.json` + `templates/base_resume.tex` |
 | **Login · Signup · sign-out · route guard** | **live — `POST /api/account/{signup,login}`, JWT in `sessionStorage`, mirrored into Redux** |
 | **My Details — identity, experience, education, skills, certifications** | **live — `getAccount` + the five profile endpoints on load, one Save writes them all back. The "Indexed for retrieval" panel is live too — `GET /api/resume-chunk/stats` and `POST /api/profile/reindex`. `profile.json` is down to `resumeFile` on this screen** |
