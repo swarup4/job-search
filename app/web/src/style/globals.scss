@@ -201,6 +201,7 @@ $statuses: (
   "interview": (bg: var(--attention),    fg: var(--attention-ink)),
   "offer":     (bg: var(--primary),      fg: var(--primary-foreground)),
   "rejected":  (bg: var(--risk),         fg: var(--risk-ink)),
+  "withdrawn": (bg: var(--secondary),    fg: var(--muted-foreground)),
 );
 
 $ring-sizes: (

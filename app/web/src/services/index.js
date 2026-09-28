@@ -26,6 +26,7 @@ export {
     getApplicationForJob,
     getBadges,
     getBoardCounts,
+    getTracker,
     listApplications,
     listUnstartedJobs,
     setApplicationStatus,

@@ -1,4 +1,5 @@
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from beanie import PydanticObjectId
 
@@ -14,6 +15,8 @@ from modules.application.models import (
     Badges,
     BoardCounts,
     StatusTransition,
+    Tracker,
+    TrackerRow,
 )
 from modules.job import Job, count_jobs, get_job, list_jobs
 from modules.match import pending_counts
@@ -258,3 +261,81 @@ async def badges(user_id: PydanticObjectId) -> Badges:
             Application.userId == user_id, Application.status == ApplicationStatus.SHORTLISTED
         ).count(),
     )
+
+
+async def tracker(user_id: PydanticObjectId) -> Tracker:
+    """Shortlisted, staged and submitted applications, each with its job's title, company
+    and location from one `$lookup`. A row withdrawn before it was ever submitted is an
+    undone shortlist, not an application, and is left out."""
+    rows = await Application.aggregate(
+        [
+            {"$match": {"userId": user_id}},
+            {
+                "$lookup": {
+                    "from": "jobs",
+                    "localField": "jobId",
+                    "foreignField": "_id",
+                    "as": "job",
+                }
+            },
+            {"$unwind": "$job"},
+        ]
+    ).to_list()
+
+    shortlisted: list[TrackerRow] = []
+    staged: list[TrackerRow] = []
+    submitted: list[TrackerRow] = []
+    for row in rows:
+        entry = _tracker_row(row)
+        if entry.status is ApplicationStatus.SHORTLISTED:
+            shortlisted.append(entry)
+        elif entry.status is ApplicationStatus.STAGED:
+            staged.append(entry)
+        elif entry.submittedAt is not None:
+            submitted.append(entry)
+
+    shortlisted.sort(key=lambda entry: _utc(entry.shortlistedAt), reverse=True)
+    staged.sort(key=lambda entry: _utc(entry.stagedAt), reverse=True)
+    submitted.sort(key=lambda entry: _utc(entry.lastActivityAt or entry.submittedAt), reverse=True)
+    return Tracker(shortlisted=shortlisted, staged=staged, submitted=submitted)
+
+
+_STORED = (
+    "jobId",
+    "status",
+    "ats",
+    "applyUrl",
+    "texPath",
+    "shortlistedAt",
+    "stagedAt",
+    "submittedAt",
+    "lastActivityAt",
+    "lastActivityNote",
+    "followUpDueAt",
+    "followUpSentAt",
+)
+
+
+def _tracker_row(row: dict[str, Any]) -> TrackerRow:
+    job = row["job"]
+    return TrackerRow(
+        # The stored fields that carry over as they are; the rest are joined or counted.
+        **{key: row[key] for key in _STORED if key in row},
+        id=row["_id"],
+        title=job["title"],
+        company=job["company"],
+        location=job["location"],
+        listingUrl=job.get("listingUrl"),
+        fieldsFilled=len(row.get("fieldsFilled", [])),
+        needsAnswer=sum(
+            1 for answer in row.get("screeningAnswers", []) if not answer.get("answer")
+        ),
+    )
+
+
+def _utc(moment: datetime | None) -> datetime:
+    """Mongo hands back naive UTC datetimes; sorting them beside aware ones needs one
+    convention. A missing date sorts last."""
+    if moment is None:
+        return datetime.min.replace(tzinfo=UTC)
+    return moment.replace(tzinfo=UTC) if moment.tzinfo is None else moment
