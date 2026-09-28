@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { Bookmark } from "lucide-react";
+import { toast } from "@/component/ui/toast";
 import { Tooltip } from "@/component/ui/tooltip";
+import { ApiError } from "@/services";
 import { cn } from "@/util/helper";
 
 /**
@@ -32,8 +34,17 @@ export function ShortlistButton({ shortlisted = false, size = "md", className, o
         setSaving(true);
         try {
           await onToggle(next);
-        } catch {
+          toast.success(next ? "Added to your shortlist." : "Removed from your shortlist.");
+        } catch (failure) {
           setOn(!next);
+          // The server says why — e.g. a job already applied to leaves through its status.
+          toast.error(
+            failure instanceof ApiError
+              ? failure.message
+              : next
+                ? "Could not add this job to your shortlist."
+                : "Could not remove this job from your shortlist."
+          );
         } finally {
           setSaving(false);
         }

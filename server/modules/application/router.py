@@ -16,6 +16,7 @@ from modules.application.models import (
     Badges,
     BoardCounts,
     StatusTransition,
+    Tracker,
 )
 from modules.job import Job, JobRead
 
@@ -45,6 +46,12 @@ async def answer_bank(user_id: CurrentUser) -> list[AnswerBank]:
 async def badges(user_id: CurrentUser) -> Badges:
     """The header and sidebar badges, and the Pipeline's review banner, in one call."""
     return await service.badges(user_id)
+
+
+@router.get("/tracker", response_model=Tracker)
+async def tracker(user_id: CurrentUser) -> Tracker:
+    """The Applications screen in one call: staged and submitted, with each job joined."""
+    return await service.tracker(user_id)
 
 
 @router.get("/counts", response_model=BoardCounts)

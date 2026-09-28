@@ -269,3 +269,40 @@ class Badges(BaseModel):
     nextJobId: PydanticObjectId | None = None
     staged: int
     shortlisted: int
+
+
+class TrackerRow(BaseModel):
+    """One application on the Applications screen, with its job's listing joined in."""
+
+    # A response always carries every field, defaults included.
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
+    id: PydanticObjectId
+    jobId: PydanticObjectId
+    title: str
+    company: str
+    location: str
+    listingUrl: HttpUrl | None = None
+    status: ApplicationStatus
+    ats: AtsPlatform = AtsPlatform.OTHER
+    applyUrl: HttpUrl | None = None
+    texPath: str | None = None
+    # How many fields the extension filled, and how many screening questions wait on you.
+    fieldsFilled: int = 0
+    needsAnswer: int = 0
+    shortlistedAt: datetime | None = None
+    stagedAt: datetime | None = None
+    submittedAt: datetime | None = None
+    lastActivityAt: datetime | None = None
+    lastActivityNote: str | None = None
+    followUpDueAt: datetime | None = None
+    followUpSentAt: datetime | None = None
+
+
+class Tracker(BaseModel):
+    """The Applications screen, in the order an application moves: shortlisted (being
+    prepared), staged (waiting on your submit), and submitted — each newest first."""
+
+    shortlisted: list[TrackerRow]
+    staged: list[TrackerRow]
+    submitted: list[TrackerRow]

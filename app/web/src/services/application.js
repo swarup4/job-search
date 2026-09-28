@@ -18,6 +18,15 @@ export function getBadges() {
     return axiosInstance.get("/application/badges");
 }
 
+/**
+ * GET /api/application/tracker — the Applications screen in one call: `staged` (waiting on
+ * your submit) and `submitted` (most recent first), each row with its job's title, company
+ * and location joined in.
+ */
+export function getTracker() {
+    return axiosInstance.get("/application/tracker");
+}
+
 /** GET /api/application/counts — the Pipeline's column totals for you, zeros included. */
 export function getBoardCounts() {
     return axiosInstance.get("/application/counts");
