@@ -69,6 +69,10 @@ class NoCurrentRole(RuntimeError):
     """Nothing to tailor: the profile holds no work experience."""
 
 
+class NoBaseResume(RuntimeError):
+    """Nothing to tailor from: the user has not submitted a default resume."""
+
+
 class Placement(BaseModel):
     keyword: str
     kind: Literal["skill", "bullet"]
@@ -111,7 +115,12 @@ async def tailor(job_id: str) -> dict[str, Any]:
     selected = _selected_labels(match)
 
     profile = await jobpilot_api.get_profile()
-    base = await jobpilot_api.get_base_resume()
+    try:
+        base = await jobpilot_api.get_base_resume()
+    except jobpilot_api.JobPilotApiError as error:
+        if error.status == 404:
+            raise NoBaseResume("pick a template on the Resume screen first") from error
+        raise
 
     role = _current_role(profile)
     groups = profile.get("skill", [])
@@ -125,6 +134,7 @@ async def tailor(job_id: str) -> dict[str, Any]:
         {
             "jobId": job_id,
             "filePath": str(path),
+            "tex": tex,
             "incorporated": [item.keyword for item in accepted],
             "declined": [item.label for item in declined],
             "changes": changes,

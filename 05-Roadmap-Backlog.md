@@ -23,7 +23,7 @@ anything starts reasoning.
 | Phase | Delivers | State |
 |---|---|---|
 | [1](#2-phase-1--authentication--profile) | Sign in, and the profile everything hangs off | ✅ done |
-| [2](#3-phase-2--resume-generation--download) | A resume built from that profile, downloadable | 🚧 `.tex` and PDF both download; three tasks left |
+| [2](#3-phase-2--resume-generation--download) | A resume built from that profile, downloadable | 🚧 `.tex` and PDF both download; tailored resume live; two tasks left |
 | [3](#4-phase-3--job-scraping-search--shortlist) | Real jobs in the system, searchable and shortlistable | 🚧 capture, Workday scraping, analysis, Search, Shortlist and Job details live; other sources and the scheduler open |
 | [4](#5-phase-4--applications--settings) | Tracking what you applied to, and the preferences driving it | 🚧 per-user pipeline, board, badges and Applications screen live; follow-ups and sheet sync open |
 | [5](#6-phase-5--llm-integration--resume-rectification) | A resume rectified against a specific job | ✅ done |
@@ -111,7 +111,7 @@ the product is keyed by `userId`, so this comes first.
 ---
 
 ## 3. Phase 2 — Resume generation & download
-🚧 **downloads work, three tasks left.** Turn the profile into a document you can send. No LLM in
+🚧 **downloads work, two tasks left.** Turn the profile into a document you can send. No LLM in
 this phase — it is templating, not intelligence.
 
 **API**
@@ -139,7 +139,16 @@ this phase — it is templating, not intelligence.
 
 **UI**
 - ✅ `P2-09` Resume Preview screen built: Preview / Diff / Source tabs
-- ⬜ `P2-10` Point the Resume Preview screen at a real render instead of `resume.json`
+- ✅ `P2-10` Point the Resume Preview screen at a real render instead of `resume.json`.
+  *2026-09-28:* the page reads `GET /api/resume/getResume/{jobId}` and a **Tailor resume**
+  button calls `POST /api/tailoring/{jobId}` on the AI tier (`ai/api/tailoring.py`), which runs
+  `agents/tailoring.tailor` in the request — one model call, no background run. Opening the page
+  never tailors. The tailored `.tex` is now stored on the `resumes` row (`tex`), because `changes`
+  are line numbers and Regenerate rewrites the base resume they would otherwise point into. A
+  selection changed since the last run shows **Re-tailor**; no default resume answers 409 with
+  a pointer to the Resume screen. The bottom button is **Go to Applications** — storing the
+  resume already staged the row. `resume.json` deleted. 3 tests in `test_no_fabrication.py`,
+  9 in `ai/tests/`
 - ✅ `P2-11` Template picker in the dashboard — preview image per template, on the Resume screen
 - ✅ `P2-14` **Resume screen** (`/resume`): pick a template, see your own details rendered into
   it, submit it as the default resume. The preview parses the rendered `.tex` in the browser
@@ -781,11 +790,14 @@ above is unprovable until this exists.
 - ✅ `CC-02` Beanie documents for every local collection, `ObjectId` keys
 - ✅ `CC-03` React frontend, built in v1 instead of Streamlit/Gradio *(closed — see
   deviation 1)*
-- ✅ `CC-04` **Test suite for the API and its guardrails.** 81 tests in `server/tests/`, run
+- ✅ `CC-04` **Test suite for the API and its guardrails.** 84 tests in `server/tests/`, run
   against a throwaway local MongoDB (`jobpilot_test`), never Atlas — including
-  `test_no_fabrication.py` for the keyword gate. 127 in `ai/tests/`, with the model and the API
+  `test_no_fabrication.py` for the keyword gate. 136 in `ai/tests/`, with the model and the API
   faked. Counted 2026-09-27
 - ⬜ `CC-05` CI/CD via GitHub Actions (lint and test on push)
+- ⬜ `CC-06` **The AI tier's API token is one global.** `client.set_token` is module state, so a
+  second account calling tailoring while another's analysis or discovery run is going would switch
+  that run onto its token. Harmless with one user; the fix is a client per request or per run
 
 **CI is now the one that should not wait.** The suites exist but run only when someone runs
 them; `CC-05` makes them run on every push before this is used against real job applications.
@@ -796,11 +808,10 @@ them; `CC-05` makes them run on every push before this is used against real job 
 
 The dashboard UI was built ahead of the backend. `server/` now has 11 modules, 83 endpoints and 18
 collections, every endpoint behind a bearer token; the AI tier (`ai/api/`, port 8001) adds
-discovery, analysis and settings. Every signed-in screen shares one header and sidebar
-(`app/(app)/layout.jsx`) and reads the API, except the per-job **Resume Preview**
-(`resume.json`); My Details keeps one fixture field, `resumeFile`. Tests: 81 in `server/tests/`,
-127 in `ai/tests/` (`CC-04`). There is still no CI
-(`CC-05`). Recounted against the codebase on 2026-09-27.
+discovery, analysis, tailoring and settings. Every signed-in screen shares one header and sidebar
+(`app/(app)/layout.jsx`) and reads the API; My Details keeps one fixture field, `resumeFile`. Tests: 84 in `server/tests/`,
+136 in `ai/tests/` (`CC-04`). There is still no CI
+(`CC-05`). Recounted against the codebase on 2026-09-28.
 
 `ai/` runs discovery and analysis on request but holds no graph — nothing agentic runs yet
 (Phase 8). The Chrome extension is built (Phase 9).
@@ -814,7 +825,7 @@ discovery, analysis and settings. Every signed-in screen shares one header and s
 | **Job Details — posting, match findings, Shortlist, Analyze this job** | **live — `GET /api/job/getJobDetails/{id}`, `GET /api/match/getMatch/{id}`, `GET /api/application/for-job/{id}`, the shortlist endpoints; Analyze on the AI tier, shown only while the job is unscored** |
 | **Keyword Selection — starts with nothing checked, per FR-2.5** | **live — `GET /api/job/getJob/{id}`, `GET /api/match/getMatch/{id}`, `POST /api/match/selection/{id}`** |
 | **Applications — shortlisted, staged and submitted** | **live — one `GET /api/application/tracker`, jobs joined in; Open & autofill to the apply or listing URL** |
-| Resume Preview for a job — Preview / Diff / Source tabs, `.tex` download | `resume.json` + `templates/base_resume.tex` |
+| **Resume Preview for a job — Tailor resume, Preview / Diff / Source tabs, `.tex` download** | **live — `GET /api/resume/getResume/{jobId}`, `GET /api/match/getMatch/{jobId}`; Tailor resume on the AI tier (`POST /api/tailoring/{jobId}`)** |
 | **Login · Signup · sign-out · route guard** | **live — `POST /api/account/{signup,login}`, JWT in `sessionStorage`, mirrored into Redux** |
 | **My Details — identity, experience, education, skills, certifications** | **live — `getAccount` + the five profile endpoints on load, one Save writes them all back. The "Indexed for retrieval" panel is live too — `GET /api/resume-chunk/stats` and `POST /api/profile/reindex`. `profile.json` is down to `resumeFile` on this screen** |
 | **Resume — template picker, render, submit as default** | **live — `GET /api/template`, `GET /api/template/render/{id}`, `PUT /api/resume/base`** |

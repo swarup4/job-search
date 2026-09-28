@@ -67,3 +67,4 @@ export {
 } from "./discovery";
 export { getPreferences, savePreferences } from "./preference";
 export { getAnalysisRun, startAnalysis } from "./analysis";
+export { tailorResume } from "./tailoring";
