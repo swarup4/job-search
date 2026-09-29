@@ -6,6 +6,7 @@ from typing import Any
 from beanie import PydanticObjectId
 
 from config.errors import NotFound
+from modules.job.location import canonical_country, parse_location
 from modules.job.models import (
     Job,
     JobCreate,
@@ -45,7 +46,13 @@ async def create_job(payload: JobCreate) -> JobCreated:
     if existing is not None:
         return JobCreated(id=existing.id, duplicate=True)
 
-    job = Job(**payload.model_dump(exclude={"dedupHash"}), dedupHash=dedupHash)
+    parsed_country, cities = parse_location(payload.location)
+    job = Job(
+        **payload.model_dump(exclude={"dedupHash", "country"}),
+        country=canonical_country(payload.country) or parsed_country,
+        cities=cities,
+        dedupHash=dedupHash,
+    )
     await job.insert()
     return JobCreated(id=job.id, duplicate=False)
 
@@ -87,14 +94,15 @@ async def count_jobs(exclude: list[PydanticObjectId] | None = None) -> int:
     return await Job.find(_query(None, exclude)).count()
 
 
-async def get_job_detail(job_id: PydanticObjectId) -> JobDetailRead:
-    """The job and its description in one query.
+async def get_job_detail(job_id: PydanticObjectId, user_id: PydanticObjectId) -> JobDetailRead:
+    """The job, its description, and the caller's own match and shortlist, in one query.
 
-    One of two places the job module reads other modules' collections (search, which
-    joins matches and applications, is the other): a `$lookup` into `job_descriptions`, so the details page costs one round trip
-    instead of two. The projection leaves out the embedding (~20 KB of floats) and
-    the unused `htmlString`. A job with no description still comes back, with
-    `description` null — "no description" is not "no job"."""
+    One of two places the job module reads other modules' collections (search is the
+    other), so the details page costs one round trip instead of three. The match and
+    the application are filtered on the caller: the posting is shared, those are not.
+    The projection leaves out the embedding (~20 KB of floats) and the unused
+    `htmlString`. A job with no description still comes back, with `description`
+    null — "no description" is not "no job"."""
     rows = await Job.aggregate(
         [
             {"$match": {"_id": job_id}},
@@ -112,7 +120,6 @@ async def get_job_detail(job_id: PydanticObjectId) -> JobDetailRead:
                                 "url": 1,
                                 "pageTitle": 1,
                                 "jdText": 1,
-                                "requirements": 1,
                                 "links": 1,
                                 "capturedAt": 1,
                             }
@@ -121,7 +128,35 @@ async def get_job_detail(job_id: PydanticObjectId) -> JobDetailRead:
                 }
             },
             {"$unwind": {"path": "$description", "preserveNullAndEmptyArrays": True}},
-            {"$project": {"dedupHash": 0}},
+            {
+                "$lookup": {
+                    "from": "matches",
+                    "localField": "_id",
+                    "foreignField": "jobId",
+                    "as": "match",
+                    "pipeline": [
+                        {"$match": {"userId": user_id}},
+                        {"$addFields": {"id": "$_id"}},
+                        {"$project": {"_id": 0, "userId": 0, "jobId": 0}},
+                    ],
+                }
+            },
+            {"$unwind": {"path": "$match", "preserveNullAndEmptyArrays": True}},
+            {
+                "$lookup": {
+                    "from": "applications",
+                    "localField": "_id",
+                    "foreignField": "jobId",
+                    "as": "application",
+                    # Shortlisted means a row of yours that you have not withdrawn.
+                    "pipeline": [
+                        {"$match": {"userId": user_id, "status": {"$ne": "withdrawn"}}},
+                        {"$project": {"_id": 1}},
+                    ],
+                }
+            },
+            {"$addFields": {"shortlisted": {"$gt": [{"$size": "$application"}, 0]}}},
+            {"$project": {"dedupHash": 0, "application": 0}},
         ]
     ).to_list()
     if not rows:

@@ -54,11 +54,6 @@ export function setShortlisted(jobId, shortlisted) {
     return shortlisted ? shortlistJob(jobId) : unshortlistJob(jobId);
 }
 
-/** GET /api/application/for-job/{jobId} — null until you shortlist or tailor for the job. */
-export function getApplicationForJob(jobId) {
-    return orNull(axiosInstance.get(`/application/for-job/${jobId}`));
-}
-
 export function getApplication(applicationId) {
     return orNull(axiosInstance.get(`/application/getApplication/${applicationId}`));
 }

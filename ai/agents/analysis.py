@@ -1,22 +1,24 @@
 """Everything done to a stored job after discovery, behind one Analyze button.
 
-Three steps, each standing alone so one failing does not cost the others. The job
+Four steps, each standing alone so one failing does not cost the others. The job
 page renders the stored markdown itself, so no HTML is produced here:
 
 | step      | writes                                   | model          |
 |-----------|------------------------------------------|----------------|
 | details   | experience, salary, work mode, job type  | the LLM        |
 | embedding | the JD's vector                          | Voyage         |
-| match     | score, keywords, risks — via `rectify`   | the LLM, 3×    |
-|           | and the extracted requirements           |                |
+| techStack | the job's technologies                   | the LLM        |
+| match     | score, keywords, risks — via `rectify`,  | the LLM, 2×    |
+|           | reusing the techStack step's extraction  |                |
 
 The details step follows the parser's rule: the model proposes, the page decides. An
 experience or salary figure not present in the posting verbatim is dropped, and a
 work mode or job type needs a word in the text that says so. A field the board
 already supplied is never overwritten.
 
-Nothing is paid for twice: a job you already have a match for is skipped whole, a JD
-already embedded keeps its vector, and a job with all four details skips the LLM.
+Nothing is paid for twice: each step skips what is already stored — the four details,
+the vector, a tech stack already read (even an empty one), your match — and a job with
+all of them is skipped whole.
 """
 
 from __future__ import annotations
@@ -90,15 +92,34 @@ class AnalysisOutcome(BaseModel):
     skipped: str | None = None
 
 
-async def analyze(job_id: str) -> AnalysisOutcome:
+# Called with each step as it starts and ends, so a watcher can show progress live.
+OnEvent = Callable[[dict[str, Any]], None]
+
+
+def _ignore(event: dict[str, Any]) -> None:
+    return None
+
+
+async def analyze(job_id: str, on_event: OnEvent = _ignore) -> AnalysisOutcome:
     job = await client.get_job(job_id)
     outcome = AnalysisOutcome(jobId=job_id, title=job["title"], company=job["company"])
+    on_event({"type": "job_started", "jobId": job_id, "title": job["title"]})
+
+    async def step(name: str, work: Any) -> StepResult:
+        on_event({"type": "step_started", "jobId": job_id, "step": name})
+        result = await _step(work)
+        return done(name, result)
+
+    def done(name: str, result: StepResult) -> StepResult:
+        on_event({"type": "step", "jobId": job_id, "step": name, **result.model_dump()})
+        return result
 
     existing = await _existing_match(job_id)
     if existing is not None:
         outcome.score = existing.get("score")
-        outcome.skipped = "already analyzed"
-        return outcome
+        if job.get("techStack") is not None:
+            outcome.skipped = "already analyzed"
+            return outcome
 
     description = await client.get_description_for_job(job_id)
     text = (description or {}).get("jdText", "").strip()
@@ -106,16 +127,28 @@ async def analyze(job_id: str) -> AnalysisOutcome:
         outcome.error = "no job description is stored for this job"
         return outcome
 
-    outcome.steps["details"] = await _step(_details(job, text[:MAX_JD_CHARS]))
+    outcome.steps["details"] = await step("details", _details(job, text[:MAX_JD_CHARS]))
     if description.get("hasEmbedding"):
-        outcome.steps["embedding"] = StepResult(ok=True, note="already embedded")
+        outcome.steps["embedding"] = done("embedding", StepResult(ok=True, note="already embedded"))
     else:
-        outcome.steps["embedding"] = await _step(
-            _embedding(description["id"], text[:MAX_JD_CHARS])
+        outcome.steps["embedding"] = await step(
+            "embedding", _embedding(description["id"], text[:MAX_JD_CHARS])
         )
 
+    # Handed from the techStack step to the match, so the posting is extracted once.
+    extracted: list[matching.Requirement] = []
+    if job.get("techStack") is not None:
+        outcome.steps["techStack"] = done("techStack", StepResult(ok=True, note="already read"))
+    else:
+        outcome.steps["techStack"] = await step(
+            "techStack", _tech_stack(job, description, extracted)
+        )
+
+    if existing is not None:
+        outcome.steps["match"] = done("match", StepResult(ok=True, note="already matched"))
+        return outcome
     match: dict[str, Any] = {}
-    outcome.steps["match"] = await _step(_match(job_id, description["id"], match))
+    outcome.steps["match"] = await step("match", _match(job_id, extracted or None, match))
     outcome.score = match.get("score")
     return outcome
 
@@ -124,6 +157,7 @@ async def analyze_many(
     job_ids: list[str],
     on_result: Callable[[AnalysisOutcome], None] | None = None,
     at_once: int = 2,
+    on_event: OnEvent = _ignore,
 ) -> list[AnalysisOutcome]:
     """A few jobs at a time: each match makes three LLM calls, and the hosted model's
     rate limit is the real ceiling, not this machine."""
@@ -131,7 +165,7 @@ async def analyze_many(
 
     async def one(job_id: str) -> AnalysisOutcome:
         async with slots:
-            outcome = await analyze(job_id)
+            outcome = await analyze(job_id, on_event)
         if on_result is not None:
             on_result(outcome)
         return outcome
@@ -193,14 +227,21 @@ async def _embedding(description_id: str, text: str) -> str:
     return f"{len(vector)} dimensions"
 
 
-async def _match(job_id: str, description_id: str, into: dict[str, Any]) -> str:
-    match = await matching.rectify(job_id)
+async def _tech_stack(
+    job: dict[str, Any], description: dict[str, Any], into: list[matching.Requirement]
+) -> str:
+    requirements = await matching.extract_requirements(matching._jd_text(description))
+    into.extend(requirements)
+    stack = matching.tech_stack(requirements)
+    await client.update_job(job["id"], {"techStack": stack})
+    return f"{len(stack)} technologies" if stack else "names no technology"
+
+
+async def _match(
+    job_id: str, requirements: list[matching.Requirement] | None, into: dict[str, Any]
+) -> str:
+    match = await matching.rectify(job_id, requirements)
     into.update(match)
-    # The labels the extraction found, present and missing alike, are the job's
-    # requirements — stored on the description so search can filter on them.
-    labels = [item["label"] for item in match.get("present", [])]
-    labels += [item["label"] for item in match.get("missing", [])]
-    await client.update_description(description_id, {"requirements": list(dict.fromkeys(labels))})
     return f"score {match.get('score')}"
 
 

@@ -251,6 +251,49 @@ the API. The other sources, archiving and the scheduler are still open.
   max 50, one run at a time; the dashboard polls its status only while a run it started is
   going, never on page load. `JobUpdate` gained the four detail fields. Nothing is paid for
   twice — see `P3-30`. ~1 min and ~$0.001 per job. 15 tests
+- ✅ `P3-31` **Country and cities from `location`, no LLM.** `modules/job/location.py`, run by
+  `create_job` — on the server rather than the AI tier as first planned, so every writer
+  (discovery, capture parse, manual create) gets it and the backfill needs no token. Countries
+  are the full ISO 3166 list via `pycountry` — names, official and common names, and codes as a
+  whole comma part — plus board spellings ISO lacks (USA, UK, England, UAE…); Georgia and Jersey
+  are never read, being US states too. The last comma part is the country, else one named
+  anywhere; `;`
+  splits places; a known city is found anywhere in a place (Bangalore / Bangalore Area / `IN-KA-
+  BENGALURU-…` → Bengaluru), otherwise only a plain `City, Region` pair gives one. A board's own
+  country wins — Workday's now travels on `Posting.country`. `country` is the posting's primary
+  one; a posting across two countries keeps every city. Unreadable stays `null` / `[]`.
+  `server/backfill_job_locations.py`, dry-run by default: 416 India, 2 United States, 1 empty
+  location. 39 tests in `server/tests/test_location.py` built from the real spellings, 2 in
+  `ai/tests/`
+- ✅ `P3-32` **Tech stack once per posting.** Analysis gained a `techStack` step: the same
+  verbatim-checked extraction the match uses, now tagging each item `tech` / `qualification` /
+  `practice`, with the `tech` ones written to `jobs.techStack`. The match is handed that
+  extraction, so a run still pays for it once. `null` means not read yet and `[]` means the
+  posting names no technology, so neither is paid for twice. Analysis is now per step: a job
+  with a match but no stack gets only the extraction, from the **Tech stack** panel on Job
+  details. The capture parser writes its verified stack to the job too, never over one already
+  read. `job_descriptions.requirements` is removed and **not** copied across — the match had
+  stored every requirement, qualifications included ("3 years LLM experience");
+  `server/migrate_drop_description_requirements.py`, dry-run by default. 4 new tests in
+  `ai/tests/`. *Corrected: this does not save a call for a second account — its match still
+  extracts, because it needs each requirement's evidence, not only the tech labels*
+- ⬜ `P3-33` **Experience as numbers.** `experienceMin` / `experienceMax` parsed from the verbatim
+  `experienceBand` ("11-15 years" → 11 / 15, "5+ years" → 5 / null), no LLM — so the saved
+  `minExperience` preference can filter on it
+- ✅ `P3-35` **Analysis progress over SSE, not polling.** `GET /api/analysis/run/events` on the
+  AI tier streams `job_started`, `step_started`, `step`, `job_done` and `run_done` as they
+  happen, replays the run's earlier events to a late stream, resumes from `Last-Event-ID`, and
+  sends a keep-alive comment every 15s. The dashboard reads it with `fetch`, not `EventSource`,
+  so the bearer token stays in a header rather than the URL. A single-job Analyze toasts every
+  step — blue **info** as it starts (the info tone gained its own blue tokens), green or red as
+  it ends, then the score; a batch toasts each job. Discovery still polls (`usePolledRun`).
+  3 stream tests in `ai/tests/test_analysis.py`
+- ✅ `P3-36` **A well-matched job scored 0.** The diff asked for one verbatim quote per
+  requirement; the model stitched fragments of several lines together with its own
+  `Project:` / `Skills:` labels, the stitched string was nowhere in the profile, and every
+  true "present" fell back to Missing. `Verdict.evidence` is now a list of single-line quotes
+  and any one verifying is enough. Checked on the real Visa JD: 0 of 14 present → 13 of 14.
+  *Still open: the check proves a quote is real, not that it supports the claim*
 
 **UI**
 - ✅ `P3-08` Job Search screen built (multi-field search + facets)
@@ -285,6 +328,8 @@ the API. The other sources, archiving and the scheduler are still open.
   twice: a run skips a job you already have a match for, keeps a JD's existing embedding (the
   description read gained `hasEmbedding`), and skips the details LLM call when all four fields
   are known
+- ⬜ `P3-34` Show and filter the `P3-31`…`P3-33` fields: tech stack chips and the country on
+  Job details; country and tech-stack filters on Search, beside its existing `keywords`
 
 **Infrastructure**
 - ⬜ `P3-12` Redis + Celery for scheduling
@@ -304,6 +349,15 @@ field anyway, and markdown cannot express a `<style>` or a `<script>` so the exc
 filter to maintain. The cost is that it is **one-way** — the earlier design kept raw HTML so a
 better extractor could be re-run over old rows, and that is no longer possible. A capture the
 converter mangles is recaptured by hand. `region` and `textLength` exist to make that visible.
+
+### Decisions (2026-09-28)
+
+**What a posting says is extracted once, onto the posting.** Tech stack, country, cities and the
+experience range belong to the listing, not to whoever analyzed it, so they live on the shared
+`jobs` row — the ER diagram was updated first. The tech stack used to be a by-product of each
+user's match, stored on the description, mixed with qualifications; it is now read once per
+posting, technologies only, and Search can filter on the job itself. Location and experience are parsed, not generated: the
+text already holds them, and a parser that answers `null` cannot invent a country.
 
 ### Company career pages (planned 2026-09-24)
 

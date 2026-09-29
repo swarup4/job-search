@@ -17,9 +17,7 @@ import { ShortlistButton } from "@/component/ShortlistButton";
 import { useAnalysis } from "@/component/Analysis";
 import {
     ApiError,
-    getApplicationForJob,
     getJobDetails,
-    getMatch,
     setShortlisted,
 } from "@/services";
 import { useRefreshShell } from "@/hooks/useShellCounts";
@@ -48,16 +46,17 @@ export default function Page() {
 
     const load = useCallback(async () => {
         try {
-            const [job, match, application] = await Promise.all([
-                getJobDetails(jobId),
-                getMatch(jobId),
-                getApplicationForJob(jobId),
-            ]);
-            // Shortlisted is yours, not the job's: an application that is not withdrawn.
-            const shortlisted = Boolean(application) && application.status !== "withdrawn";
+            // One request: the posting, its description, and your own match and shortlist.
+            const job = await getJobDetails(jobId);
             setData(
                 job
-                    ? { status: "ready", job, description: job.description, match, shortlisted }
+                    ? {
+                          status: "ready",
+                          job,
+                          description: job.description,
+                          match: job.match,
+                          shortlisted: job.shortlisted,
+                      }
                     : { status: "missing" }
             );
         } catch (failure) {
@@ -109,12 +108,13 @@ function JobDetails({ job, description, match, shortlisted, jobId, from, analysi
                         <Building2 className="size-7" />
                     </span>
 
-                    <div className="min-w-[260px] grow">
-                        <div className="flex flex-wrap items-center gap-3">
-                            <h1 className="text-[26px] font-semibold leading-tight tracking-tight">{job.title}</h1>
+                    <div className="min-w-[260px] flex-1">
+                        <h1 className="text-[26px] font-semibold leading-tight tracking-tight">{job.title}</h1>
+                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
+                            <p className="text-[15px] text-muted-foreground">{job.company}</p>
                             {job.jobType ? <Badge variant="soft">{JOB_TYPE[job.jobType]}</Badge> : null}
+                            <Badge variant="source">{SOURCE[job.source] ?? job.source}</Badge>
                         </div>
-                        <p className="mt-2 text-[15px] text-muted-foreground">{job.company}</p>
                         <div className="mt-3.5 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13.5px] text-muted-foreground">
                             <Meta icon={MapPin}>{job.location}</Meta>
                             <Meta icon={Clock}>
@@ -123,7 +123,6 @@ function JobDetails({ job, description, match, shortlisted, jobId, from, analysi
                             {job.salaryText ? <Meta icon={Wallet}>{job.salaryText}</Meta> : null}
                             {job.experienceBand ? <Meta icon={Briefcase}>{job.experienceBand}</Meta> : null}
                             {job.workMode ? <Meta icon={Laptop}>{WORK_MODE[job.workMode]}</Meta> : null}
-                            <Badge variant="source">{SOURCE[job.source] ?? job.source}</Badge>
                         </div>
                     </div>
 
@@ -132,7 +131,7 @@ function JobDetails({ job, description, match, shortlisted, jobId, from, analysi
                             <MatchScore value={match.score} size="lg" />
                         ) : (
                             <Tooltip content="Not compared with your resume yet" align="end">
-                                <MatchScore value={0} size="lg" />
+                                <MatchScore value={null} size="lg" />
                             </Tooltip>
                         )}
                         <span className="text-[12px] text-muted-foreground">match</span>
@@ -199,19 +198,29 @@ function JobDetails({ job, description, match, shortlisted, jobId, from, analysi
 
                     <Panel>
                         <PanelHeader>
-                            <PanelTitle>Requirements</PanelTitle>
+                            <PanelTitle>Tech stack</PanelTitle>
                         </PanelHeader>
                         <PanelBody>
-                            {description?.requirements?.length ? (
+                            {job.techStack?.length ? (
                                 <div className="flex flex-wrap gap-1.5">
-                                    {description.requirements.map((item) => (
+                                    {job.techStack.map((item) => (
                                         <Badge key={item} variant="soft">{item}</Badge>
                                     ))}
                                 </div>
-                            ) : (
+                            ) : job.techStack ? (
                                 <p className="text-[13.5px] text-muted-foreground">
-                                    The skills and tools this posting asks for are extracted when the job is analyzed.
+                                    This posting names no specific technology.
                                 </p>
+                            ) : (
+                                <div className="flex flex-col items-start gap-3">
+                                    <p className="text-[13.5px] text-muted-foreground">
+                                        The technologies this posting names are read when the job is analyzed.
+                                    </p>
+                                    {/* Scored before the stack existed: Analyze now reads only the stack. */}
+                                    {match ? (
+                                        <AnalyzeButton jobId={jobId} analysis={analysis} analyzing={analyzing} />
+                                    ) : null}
+                                </div>
                             )}
                         </PanelBody>
                     </Panel>

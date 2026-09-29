@@ -76,10 +76,6 @@ class JobDescription(Document):
     htmlString: str = ""
     links: list[str] = Field(default_factory=list)
 
-    # The tech stack the posting asks for, normalised to single tokens. Parsed out
-    # of `jdText`, so it belongs with the prose rather than with the listing.
-    requirements: list[str] = Field(default_factory=list)
-
     # Built from `jdText`, never from `htmlString`. Null until the AI tier has
     # embedded it; a `$vectorSearch` index covers this field.
     embedding: list[float] | None = None
@@ -136,7 +132,6 @@ class JobDescriptionDetail(JobDescriptionRead):
     jdText: str
     htmlString: str = ""
     links: list[str] = Field(default_factory=list)
-    requirements: list[str] = Field(default_factory=list)
     # Whether the AI tier has embedded it, so Analyze can skip that step.
     hasEmbedding: bool = False
 
@@ -154,7 +149,6 @@ class JobDescriptionUpdate(BaseModel):
     """What parsing learns after the capture was stored. Every field optional: a
     PATCH sends only what changed."""
 
-    requirements: list[str] | None = None
     htmlString: str | None = None
 
 

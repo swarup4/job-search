@@ -79,9 +79,13 @@ async def test_a_requirement_with_an_invented_quote_is_dropped(
         answers(
             Extraction(
                 keywords=[
-                    ExtractedKeyword(label="Kubernetes", evidence="run our Kubernetes clusters"),
                     ExtractedKeyword(
-                        label="Kafka", evidence="You will operate our Kafka event streams daily"
+                        kind="tech", label="Kubernetes", evidence="run our Kubernetes clusters"
+                    ),
+                    ExtractedKeyword(
+                        kind="tech",
+                        label="Kafka",
+                        evidence="You will operate our Kafka event streams daily",
                     ),
                 ]
             )
@@ -102,7 +106,9 @@ async def test_mentions_are_counted_from_the_jd_not_taken_from_the_model(
         answers(
             Extraction(
                 keywords=[
-                    ExtractedKeyword(label="Kubernetes", evidence="run our Kubernetes clusters")
+                    ExtractedKeyword(
+                        kind="tech", label="Kubernetes", evidence="run our Kubernetes clusters"
+                    )
                 ]
             )
         ),
@@ -120,9 +126,13 @@ async def test_the_same_requirement_is_offered_once(monkeypatch: pytest.MonkeyPa
         answers(
             Extraction(
                 keywords=[
-                    ExtractedKeyword(label="Kubernetes", evidence="run our Kubernetes clusters"),
                     ExtractedKeyword(
-                        label="kubernetes", evidence="Kubernetes experience is essential."
+                        kind="tech", label="Kubernetes", evidence="run our Kubernetes clusters"
+                    ),
+                    ExtractedKeyword(
+                        kind="tech",
+                        label="kubernetes",
+                        evidence="Kubernetes experience is essential.",
                     ),
                 ]
             )
@@ -144,7 +154,8 @@ async def test_a_literal_profile_match_is_present_without_asking_the_model(
     monkeypatch.setattr(matching, "generate", refuse)
 
     present, missing = await matching.split_by_profile(
-        [Requirement(key="aws", label="AWS", mentions=1, evidence="the AWS estate")], PROFILE
+        [Requirement(kind="tech", key="aws", label="AWS", mentions=1, evidence="the AWS estate")],
+        PROFILE,
     )
 
     assert [item.label for item in present] == ["AWS"]
@@ -161,7 +172,12 @@ async def test_an_old_role_still_counts_as_evidence(monkeypatch: pytest.MonkeyPa
     monkeypatch.setattr(matching, "generate", refuse)
 
     present, _ = await matching.split_by_profile(
-        [Requirement(key="rasa", label="RASA", mentions=1, evidence="RASA is required")], PROFILE
+        [
+            Requirement(
+                kind="tech", key="rasa", label="RASA", mentions=1, evidence="RASA is required"
+            )
+        ],
+        PROFILE,
     )
 
     assert [item.label for item in present] == ["RASA"]
@@ -179,7 +195,7 @@ async def test_an_unverifiable_present_verdict_falls_back_to_missing(
                     Verdict(
                         label="Kubernetes",
                         present=True,
-                        evidence="Operated Kubernetes clusters in production",
+                        evidence=["Operated Kubernetes clusters in production"],
                     )
                 ]
             )
@@ -189,6 +205,7 @@ async def test_an_unverifiable_present_verdict_falls_back_to_missing(
     present, missing = await matching.split_by_profile(
         [
             Requirement(
+                kind="tech",
                 key="kubernetes",
                 label="Kubernetes",
                 mentions=2,
@@ -200,6 +217,47 @@ async def test_an_unverifiable_present_verdict_falls_back_to_missing(
 
     assert present == []
     assert [item.label for item in missing] == ["Kubernetes"]
+
+
+async def test_one_verbatim_quote_is_enough_when_another_is_stitched(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The model joins fragments from different lines into one quote. That quote is
+    refused, but a real one beside it still proves the claim — before this, every
+    such verdict fell back to Missing and a well-matched job scored 0."""
+    monkeypatch.setattr(
+        matching,
+        "generate",
+        answers(
+            Diff(
+                verdicts=[
+                    Verdict(
+                        label="Deployment pipelines",
+                        present=True,
+                        evidence=[
+                            "Project: X - Ran the AWS estate; Skills: pipelines",
+                            "Ran the AWS estate and the deployment pipeline",
+                        ],
+                    )
+                ]
+            )
+        ),
+    )
+
+    present, _ = await matching.split_by_profile(
+        [
+            Requirement(
+                kind="tech",
+                key="deployment-pipelines",
+                label="Deployment pipelines",
+                mentions=1,
+                evidence="x",
+            )
+        ],
+        PROFILE,
+    )
+
+    assert [item.label for item in present] == ["Deployment pipelines"]
 
 
 async def test_a_present_verdict_quoting_the_profile_is_kept(
@@ -214,7 +272,7 @@ async def test_a_present_verdict_quoting_the_profile_is_kept(
                     Verdict(
                         label="Deployment pipelines",
                         present=True,
-                        evidence="Ran the AWS estate and the deployment pipeline",
+                        evidence=["Ran the AWS estate and the deployment pipeline"],
                     )
                 ]
             )
@@ -224,6 +282,7 @@ async def test_a_present_verdict_quoting_the_profile_is_kept(
     present, _ = await matching.split_by_profile(
         [
             Requirement(
+                kind="tech",
                 key="deployment-pipelines",
                 label="Deployment pipelines",
                 mentions=1,
@@ -240,8 +299,8 @@ async def test_a_present_verdict_quoting_the_profile_is_kept(
 
 
 def test_the_score_weights_a_requirement_by_how_often_the_jd_asks_for_it() -> None:
-    present = [Requirement(key="aws", label="AWS", mentions=1, evidence="x")]
-    missing = [Requirement(key="k8s", label="Kubernetes", mentions=3, evidence="x")]
+    present = [Requirement(kind="tech", key="aws", label="AWS", mentions=1, evidence="x")]
+    missing = [Requirement(kind="tech", key="k8s", label="Kubernetes", mentions=3, evidence="x")]
 
     assert coverage_score(present, missing) == 25
 
@@ -276,6 +335,7 @@ def hint(text: str, score: float) -> Span:
 
 def requirement() -> Requirement:
     return Requirement(
+        kind="tech",
         key="agentic-orchestration",
         label="agentic orchestration",
         mentions=1,

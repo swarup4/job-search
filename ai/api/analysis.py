@@ -1,20 +1,24 @@
 """The Analyze buttons: one job from its page, or the newest few you have not scored yet.
 
-Same shape as a discovery run — the dashboard's token is used for this run only,
-the work happens in the background, and the dashboard polls for progress. One run
-at a time: each job costs a few LLM calls, and two runs would compete for the same
+Same shape as a discovery run — the dashboard's token is used for this run only and
+the work happens in the background. Progress is pushed as server-sent events from
+`GET /run/events`, one per step as it starts and ends; `GET /run` still answers the
+run's state for a page that only needs the summary. One run at a time: each job costs a few LLM calls, and two runs would compete for the same
 hosted rate limit while making the cost of a click hard to predict.
 """
 
 from __future__ import annotations
 
 import asyncio
+import json
 import uuid
+from collections.abc import AsyncIterator
 from datetime import UTC, datetime
-from typing import Literal
+from typing import Annotated, Any, Literal
 
 import httpx
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Header, HTTPException, Request, status
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, model_validator
 
 from agents import analysis
@@ -30,6 +34,10 @@ router = APIRouter(tags=["analysis"])
 MAX_PER_RUN = 50
 
 EXPIRED = "Your session expired mid-run. Run again — finished jobs keep their results."
+
+# A comment line this often keeps an idle stream from being closed as dead while a
+# slow model call is in flight.
+KEEPALIVE_SECONDS = 15
 
 
 class AnalysisRequest(BaseModel):
@@ -60,9 +68,20 @@ class _Slot:
     """The one run, in memory. Each job's results are written to the server as it
     finishes, so a restart here loses only the progress view."""
 
-    run: AnalysisRun | None = None
-    owner: str | None = None
-    task: asyncio.Task[None] | None = None
+    def __init__(self) -> None:
+        self.run: AnalysisRun | None = None
+        self.owner: str | None = None
+        self.task: asyncio.Task[None] | None = None
+        # Every event of the run, kept so a stream opened late replays what it missed.
+        self.events: list[dict[str, Any]] = []
+        # Replaced on every event: each waiting stream holds the old one, which is set.
+        self.tick = asyncio.Event()
+
+
+def _emit(event: dict[str, Any]) -> None:
+    _slot.events.append(event)
+    tick, _slot.tick = _slot.tick, asyncio.Event()
+    tick.set()
 
 
 _slot = _Slot()
@@ -90,7 +109,7 @@ async def start_run(body: AnalysisRequest, who: Caller) -> AnalysisRun:
     run = AnalysisRun(
         id=uuid.uuid4().hex, status="running", jobIds=job_ids, startedAt=datetime.now(UTC)
     )
-    _slot.run, _slot.owner = run, account_id
+    _slot.run, _slot.owner, _slot.events = run, account_id, []
     _slot.task = asyncio.create_task(_execute(run, token))
     return run
 
@@ -102,10 +121,56 @@ async def latest_run(who: Caller) -> AnalysisRun | None:
     return _slot.run if _slot.owner == account_id else None
 
 
+@router.get("/run/events")
+async def run_events(
+    request: Request,
+    who: Caller,
+    last_event_id: Annotated[str | None, Header()] = None,
+) -> StreamingResponse:
+    """The caller's latest run as a stream: every event so far, then each new one,
+    closing after `run_done`. `Last-Event-ID` resumes after a dropped connection."""
+    _, account_id = who
+    if _slot.run is None or _slot.owner != account_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "no analysis run to follow")
+    run = _slot.run
+    start = int(last_event_id) + 1 if last_event_id and last_event_id.isdigit() else 0
+
+    async def stream() -> AsyncIterator[str]:
+        index = start
+        while True:
+            tick = _slot.tick
+            # A newer run replaced this one; its events are not this stream's.
+            if _slot.run is not run:
+                return
+            while index < len(_slot.events):
+                event = _slot.events[index]
+                yield f"id: {index}\nevent: {event['type']}\ndata: {json.dumps(event)}\n\n"
+                index += 1
+                if event["type"] == "run_done":
+                    return
+            if await request.is_disconnected():
+                return
+            try:
+                await asyncio.wait_for(tick.wait(), KEEPALIVE_SECONDS)
+            except TimeoutError:
+                yield ": keepalive\n\n"
+
+    return StreamingResponse(
+        stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
 async def _execute(run: AnalysisRun, token: str) -> None:
     client.set_token(token)
+
+    def finished(outcome: AnalysisOutcome) -> None:
+        run.results.append(outcome)
+        _emit({"type": "job_done", **outcome.model_dump()})
+
     try:
-        await analysis.analyze_many(run.jobIds, on_result=run.results.append)
+        await analysis.analyze_many(run.jobIds, on_result=finished, on_event=_emit)
         run.status = "done"
     except JobPilotApiError as error:
         run.status = "failed"
@@ -115,3 +180,4 @@ async def _execute(run: AnalysisRun, token: str) -> None:
         run.error = f"{type(error).__name__}: {error}"[:300]
     finally:
         run.finishedAt = datetime.now(UTC)
+        _emit({"type": "run_done", "status": run.status, "error": run.error})

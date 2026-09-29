@@ -276,6 +276,48 @@ async def test_details_join_the_description(signed_in: AsyncClient) -> None:
     assert "dedupHash" not in body
 
 
+async def test_details_carry_your_match_and_shortlist(signed_in: AsyncClient) -> None:
+    """One request for the details page instead of three."""
+    job_id = await make_job(signed_in, "LLM Engineer", "R1")
+    before = (await signed_in.get(f"/job/getJobDetails/{job_id}")).json()
+    assert before["match"] is None and before["shortlisted"] is False
+
+    await score(signed_in, job_id, 72)
+    await signed_in.post(f"/application/shortlist/{job_id}")
+    body = (await signed_in.get(f"/job/getJobDetails/{job_id}")).json()
+
+    assert body["shortlisted"] is True
+    assert body["match"]["score"] == 72
+    assert body["match"]["missing"][0]["label"] == "RAG"
+    assert body["match"]["review"]["state"] == "pending"
+    assert body["match"]["id"] == (await signed_in.get(f"/match/getMatch/{job_id}")).json()["id"]
+    assert "userId" not in body["match"]
+
+
+async def test_details_show_only_your_own_match_and_shortlist(client: AsyncClient) -> None:
+    await sign_up(client, "one@example.com")
+    job_id = await make_job(client, "LLM Engineer", "R1")
+    await score(client, job_id, 72)
+    await client.post(f"/application/shortlist/{job_id}")
+
+    await sign_up(client, "two@example.com")
+    body = (await client.get(f"/job/getJobDetails/{job_id}")).json()
+
+    assert body["match"] is None
+    assert body["shortlisted"] is False
+
+
+async def test_a_withdrawn_application_is_not_shortlisted(signed_in: AsyncClient) -> None:
+    job_id = await make_job(signed_in, "LLM Engineer", "R1")
+    await signed_in.post(f"/application/shortlist/{job_id}")
+    await stage(signed_in, job_id)
+    await signed_in.delete(f"/application/shortlist/{job_id}")
+
+    body = (await signed_in.get(f"/job/getJobDetails/{job_id}")).json()
+
+    assert body["shortlisted"] is False
+
+
 async def test_details_of_a_job_without_a_description(signed_in: AsyncClient) -> None:
     created = await signed_in.post(
         "/job/createJob",

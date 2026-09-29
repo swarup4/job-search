@@ -23,7 +23,7 @@ from __future__ import annotations
 import asyncio
 import re
 import sys
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel
 
@@ -36,8 +36,12 @@ from rag import NEAR_MISS_THRESHOLD, embed_pending, nearest_spans
 MAX_JD_CHARS = 12_000
 
 
+Kind = Literal["tech", "qualification", "practice"]
+
+
 class ExtractedKeyword(BaseModel):
     label: str
+    kind: Kind
     evidence: str
 
 
@@ -48,7 +52,10 @@ class Extraction(BaseModel):
 class Verdict(BaseModel):
     label: str
     present: bool
-    evidence: str
+    # Several short quotes rather than one: asked for a single span, the model stitches
+    # fragments from different lines together, and the stitched string is nowhere in
+    # the profile — so every true "present" failed verification and scored 0.
+    evidence: list[str]
 
 
 class Diff(BaseModel):
@@ -69,6 +76,7 @@ class Requirement(BaseModel):
 
     key: str
     label: str
+    kind: Kind
     mentions: int
     evidence: str
     # A profile span that reads like this requirement under different wording. Set on
@@ -83,6 +91,7 @@ Exclude generic traits — "team player", "excellent communication", "self-start
 
 Rules:
 - `label` uses the job description's own wording, and is at most four words.
+- `kind` is "tech" for something you could install, import or sign up for — a language, framework, library, database, cloud service, platform or protocol ("Python", "LangGraph", "PostgreSQL", "AWS"). "qualification" for years of experience, degrees and certifications. "practice" for methodologies and disciplines ("Agile", "prompt engineering", "MLOps").
 - `evidence` is a span copied VERBATIM from the job description containing that requirement. Never paraphrase it.
 - Never list a requirement the text does not state.
 - At most 20 requirements, most important first."""
@@ -93,7 +102,7 @@ For each requirement, decide whether the profile already evidences it.
 
 Rules:
 - `present` is true only when the profile text supports the claim. A related skill is not the same skill.
-- `evidence` is a span copied VERBATIM from the profile showing where it is claimed. Leave it empty when `present` is false.
+- `evidence` is a list of 1-3 short quotes, each copied VERBATIM from a single line of the profile — no section names, no "Project:" or "Skills:" prefixes, no joining quotes together. Leave it empty when `present` is false.
 - Judge the WHOLE profile, including old roles. A skill used years ago is still a skill the candidate has.
 - Return exactly one verdict per requirement, using the requirement's label unchanged."""
 
@@ -108,8 +117,11 @@ Rules:
 - At most 5 findings."""
 
 
-async def rectify(job_id: str) -> dict[str, Any]:
+async def rectify(job_id: str, requirements: list[Requirement] | None = None) -> dict[str, Any]:
     """Score one job against the profile and persist the result through `server`.
+
+    `requirements` are the posting's, when the caller has already extracted them —
+    analysis does, to store the tech stack — so one run pays for extraction once.
 
     The match lands with its review gate PENDING. Nothing here selects a keyword —
     that is the user's answer at the interrupt, and the server refuses a resume
@@ -119,8 +131,9 @@ async def rectify(job_id: str) -> dict[str, Any]:
     description = await jobpilot_api.get_description_for_job(job_id)
     profile = await jobpilot_api.get_profile()
 
-    jd_text = _jd_text(description)
-    requirements = await extract_requirements(jd_text)
+    jd_text = _jd_text(description, job.get("techStack"))
+    if requirements is None:
+        requirements = await extract_requirements(jd_text)
     present, missing = await split_by_profile(requirements, profile)
     # Chunks the user edited since the last run have no vector yet, so the near-miss
     # check would quietly come back empty. One GET when there is nothing to do.
@@ -183,6 +196,7 @@ async def extract_requirements(jd_text: str) -> list[Requirement]:
             Requirement(
                 key=key,
                 label=label,
+                kind=keyword.kind,
                 # Counted here rather than taken from the model: how often a word
                 # appears is arithmetic, and the screen ranks by it.
                 mentions=max(1, _occurrences(label, haystack)),
@@ -225,7 +239,8 @@ async def split_by_profile(
             # An unsupported "already have it" is the dangerous direction: it hides a
             # keyword the user would otherwise have been offered. Unverifiable
             # evidence sends the requirement back to Missing, where they decide.
-            if verdict.present and key in by_key and _verified_span(verdict.evidence, flat_profile):
+            verified = any(_verified_span(quote, flat_profile) for quote in verdict.evidence)
+            if verdict.present and key in by_key and verified:
                 claimed.add(key)
 
     evidenced = literal | claimed
@@ -395,14 +410,19 @@ def profile_digest(profile: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def _jd_text(description: dict[str, Any] | None) -> str:
-    """The posting's prose, with the parsed stack appended as a hint. Empty when the
+def tech_stack(requirements: list[Requirement]) -> list[str]:
+    """The technologies among a posting's requirements, in the order it ranks them."""
+    return list(dict.fromkeys(item.label for item in requirements if item.kind == "tech"))
+
+
+def _jd_text(description: dict[str, Any] | None, stack: list[str] | None = None) -> str:
+    """The posting's prose, with its stored stack appended as a hint. Empty when the
     job has no description yet — nothing to score rather than an error."""
     if not description:
         return ""
     parts = [description.get("jdText", "")]
-    if description.get("requirements"):
-        parts.append("Tech stack named in the posting: " + ", ".join(description["requirements"]))
+    if stack:
+        parts.append("Tech stack named in the posting: " + ", ".join(stack))
     return "\n\n".join(part for part in parts if part)[:MAX_JD_CHARS]
 
 

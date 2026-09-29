@@ -80,6 +80,14 @@ async def test_a_new_posting_writes_job_description_and_link(fake: FakeClient) -
     assert fake.linked == [("d1", "j1")]
 
 
+async def test_the_boards_country_is_sent_with_the_job(fake: FakeClient) -> None:
+    """The server parses `location` only when the board gave no country of its own."""
+    await ingest(POSTING.model_copy(update={"country": "India"}))
+    await ingest(POSTING)
+
+    assert [job["country"] for job in fake.jobs] == ["India", None]
+
+
 async def test_a_stored_posting_is_left_alone(fake: FakeClient) -> None:
     fake.job_duplicate = fake.has_description = True
     assert await ingest(POSTING) is False

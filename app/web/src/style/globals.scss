@@ -66,6 +66,9 @@ $elevation: (
   --risk-muted: oklch(0.545 0.17 25);
   --risk-solid: oklch(0.585 0.215 25);
   --destructive: var(--risk-solid);
+  // Info toasts: a progress note, neither an outcome nor a warning.
+  --info-ink: oklch(0.47 0.15 255);
+  --info-solid: oklch(0.6 0.17 255);
   --destructive-foreground: oklch(1 0 0);
 
   --added: oklch(0.963 0.035 142);
@@ -114,6 +117,8 @@ $elevation: (
   --risk-ink: oklch(0.92 0.045 20);
   --risk-muted: oklch(0.81 0.09 22);
   --risk-solid: oklch(0.655 0.19 25);
+  --info-ink: oklch(0.83 0.09 255);
+  --info-solid: oklch(0.68 0.15 255);
 
   --added: oklch(0.27 0.05 145);
   --added-ink: oklch(0.895 0.055 145);
@@ -189,6 +194,8 @@ h1, h2, h3, h4, h5 {
   --color-risk-ink: var(--risk-ink);
   --color-risk-muted: var(--risk-muted);
   --color-risk-solid: var(--risk-solid);
+  --color-info-ink: var(--info-ink);
+  --color-info-solid: var(--info-solid);
 
   --color-added: var(--added);
   --color-added-ink: var(--added-ink);

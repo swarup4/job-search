@@ -23,7 +23,6 @@ export {
 export { getTemplatePreview, listTemplates, renderTemplate } from "./template";
 export {
     getApplication,
-    getApplicationForJob,
     getBadges,
     getBoardCounts,
     getTracker,
@@ -66,5 +65,5 @@ export {
     updateCareerSource,
 } from "./discovery";
 export { getPreferences, savePreferences } from "./preference";
-export { getAnalysisRun, startAnalysis } from "./analysis";
+export { followAnalysis, getAnalysisRun, startAnalysis } from "./analysis";
 export { tailorResume } from "./tailoring";

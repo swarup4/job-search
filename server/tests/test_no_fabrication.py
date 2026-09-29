@@ -15,7 +15,6 @@ JOB = {
     "company": "Acme",
     "location": "Bengaluru, India",
     "source": "linkedin",
-    "requirements": ["kubernetes", "terraform", "aws"],
 }
 
 JD_TEXT = "Run our Kubernetes clusters and write Terraform for the AWS estate."
