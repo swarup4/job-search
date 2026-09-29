@@ -7,13 +7,15 @@ import { useSelector } from "react-redux";
 import { Bell, RefreshCw, Search } from "lucide-react";
 import { Button } from "@/component/ui/button";
 import { SignOutButton } from "@/component/SignOutButton";
-import { useRefreshShell } from "@/hooks/useShellCounts";
+import { useScoringRun } from "@/hooks/useScoringRun";
+import { useRefreshStatus } from "@/hooks/useStatus";
 import { ROUTES } from "@/routes";
-import { selectShell } from "@/store/shell/shellSlice";
+import { selectStatus } from "@/store/status/statusSlice";
 
 export function Topbar() {
-    const { pending, syncedAt } = useSelector(selectShell);
-    const refreshShell = useRefreshShell();
+    const { badges, syncedAt } = useSelector(selectStatus);
+    const { pending } = badges;
+    const refreshStatus = useRefreshStatus();
     const router = useRouter();
     const [term, setTerm] = useState("");
     const [refreshing, setRefreshing] = useState(false);
@@ -24,10 +26,14 @@ export function Topbar() {
         return () => clearInterval(timer);
     }, []);
 
+    const scoring = useScoringRun(refreshStatus);
+
+    // Re-reads the badges, and scores every job that has no match yet — or, while
+    // that run is going, says how far it has got.
     async function refresh() {
         setRefreshing(true);
         try {
-            await refreshShell();
+            await Promise.all([refreshStatus(), scoring.trigger()]);
         } finally {
             setRefreshing(false);
         }
@@ -80,9 +86,15 @@ export function Topbar() {
                     ) : null}
                 </button>
 
-                <Button size="sm" variant="outline" onClick={refresh} disabled={refreshing}>
-                    <RefreshCw className={refreshing ? "animate-spin" : undefined} />
-                    Refresh
+                <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={refresh}
+                    disabled={refreshing}
+                    title="Refresh the counts and score every job that has no match yet"
+                >
+                    <RefreshCw className={refreshing || scoring.running ? "animate-spin" : undefined} />
+                    {scoring.running ? "Scoring…" : "Refresh"}
                 </Button>
 
                 <SignOutButton />

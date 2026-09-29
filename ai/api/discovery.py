@@ -1,7 +1,8 @@
 """The dashboard's way to start a scrape, as whoever is signed in.
 
-The JWT arrives on the request and is handed to the client with `set_token` for
-that run only; nothing keeps it past the run. One run at a time, because two
+`POST /api/runs/discovery/start` starts one (or answers yours, if going) and `/events`
+streams it — every company as it finishes, from `run_started`, which carries the run. The JWT arrives on the request and is handed to the
+client with `set_token` for that run only; nothing keeps it past the run. One run at a time, because two
 overlapping runs would race each other's duplicate checks and write the same
 postings twice.
 """
@@ -16,9 +17,11 @@ from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
 import httpx
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
+from api.events import EventLog
 from mcp_servers.jobpilot_api import client
 from mcp_servers.jobpilot_api.client import JobPilotApiError
 from sources import run as scrape
@@ -28,7 +31,7 @@ router = APIRouter(tags=["discovery"])
 
 EXPIRED = "Your session expired mid-run. Run again — jobs already stored are skipped."
 
-# The dashboard polls while a run is going. Without this, every poll would cost the
+# Every request on this tier checks its token. Without this, each one would cost the
 # API server a getAccount as well. The price: a token that has just expired is still
 # accepted here for up to this long. Harmless — it can only read progress or start a
 # run, and a run's first call to the API server is refused.
@@ -63,10 +66,12 @@ class _Slot:
     """The one run. In memory: each company's outcome is written to its career source
     as it finishes, so a restart loses only the progress view, never the result."""
 
-    run: DiscoveryRun | None = None
-    owner: str | None = None
-    # Held so the event loop's weak reference is not the only one to the task.
-    task: asyncio.Task[None] | None = None
+    def __init__(self) -> None:
+        self.run: DiscoveryRun | None = None
+        self.owner: str | None = None
+        # Held so the event loop's weak reference is not the only one to the task.
+        self.task: asyncio.Task[None] | None = None
+        self.log = EventLog()
 
 
 _slot = _Slot()
@@ -108,11 +113,15 @@ async def caller(authorization: Annotated[str | None, Header()] = None) -> tuple
 Caller = Annotated[tuple[str, str], Depends(caller)]
 
 
-@router.post("/run", response_model=DiscoveryRun, status_code=status.HTTP_202_ACCEPTED)
-async def start_run(who: Caller) -> DiscoveryRun:
+@router.post("/start", response_model=DiscoveryRun, status_code=status.HTTP_202_ACCEPTED)
+async def start_discovery(who: Caller, response: Response) -> DiscoveryRun:
     token, account_id = who
     if _slot.run is not None and _slot.run.status == "running":
-        raise HTTPException(status.HTTP_409_CONFLICT, "a discovery run is already in progress")
+        if _slot.owner != account_id:
+            raise HTTPException(status.HTTP_409_CONFLICT, "a discovery run is already in progress")
+        # Yours already: answer it, and the page follows it rather than showing an error.
+        response.status_code = status.HTTP_200_OK
+        return _slot.run
 
     sources = await client.list_career_sources(enabled=True)
     filters = Filters.from_preferences(await client.get_preferences())
@@ -129,23 +138,36 @@ async def start_run(who: Caller) -> DiscoveryRun:
         filters=filters,
         startedAt=datetime.now(UTC),
     )
-    _slot.run, _slot.owner = run, account_id
-    _slot.task = asyncio.create_task(_execute(run, token, sources))
+    _slot.run, _slot.owner, _slot.log = run, account_id, EventLog()
+    _slot.task = asyncio.create_task(_execute(run, token, sources, _slot.log))
     return run
 
 
-@router.get("/run", response_model=DiscoveryRun | None)
-async def latest_run(who: Caller) -> DiscoveryRun | None:
-    """The latest run, if the caller started it. Another account sees nothing."""
+@router.get("/events")
+async def discovery_events(
+    request: Request,
+    who: Caller,
+    last_event_id: Annotated[str | None, Header()] = None,
+) -> StreamingResponse:
+    """Your latest run: `run_started` (the run itself), `company_done` as each company
+    finishes, then `run_done`. 404 when you have none."""
     _, account_id = who
-    return _slot.run if _slot.owner == account_id else None
+    if _slot.run is None or _slot.owner != account_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "no discovery run to follow")
+    run = _slot.run
+    return _slot.log.stream(request, last_event_id, lambda: _slot.run is run)
 
 
-async def _execute(run: DiscoveryRun, token: str, sources: list[dict[str, Any]]) -> None:
+async def _execute(
+    run: DiscoveryRun, token: str, sources: list[dict[str, Any]], log: EventLog
+) -> None:
     client.set_token(token)
+    log.emit({"type": "run_started", "run": run.model_dump(mode="json")})
 
     def record(name: str, result: dict[str, Any]) -> None:
-        run.results.append(CompanyResult(name=name, **result))
+        company = CompanyResult(name=name, **result)
+        run.results.append(company)
+        log.emit({"type": "company_done", **company.model_dump(), "done": len(run.results)})
 
     try:
         await scrape.run_all(sources, run.filters, on_result=record)
@@ -158,3 +180,8 @@ async def _execute(run: DiscoveryRun, token: str, sources: list[dict[str, Any]])
         run.error = f"{type(error).__name__}: {error}"[:300]
     finally:
         run.finishedAt = datetime.now(UTC)
+        log.emit(
+            {"type": "run_done", "status": run.status, "error": run.error,
+             "finishedAt": run.finishedAt.isoformat(),
+             "new": sum(result.new for result in run.results)}
+        )  # fmt: skip

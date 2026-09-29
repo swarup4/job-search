@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { SidebarIdentity } from "@/component/SidebarIdentity";
 import { NAV, sectionFor } from "@/routes";
-import { selectShell } from "@/store/shell/shellSlice";
+import { selectStatus } from "@/store/status/statusSlice";
 import { cn } from "@/util/helper";
 
 const ICON = {
@@ -93,13 +93,13 @@ function activeHref(pathname, from) {
 }
 
 function Nav({ active }) {
-    const counts = useSelector(selectShell);
+    const { badges } = useSelector(selectStatus);
     return (
         <nav className="p-2">
             {NAV.map((item) => {
                 const Icon = ICON[item.icon];
                 const isActive = active === item.href;
-                const badge = item.badgeKey ? counts[item.badgeKey] : null;
+                const badge = item.badgeKey ? badges[item.badgeKey] : null;
                 return (
                     <Link
                         key={item.href}

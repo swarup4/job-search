@@ -113,34 +113,6 @@ async def test_summaries_return_only_scored_jobs(signed_in: AsyncClient) -> None
     ]
 
 
-async def test_badges_name_the_longest_waiting_job(signed_in: AsyncClient) -> None:
-    empty = (await signed_in.get("/application/badges")).json()
-    assert empty == {"keywordSelections": 0, "nextJobId": None, "staged": 0, "shortlisted": 0}
-
-    older = await make_job(signed_in, "LLM Engineer", "R1")
-    newer = await make_job(signed_in, "GenAI Engineer", "R2")
-    await score(signed_in, older, 70)
-    await score(signed_in, newer, 90)
-
-    badges = (await signed_in.get("/application/badges")).json()
-    assert badges["keywordSelections"] == 2
-    assert badges["nextJobId"] == older
-
-
-async def test_badges_count_staged_and_shortlisted(signed_in: AsyncClient) -> None:
-    shortlisted = await make_job(signed_in, "LLM Engineer", "R1")
-    staged = await make_job(signed_in, "GenAI Engineer", "R2")
-    await signed_in.post(f"/application/shortlist/{shortlisted}")
-    await stage(signed_in, staged)
-
-    badges = (await signed_in.get("/application/badges")).json()
-    assert badges["shortlisted"] == 1 and badges["staged"] == 1
-
-
-async def test_badges_need_a_token(client: AsyncClient) -> None:
-    assert (await client.get("/application/badges")).status_code == 401
-
-
 async def test_analysis_details_can_be_written_to_a_job(signed_in: AsyncClient) -> None:
     job_id = await make_job(signed_in, "LLM Engineer", "R1")
     response = await signed_in.patch(
@@ -274,6 +246,148 @@ async def test_details_join_the_description(signed_in: AsyncClient) -> None:
     # Neither the vector nor the dedup hash leaves the server.
     assert "embedding" not in body["description"]
     assert "dedupHash" not in body
+
+
+async def test_the_board_is_one_read(signed_in: AsyncClient) -> None:
+    """Every column's first cards and total, your match joined in."""
+    new = await make_job(signed_in, "Fresh Role", "R1")
+    reviewed = await make_job(signed_in, "LLM Engineer", "R2")
+    tailored = await make_job(signed_in, "GenAI Engineer", "R3")
+    await score(
+        signed_in, reviewed, 72, risks=[{"key": "yrs", "title": "Years gap", "detail": "x"}]
+    )
+    await signed_in.post(f"/application/shortlist/{reviewed}")
+    await stage(signed_in, tailored)
+
+    board = (await signed_in.get("/application/board")).json()
+
+    columns = board["columns"]
+    assert {key: column["count"] for key, column in columns.items()} == {
+        "new": 1, "shortlisted": 1, "staged": 1, "applied": 0, "interview": 0,
+    }  # fmt: skip
+    assert set(columns) == {"new", "shortlisted", "staged", "applied", "interview"}
+    assert [card["id"] for card in columns["new"]["cards"]] == [new]
+    assert columns["new"]["cards"][0]["score"] is None
+    card = columns["shortlisted"]["cards"][0]
+    assert (card["id"], card["score"], card["reviewState"], card["risk"]) == (
+        reviewed,
+        72,
+        "pending",
+        "Years gap",
+    )
+    assert columns["staged"]["cards"][0]["texPath"] == "out/resume.tex"
+    assert columns["applied"] == {"count": 0, "cards": []}
+
+
+async def test_show_more_pages_through_a_column(signed_in: AsyncClient) -> None:
+    ids = [await make_job(signed_in, f"Role {n}", f"R{n}") for n in range(3)]
+
+    first = (await signed_in.get("/application/board", params={"limit": 2})).json()
+    more = (await signed_in.get("/application/board/new", params={"skip": 2, "limit": 2})).json()
+
+    shown = [card["id"] for card in first["columns"]["new"]["cards"]] + [c["id"] for c in more]
+    assert sorted(shown) == sorted(ids)
+    assert len(more) == 1
+
+
+async def test_the_board_is_yours_alone(client: AsyncClient) -> None:
+    await sign_up(client, "one@example.com")
+    job_id = await make_job(client, "LLM Engineer", "R1")
+    await score(client, job_id, 72)
+    await client.post(f"/application/shortlist/{job_id}")
+
+    await sign_up(client, "two@example.com")
+    board = (await client.get("/application/board")).json()
+
+    assert board["columns"]["shortlisted"]["count"] == 0
+    assert board["columns"]["new"]["cards"][0]["score"] is None
+
+
+async def test_an_unknown_column_is_refused(signed_in: AsyncClient) -> None:
+    assert (await signed_in.get("/application/board/archived")).status_code == 422
+
+
+async def test_the_shortlist_joins_each_job_and_your_match(signed_in: AsyncClient) -> None:
+    """One request for the Shortlist screen, not one per job."""
+    scored = await make_job(signed_in, "LLM Engineer", "R1")
+    unscored = await make_job(signed_in, "GenAI Engineer", "R2")
+    await score(signed_in, scored, 72, risks=[{"key": "yrs", "title": "Years", "detail": "x"}])
+    await signed_in.post(f"/application/shortlist/{scored}")
+    await signed_in.post(f"/application/shortlist/{unscored}")
+
+    rows = (await signed_in.get("/application/shortlist")).json()
+
+    # Newest shortlisted first.
+    assert [row["id"] for row in rows] == [unscored, scored]
+    assert rows[0]["score"] is None and rows[0]["missingCount"] == 0
+    assert rows[1]["title"] == "LLM Engineer"
+    assert (
+        rows[1]["score"],
+        rows[1]["riskCount"],
+        rows[1]["presentCount"],
+        rows[1]["missingCount"],
+    ) == (72, 1, 1, 1)
+
+
+async def test_the_shortlist_leaves_out_staged_jobs(signed_in: AsyncClient) -> None:
+    job_id = await make_job(signed_in, "LLM Engineer", "R1")
+    await signed_in.post(f"/application/shortlist/{job_id}")
+    await stage(signed_in, job_id)
+
+    assert (await signed_in.get("/application/shortlist")).json() == []
+
+
+async def test_the_shortlist_is_yours_alone(client: AsyncClient) -> None:
+    await sign_up(client, "one@example.com")
+    job_id = await make_job(client, "LLM Engineer", "R1")
+    await score(client, job_id, 72)
+    await client.post(f"/application/shortlist/{job_id}")
+
+    await sign_up(client, "two@example.com")
+
+    assert (await client.get("/application/shortlist")).json() == []
+
+
+async def test_details_carry_your_match_and_shortlist(signed_in: AsyncClient) -> None:
+    """One request for the details page instead of three."""
+    job_id = await make_job(signed_in, "LLM Engineer", "R1")
+    before = (await signed_in.get(f"/job/getJobDetails/{job_id}")).json()
+    assert before["match"] is None and before["shortlisted"] is False
+
+    await score(signed_in, job_id, 72)
+    await signed_in.post(f"/application/shortlist/{job_id}")
+    body = (await signed_in.get(f"/job/getJobDetails/{job_id}")).json()
+
+    assert body["shortlisted"] is True
+    assert body["match"]["score"] == 72
+    assert body["match"]["missing"][0]["label"] == "RAG"
+    assert body["match"]["review"]["state"] == "pending"
+    assert body["match"]["id"] == (await signed_in.get(f"/match/getMatch/{job_id}")).json()["id"]
+    assert "userId" not in body["match"]
+
+
+async def test_details_show_only_your_own_match_and_shortlist(client: AsyncClient) -> None:
+    await sign_up(client, "one@example.com")
+    job_id = await make_job(client, "LLM Engineer", "R1")
+    await score(client, job_id, 72)
+    await client.post(f"/application/shortlist/{job_id}")
+
+    await sign_up(client, "two@example.com")
+    body = (await client.get(f"/job/getJobDetails/{job_id}")).json()
+
+    assert body["match"] is None
+    assert body["shortlisted"] is False
+
+
+async def test_a_withdrawn_application_is_not_shortlisted(signed_in: AsyncClient) -> None:
+    job_id = await make_job(signed_in, "LLM Engineer", "R1")
+    await signed_in.post(f"/application/shortlist/{job_id}")
+    await stage(signed_in, job_id)
+    await signed_in.delete(f"/application/shortlist/{job_id}")
+
+    body = (await signed_in.get(f"/job/getJobDetails/{job_id}")).json()
+
+    assert body["shortlisted"] is False
 
 
 async def test_details_of_a_job_without_a_description(signed_in: AsyncClient) -> None:

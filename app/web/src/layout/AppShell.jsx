@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSelector } from "react-redux";
 
-import { useRefreshShell } from "@/hooks/useShellCounts";
+import { useRefreshStatus } from "@/hooks/useStatus";
 import { Sidebar } from "@/layout/Sidebar";
 import { Topbar } from "@/layout/Topbar";
 import { ROUTES } from "@/routes";
@@ -17,12 +17,12 @@ import { selectAuthStatus } from "@/store/auth/authSlice";
 export function AppShell({ children }) {
     const router = useRouter();
     const status = useSelector(selectAuthStatus);
-    const refreshShell = useRefreshShell();
+    const refreshStatus = useRefreshStatus();
 
     useEffect(() => {
         if (status === "anonymous") router.replace(ROUTES.login);
-        if (status === "authenticated") refreshShell();
-    }, [status, router, refreshShell]);
+        if (status === "authenticated") refreshStatus();
+    }, [status, router, refreshStatus]);
 
     // "unknown" lasts only until the store reads sessionStorage back, once per refresh.
     if (status !== "authenticated") return null;

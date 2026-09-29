@@ -19,6 +19,7 @@ class ResumeStore(BaseModel):
 
     jobId: PydanticObjectId
     filePath: str
+    tex: str = Field(min_length=1)
     templatePath: str = "templates/base_resume.tex"
     incorporated: list[str] = Field(default_factory=list)
     declined: list[str] = Field(default_factory=list)
@@ -26,12 +27,15 @@ class ResumeStore(BaseModel):
 
 
 class TailoredResume(Document):
-    """FR-4.4 — a .tex path and the selection set that produced it. No PDF in v1."""
+    """FR-4.4 — the tailored .tex and the selection set that produced it."""
 
     userId: PydanticObjectId
     jobId: PydanticObjectId
     matchId: PydanticObjectId
     filePath: str
+    # Stored verbatim, like BaseResume: `changes` are line numbers into this, and a
+    # Regenerate of the base resume would otherwise move every line out from under them.
+    tex: str
     templatePath: str = "templates/base_resume.tex"
     incorporated: list[str] = Field(default_factory=list)
     declined: list[str] = Field(default_factory=list)
@@ -60,6 +64,7 @@ class ResumeRead(BaseModel):
     jobId: PydanticObjectId
     matchId: PydanticObjectId
     filePath: str
+    tex: str
     templatePath: str = "templates/base_resume.tex"
     incorporated: list[str] = Field(default_factory=list)
     declined: list[str] = Field(default_factory=list)

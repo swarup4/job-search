@@ -1,3 +1,4 @@
+import asyncio
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -13,7 +14,11 @@ from modules.application.models import (
     ApplicationStage,
     ApplicationStatus,
     Badges,
+    Board,
+    BoardCard,
+    BoardColumn,
     BoardCounts,
+    ShortlistRow,
     StatusTransition,
     Tracker,
     TrackerRow,
@@ -148,6 +153,130 @@ async def board_counts(user_id: PydanticObjectId) -> BoardCounts:
     )
 
 
+# The application columns and the statuses each shows; `applied` folds in `viewed`.
+BOARD_COLUMNS: dict[str, list[ApplicationStatus]] = {
+    "shortlisted": [ApplicationStatus.SHORTLISTED],
+    "staged": [ApplicationStatus.STAGED],
+    "applied": [ApplicationStatus.APPLIED, ApplicationStatus.VIEWED],
+    "interview": [ApplicationStatus.INTERVIEW],
+}
+
+
+def _your_match(user_id: PydanticObjectId, job_field: str) -> list[dict[str, object]]:
+    """Stages joining the caller's match headline onto each row, keyed on `job_field`."""
+    return [
+        {
+            "$lookup": {
+                "from": "matches",
+                "localField": job_field,
+                "foreignField": "jobId",
+                "as": "match",
+                "pipeline": [
+                    {"$match": {"userId": user_id}},
+                    {
+                        "$project": {
+                            "_id": 0,
+                            "score": 1,
+                            "reviewState": "$review.state",
+                            "risk": {"$arrayElemAt": ["$risks.title", 0]},
+                        }
+                    },
+                ],
+            }
+        },
+        {"$unwind": {"path": "$match", "preserveNullAndEmptyArrays": True}},
+    ]
+
+
+def _card(
+    job: dict[str, Any], match: dict[str, Any] | None, application: dict[str, Any] | None
+) -> BoardCard:
+    application = application or {}
+    return BoardCard(
+        id=job["_id"],
+        title=job["title"],
+        company=job["company"],
+        location=job["location"],
+        source=job["source"],
+        discoveredAt=job["discoveredAt"],
+        **(match or {}),
+        texPath=application.get("texPath"),
+        stagedAt=application.get("stagedAt"),
+        lastActivityAt=application.get("lastActivityAt"),
+        lastActivityNote=application.get("lastActivityNote"),
+    )
+
+
+async def _new_cards(
+    user_id: PydanticObjectId, started: list[PydanticObjectId], skip: int, limit: int
+) -> list[BoardCard]:
+    rows = await Job.aggregate(
+        [
+            {"$match": {"_id": {"$nin": started}}},
+            {"$sort": {"discoveredAt": -1}},
+            {"$skip": skip},
+            {"$limit": limit},
+            *_your_match(user_id, "_id"),
+        ]
+    ).to_list()
+    return [_card(row, row.get("match"), None) for row in rows]
+
+
+async def _application_cards(
+    user_id: PydanticObjectId, statuses: list[ApplicationStatus], skip: int, limit: int
+) -> list[BoardCard]:
+    rows = await Application.aggregate(
+        [
+            {"$match": {"userId": user_id, "status": {"$in": [s.value for s in statuses]}}},
+            # The order `list_applications` has always used.
+            {"$sort": {"stagedAt": -1, "shortlistedAt": -1}},
+            {"$skip": skip},
+            {"$limit": limit},
+            {
+                "$lookup": {
+                    "from": "jobs",
+                    "localField": "jobId",
+                    "foreignField": "_id",
+                    "as": "job",
+                }
+            },
+            {"$unwind": "$job"},
+            *_your_match(user_id, "jobId"),
+        ]
+    ).to_list()
+    return [_card(row["job"], row.get("match"), row) for row in rows]
+
+
+async def board_column(
+    user_id: PydanticObjectId, column: str, skip: int, limit: int
+) -> list[BoardCard]:
+    """One column's cards after the first `skip` — the Pipeline's "Show more"."""
+    if column == "new":
+        return await _new_cards(user_id, await _started_job_ids(user_id), skip, limit)
+    return await _application_cards(user_id, BOARD_COLUMNS[column], skip, limit)
+
+
+async def board(user_id: PydanticObjectId, limit: int) -> Board:
+    """The first `limit` cards of each column, your match joined in. Each column carries
+    its own total so "Show more" knows when to stop."""
+    started = await _started_job_ids(user_id)
+    counts, new, *columns = await asyncio.gather(
+        board_counts(user_id),
+        _new_cards(user_id, started, 0, limit),
+        *(_application_cards(user_id, statuses, 0, limit) for statuses in BOARD_COLUMNS.values()),
+    )
+    totals = counts.model_dump()
+    return Board(
+        columns={
+            "new": BoardColumn(count=counts.new, cards=new),
+            **{
+                key: BoardColumn(count=totals[key], cards=cards)
+                for key, cards in zip(BOARD_COLUMNS, columns, strict=True)
+            },
+        },
+    )
+
+
 async def record_fill(
     user_id: PydanticObjectId, application_id: PydanticObjectId, payload: ApplicationFill
 ) -> Application:
@@ -261,6 +390,70 @@ async def badges(user_id: PydanticObjectId) -> Badges:
             Application.userId == user_id, Application.status == ApplicationStatus.SHORTLISTED
         ).count(),
     )
+
+
+async def shortlisted_jobs(user_id: PydanticObjectId) -> list[ShortlistRow]:
+    """Your shortlisted jobs, newest first, each with its listing and your match counts —
+    one query for the Shortlist screen instead of one request per job."""
+    rows = await Application.aggregate(
+        [
+            {"$match": {"userId": user_id, "status": ApplicationStatus.SHORTLISTED.value}},
+            {"$sort": {"shortlistedAt": -1}},
+            {
+                "$lookup": {
+                    "from": "jobs",
+                    "localField": "jobId",
+                    "foreignField": "_id",
+                    "as": "job",
+                }
+            },
+            {"$unwind": "$job"},
+            {
+                "$lookup": {
+                    "from": "matches",
+                    "localField": "jobId",
+                    "foreignField": "jobId",
+                    "as": "match",
+                    "pipeline": [
+                        {"$match": {"userId": user_id}},
+                        {
+                            "$project": {
+                                "_id": 0,
+                                "score": 1,
+                                "riskCount": {"$size": "$risks"},
+                                "presentCount": {"$size": "$present"},
+                                "missingCount": {"$size": "$missing"},
+                            }
+                        },
+                    ],
+                }
+            },
+            {"$unwind": {"path": "$match", "preserveNullAndEmptyArrays": True}},
+        ]
+    ).to_list()
+
+    return [
+        ShortlistRow(
+            **{key: row["job"].get(key) for key in _SHORTLIST_JOB_FIELDS},
+            id=row["job"]["_id"],
+            shortlistedAt=row.get("shortlistedAt"),
+            **row.get("match", {}),
+        )
+        for row in rows
+    ]
+
+
+_SHORTLIST_JOB_FIELDS = (
+    "title",
+    "company",
+    "location",
+    "source",
+    "jobType",
+    "workMode",
+    "salaryText",
+    "postedAt",
+    "discoveredAt",
+)
 
 
 async def tracker(user_id: PydanticObjectId) -> Tracker:

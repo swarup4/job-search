@@ -4,6 +4,7 @@ the endpoint that runs it."""
 from __future__ import annotations
 
 import asyncio
+import json
 from collections.abc import AsyncIterator
 from typing import Any
 
@@ -39,6 +40,8 @@ class FakeClient:
         self.job_updates: list[dict[str, Any]] = []
         self.description_updates: list[dict[str, Any]] = []
         self.embeddings: list[list[float]] = []
+        # What the match step was handed: None means it extracted for itself.
+        self.rectified_with: list[list[Any] | None] = []
 
     async def get_job(self, job_id: str) -> dict[str, Any]:
         return self.job
@@ -84,14 +87,21 @@ def fake(monkeypatch: pytest.MonkeyPatch) -> FakeClient:
             experience="6-10 years", salary="40 LPA", workMode="hybrid", jobType="contract"
         )
 
-    async def rectify(job_id: str) -> dict[str, Any]:
-        return {
-            "score": 72,
-            "present": [{"label": "AWS"}],
-            "missing": [{"label": "RAG"}, {"label": "AWS"}],
-        }
+    async def extract(jd_text: str) -> list[matching.Requirement]:
+        return [
+            matching.Requirement(key="aws", label="AWS", kind="tech", mentions=1, evidence="AWS"),
+            matching.Requirement(
+                key="6-10-years", label="6-10 years", kind="qualification", mentions=1, evidence="x"
+            ),
+            matching.Requirement(key="rag", label="RAG", kind="tech", mentions=1, evidence="RAG"),
+        ]
+
+    async def rectify(job_id: str, requirements: list[Any] | None = None) -> dict[str, Any]:
+        client.rectified_with.append(requirements)
+        return {"score": 72, "present": [{"label": "AWS"}], "missing": [{"label": "RAG"}]}
 
     monkeypatch.setattr(analysis, "generate", proposes)
+    monkeypatch.setattr(matching, "extract_requirements", extract)
     monkeypatch.setattr(matching, "rectify", rectify)
     return client
 
@@ -126,23 +136,49 @@ async def test_every_step_writes_its_own_field(fake: FakeClient) -> None:
     assert all(step.ok for step in outcome.steps.values()), outcome.steps
     assert not any("htmlString" in update for update in fake.description_updates)
     assert fake.embeddings == [[0.1, 0.2, 0.3]]
-    requirements = next(u["requirements"] for u in fake.description_updates if "requirements" in u)
-    assert requirements == ["AWS", "RAG"]
+    assert fake.description_updates == []
+    # Only the technologies, and the match reuses the same extraction.
+    assert {"techStack": ["AWS", "RAG"]} in fake.job_updates
+    assert [len(handed or []) for handed in fake.rectified_with] == [3]
 
 
 async def test_details_never_overwrite_what_the_board_gave(fake: FakeClient) -> None:
     await analysis.analyze("j1")
     # jobType came from the board, and the invented salary is dropped by the check.
-    assert fake.job_updates == [{"experienceBand": "6-10 years", "workMode": "hybrid"}]
+    assert fake.job_updates[0] == {"experienceBand": "6-10 years", "workMode": "hybrid"}
 
 
 async def test_a_job_already_matched_is_skipped_whole(fake: FakeClient) -> None:
     fake.match = {"score": 64}
+    fake.job["techStack"] = ["AWS"]
     outcome = await analysis.analyze("j1")
     assert outcome.skipped == "already analyzed"
     assert outcome.score == 64
     assert outcome.steps == {}
     assert fake.embeddings == [] and fake.job_updates == [] and fake.description_updates == []
+
+
+async def test_a_matched_job_without_a_stack_gets_only_the_stack(fake: FakeClient) -> None:
+    """Jobs analyzed before the tech stack existed: one extraction, no second match."""
+    fake.match = {"score": 64}
+    fake.description = {"id": "d1", "jdText": JD, "hasEmbedding": True}
+    outcome = await analysis.analyze("j1")
+
+    assert outcome.skipped is None
+    assert outcome.steps["techStack"].note == "2 technologies"
+    assert outcome.steps["match"].note == "already matched"
+    assert fake.rectified_with == []
+    assert outcome.score == 64
+
+
+async def test_a_stack_already_read_is_not_read_again(fake: FakeClient) -> None:
+    """An empty stack is an answer too — a posting that names no technology."""
+    fake.job["techStack"] = []
+    outcome = await analysis.analyze("j1")
+
+    assert outcome.steps["techStack"].note == "already read"
+    assert fake.rectified_with == [None]
+    assert not any("techStack" in update for update in fake.job_updates)
 
 
 async def test_an_embedded_description_keeps_its_vector(fake: FakeClient) -> None:
@@ -193,7 +229,7 @@ async def test_a_dead_token_stops_the_job(
     async def refused(description_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         raise JobPilotApiError(401, "expired")
 
-    monkeypatch.setattr(fake, "update_description", refused)
+    monkeypatch.setattr(fake, "update_job", refused)
     with pytest.raises(JobPilotApiError):
         await analysis.analyze("j1")
 
@@ -231,15 +267,17 @@ async def api(
     release = asyncio.Event()
     seen: list[list[str]] = []
 
-    async def analyze_many(job_ids, on_result=None, at_once=2):
+    async def analyze_many(job_ids, on_result=None, at_once=2, on_event=None):
         seen.append(job_ids)
         await release.wait()
         for job_id in job_ids:
+            on_event({"type": "step_started", "jobId": job_id, "step": "details"})
+            on_event({"type": "step", "jobId": job_id, "step": "details", "ok": True, "note": "x"})
             on_result(analysis.AnalysisOutcome(jobId=job_id, score=60))
 
     monkeypatch.setattr(analysis, "analyze_many", analyze_many)
     transport = ASGITransport(app=create_app())
-    async with AsyncClient(transport=transport, base_url="http://test/api/analysis") as http:
+    async with AsyncClient(transport=transport, base_url="http://test/api/runs") as http:
         yield http, release, seen
 
 
@@ -254,20 +292,20 @@ GOOD = {"Authorization": "Bearer good"}
 
 async def test_one_job_from_its_card(api) -> None:
     http, release, _ = api
-    started = await http.post("/run", json={"jobIds": ["j9"]}, headers=GOOD)
+    started = await http.post("/analysis/start", json={"jobIds": ["j9"]}, headers=GOOD)
     assert started.status_code == 202, started.text
     assert started.json()["jobIds"] == ["j9"]
 
     release.set()
     await finish()
-    run = (await http.get("/run", headers=GOOD)).json()
+    run = analysis_api._slot.run.model_dump(mode="json")
     assert run["status"] == "done"
     assert [r["jobId"] for r in run["results"]] == ["j9"]
 
 
 async def test_the_newest_new_jobs_in_bulk(api) -> None:
     http, release, seen = api
-    started = await http.post("/run", json={"newest": 2}, headers=GOOD)
+    started = await http.post("/analysis/start", json={"newest": 2}, headers=GOOD)
     assert started.json()["jobIds"] == ["n1", "n2"]
     release.set()
     await finish()
@@ -277,18 +315,90 @@ async def test_the_newest_new_jobs_in_bulk(api) -> None:
 async def test_exactly_one_way_to_choose_jobs(api) -> None:
     http, _, _ = api
     for body in ({}, {"jobIds": ["a"], "newest": 3}, {"newest": 500}):
-        assert (await http.post("/run", json=body, headers=GOOD)).status_code == 422
+        assert (await http.post("/analysis/start", json=body, headers=GOOD)).status_code == 422
 
 
-async def test_one_run_at_a_time_and_only_its_owner_sees_it(api) -> None:
+async def test_one_run_at_a_time_and_a_second_start_joins_it(api) -> None:
+    """Yours already running: the start answers that run, so the page follows it."""
     http, release, _ = api
-    await http.post("/run", json={"jobIds": ["j1"]}, headers=GOOD)
-    assert (await http.post("/run", json={"jobIds": ["j2"]}, headers=GOOD)).status_code == 409
+    first = (await http.post("/analysis/start", json={"jobIds": ["j1"]}, headers=GOOD)).json()
+    again = await http.post("/analysis/start", json={"jobIds": ["j2"]}, headers=GOOD)
+    other = await http.post(
+        "/analysis/start", json={"jobIds": ["j3"]}, headers={"Authorization": "Bearer other"}
+    )
     release.set()
     await finish()
-    assert (await http.get("/run", headers={"Authorization": "Bearer other"})).json() is None
+
+    assert again.status_code == 200 and again.json()["id"] == first["id"]
+    assert other.status_code == 409
+
+
+def parse_stream(body: str) -> list[tuple[str, str, dict[str, Any]]]:
+    """(id, event, data) for each server-sent event, keep-alive comments skipped."""
+    events = []
+    for block in body.strip().split("\n\n"):
+        fields = dict(
+            line.split(": ", 1) for line in block.splitlines() if not line.startswith(":")
+        )
+        if fields:
+            events.append((fields["id"], fields["event"], json.loads(fields["data"])))
+    return events
+
+
+async def test_every_step_is_streamed_and_the_stream_ends_with_the_run(api) -> None:
+    http, release, _ = api
+    await http.post("/analysis/start", json={"jobIds": ["j9"]}, headers=GOOD)
+    release.set()
+    await finish()
+
+    response = await http.get("/analysis/events", headers=GOOD)
+
+    assert response.headers["content-type"].startswith("text/event-stream")
+    events = parse_stream(response.text)
+    assert [kind for _, kind, _ in events] == [
+        "run_started", "step_started", "step", "job_done", "run_done",
+    ]  # fmt: skip
+    # The first event is the run itself — how a page finds its latest run.
+    assert events[0][2]["run"]["jobIds"] == ["j9"]
+    assert events[3][2]["score"] == 60
+    done = events[-1][2]
+    assert (done["status"], done["error"], done["finishedAt"] is not None) == ("done", None, True)
+
+
+async def test_events_from_before_the_stream_opened_are_marked_replay(api) -> None:
+    """A page joining late shows them, but does not announce them again."""
+    http, release, _ = api
+    await http.post("/analysis/start", json={"jobIds": ["j9"]}, headers=GOOD)
+    release.set()
+    await finish()
+
+    events = parse_stream((await http.get("/analysis/events", headers=GOOD)).text)
+
+    assert all(data["replay"] for _, _, data in events)
+
+
+async def test_a_reconnect_resumes_after_the_last_event_seen(api) -> None:
+    http, release, _ = api
+    await http.post("/analysis/start", json={"jobIds": ["j9"]}, headers=GOOD)
+    release.set()
+    await finish()
+
+    response = await http.get("/analysis/events", headers={**GOOD, "Last-Event-ID": "2"})
+
+    assert [kind for _, kind, _ in parse_stream(response.text)] == ["job_done", "run_done"]
+
+
+async def test_another_account_cannot_follow_the_run(api) -> None:
+    http, release, _ = api
+    await http.post("/analysis/start", json={"jobIds": ["j9"]}, headers=GOOD)
+    release.set()
+    await finish()
+
+    response = await http.get("/analysis/events", headers={"Authorization": "Bearer other"})
+
+    assert response.status_code == 404
 
 
 async def test_needs_a_token(api) -> None:
     http, _, _ = api
-    assert (await http.post("/run", json={"newest": 1})).status_code == 401
+    assert (await http.post("/analysis/start", json={"newest": 1})).status_code == 401

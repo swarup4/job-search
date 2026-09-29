@@ -1,11 +1,13 @@
 "use client";
 
+import { useSelector } from "react-redux";
 import { History } from "lucide-react";
 
 import { useDiscovery } from "@/component/DiscoveryContext";
 import { KV } from "@/component/TierSettings";
 import { Panel, PanelBody, PanelHeader, PanelTitle } from "@/component/ui/panel";
 import { Badge } from "@/component/ui/badge";
+import { selectStatus } from "@/store/status/statusSlice";
 
 const STATUS = {
     running: { label: "running", variant: "soft" },
@@ -18,10 +20,11 @@ const STATUS = {
  *
  * The run itself lives in the AI tier's memory, so a restart there forgets it. Each
  * company's latest result is stored on its career source, though, so after a restart
- * this falls back to those records: when the most recent one landed, and the totals.
+ * this falls back to the status store's `discovery`, summed from those records.
  */
 export function DiscoveryRunPanel() {
-    const { run, running, sources } = useDiscovery();
+    const { run, running } = useDiscovery();
+    const { discovery, syncedAt } = useSelector(selectStatus);
     const status = run ? STATUS[run.status] : null;
 
     return (
@@ -34,7 +37,11 @@ export function DiscoveryRunPanel() {
             </PanelHeader>
 
             <PanelBody className="flex flex-col gap-3 py-4">
-                {run ? <LiveRun run={run} running={running} /> : <Recorded sources={sources} />}
+                {run ? (
+                    <LiveRun run={run} running={running} />
+                ) : (
+                    <Recorded discovery={discovery} loaded={Boolean(syncedAt)} />
+                )}
 
                 <p className="border-t border-border pt-3 text-[12.5px] leading-relaxed text-muted-foreground">
                     <span className="font-medium text-foreground">When does it run?</span> Only when you
@@ -79,19 +86,23 @@ function LiveRun({ run, running }) {
     );
 }
 
-function Recorded({ sources }) {
-    const ran = (sources ?? []).filter((source) => source.lastRunAt && source.lastResult);
-    if (!sources) return <p className="text-[13px] text-muted-foreground">reading…</p>;
-    if (!ran.length) return <p className="text-[13px] text-muted-foreground">No run yet.</p>;
+function Recorded({ discovery, loaded }) {
+    if (!loaded) return <p className="text-[13px] text-muted-foreground">reading…</p>;
+    if (!discovery.companies) return <p className="text-[13px] text-muted-foreground">No run yet.</p>;
 
-    const latest = ran.reduce((a, b) => (new Date(a.lastRunAt) > new Date(b.lastRunAt) ? a : b));
-    const totals = sum(ran.map((source) => source.lastResult));
+    const problems = [
+        discovery.blocked ? `${discovery.blocked} blocked by robots.txt` : null,
+        discovery.failed ? `${discovery.failed} with errors` : null,
+    ].filter(Boolean);
 
     return (
         <>
-            <KV label="Last result recorded" value={when(latest.lastRunAt)} />
-            <KV label="Companies" value={`${ran.length} with a result`} />
-            <KV label="Found" value={describeTotals(totals)} />
+            <KV label="Last result recorded" value={when(discovery.lastRunAt)} />
+            <KV label="Companies" value={`${discovery.companies} with a result`} />
+            <KV
+                label="Found"
+                value={[`${discovery.newJobs} new job${discovery.newJobs === 1 ? "" : "s"}`, ...problems].join(" · ")}
+            />
             <p className="text-[12px] text-muted-foreground">
                 Taken from each company&apos;s latest result. The full run details — start time, duration,
                 what it searched for — were cleared when the AI tier restarted.

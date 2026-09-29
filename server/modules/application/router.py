@@ -1,3 +1,5 @@
+from typing import Literal
+
 from beanie import PydanticObjectId
 from fastapi import APIRouter, Query, status
 
@@ -13,8 +15,10 @@ from modules.application.models import (
     ApplicationRead,
     ApplicationStage,
     ApplicationStatus,
-    Badges,
+    Board,
+    BoardCard,
     BoardCounts,
+    ShortlistRow,
     StatusTransition,
     Tracker,
 )
@@ -42,16 +46,28 @@ async def answer_bank(user_id: CurrentUser) -> list[AnswerBank]:
     return await service.list_answer_bank(user_id)
 
 
-@router.get("/badges", response_model=Badges)
-async def badges(user_id: CurrentUser) -> Badges:
-    """The header and sidebar badges, and the Pipeline's review banner, in one call."""
-    return await service.badges(user_id)
-
-
 @router.get("/tracker", response_model=Tracker)
 async def tracker(user_id: CurrentUser) -> Tracker:
     """The Applications screen in one call: staged and submitted, with each job joined."""
     return await service.tracker(user_id)
+
+
+BoardColumnKey = Literal["new", "shortlisted", "staged", "applied", "interview"]
+
+
+@router.get("/board", response_model=Board)
+async def board(user_id: CurrentUser, limit: int = Query(default=5, ge=1, le=50)) -> Board:
+    return await service.board(user_id, limit)
+
+
+@router.get("/board/{column}", response_model=list[BoardCard])
+async def board_column(
+    column: BoardColumnKey,
+    user_id: CurrentUser,
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=5, ge=1, le=50),
+) -> list[BoardCard]:
+    return await service.board_column(user_id, column, skip, limit)
 
 
 @router.get("/counts", response_model=BoardCounts)
@@ -64,6 +80,11 @@ async def unstarted_jobs(
     user_id: CurrentUser, limit: int = Query(default=50, le=200), skip: int = 0
 ) -> list[Job]:
     return await service.unstarted_jobs(user_id, limit, skip)
+
+
+@router.get("/shortlist", response_model=list[ShortlistRow])
+async def shortlisted_jobs(user_id: CurrentUser) -> list[ShortlistRow]:
+    return await service.shortlisted_jobs(user_id)
 
 
 @router.post("/shortlist/{job_id}", response_model=ApplicationRead)

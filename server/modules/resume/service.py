@@ -100,6 +100,10 @@ async def get_base_resume(user_id: PydanticObjectId) -> BaseResume:
     return resume
 
 
+async def has_base_resume(user_id: PydanticObjectId) -> bool:
+    return await BaseResume.find_one(BaseResume.userId == user_id) is not None
+
+
 async def save_base_resume(user_id: PydanticObjectId, payload: BaseResumeStore) -> BaseResume:
     """Upsert: there is one default resume per user, so submitting again replaces it.
 

@@ -43,8 +43,8 @@ async def get_job(job_id: PydanticObjectId, _: CurrentUser) -> Job:
 
 
 @router.get("/getJobDetails/{job_id}", response_model=JobDetailRead)
-async def get_job_details(job_id: PydanticObjectId, _: CurrentUser) -> JobDetailRead:
-    return await service.get_job_detail(job_id)
+async def get_job_details(job_id: PydanticObjectId, user_id: CurrentUser) -> JobDetailRead:
+    return await service.get_job_detail(job_id, user_id)
 
 
 @router.patch("/updateJob/{job_id}", response_model=JobRead)

@@ -172,6 +172,7 @@ async def test_fields_come_from_the_board() -> None:
     assert posting.refId == "ATCI-5482962-S2002430"
     assert posting.company == "Accenture"
     assert posting.location == "Hyderabad; Bengaluru, India"
+    assert posting.country == "India"
     assert posting.jobType == "full_time"
     assert posting.workMode == "hybrid"
     assert (

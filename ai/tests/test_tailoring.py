@@ -6,9 +6,14 @@ user never approved. None of them is about whether the wording reads nicely.
 
 from __future__ import annotations
 
+from pathlib import Path
+from typing import Any
+
 import pytest
 
+from agents import tailoring
 from agents.tailoring import (
+    NoBaseResume,
     Placement,
     PlacementPlan,
     SelectionGateNotPassed,
@@ -311,3 +316,69 @@ def test_two_keywords_on_one_line_are_recorded_as_a_single_change() -> None:
     assert changes[0]["previous"] == r"\skilltag{AWS}\ \skilltag{Docker}"
     assert changes[0]["text"].endswith(r"\skilltag{Kubernetes}\ \skilltag{Terraform}")
     assert changes[0]["text"] in tex
+
+
+# --- one whole run, with the server and the model faked ----------------------
+
+
+def fake_run(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, base: Any) -> list[dict[str, Any]]:
+    """`base` is the stored default resume, or the error reading it raises."""
+    stored: list[dict[str, Any]] = []
+    match = {
+        "review": {"state": "selected", "selectedKeys": ["k8s"]},
+        "missing": [{"key": "k8s", "label": "Kubernetes"}],
+    }
+
+    async def get_match(job_id: str) -> dict[str, Any]:
+        return match
+
+    async def get_profile() -> dict[str, Any]:
+        return {"work": [ROLE], "skill": GROUPS}
+
+    async def get_base_resume() -> dict[str, Any]:
+        if isinstance(base, Exception):
+            raise base
+        return base
+
+    async def store_resume(payload: dict[str, Any]) -> dict[str, Any]:
+        stored.append(payload)
+        return payload
+
+    async def plan_placements(*_: Any) -> PlacementPlan:
+        return plan(skill("Kubernetes", "Cloud"))
+
+    for name, fake in [
+        ("get_match", get_match),
+        ("get_profile", get_profile),
+        ("get_base_resume", get_base_resume),
+        ("store_resume", store_resume),
+    ]:
+        monkeypatch.setattr(tailoring.jobpilot_api, name, fake)
+    monkeypatch.setattr(tailoring, "plan_placements", plan_placements)
+    monkeypatch.setattr(tailoring, "TAILORED_DIR", tmp_path)
+    return stored
+
+
+async def test_the_tailored_tex_is_sent_with_the_resume(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The server keeps the document itself; the file on this tier's disk is not
+    something the dashboard can read."""
+    stored = fake_run(monkeypatch, tmp_path, {"tex": GRID_TEX})
+
+    await tailoring.tailor("j1")
+
+    assert "AWS, Docker, Kubernetes" in stored[0]["tex"]
+    assert stored[0]["tex"] == Path(stored[0]["filePath"]).read_text(encoding="utf-8")
+
+
+async def test_no_default_resume_is_named_rather_than_a_bare_404(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    stored = fake_run(
+        monkeypatch, tmp_path, tailoring.jobpilot_api.JobPilotApiError(404, "no default resume")
+    )
+
+    with pytest.raises(NoBaseResume):
+        await tailoring.tailor("j1")
+    assert stored == []
