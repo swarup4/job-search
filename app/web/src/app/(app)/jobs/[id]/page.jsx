@@ -20,7 +20,8 @@ import {
     getJobDetails,
     setShortlisted,
 } from "@/services";
-import { useRefreshShell } from "@/hooks/useShellCounts";
+import { useRefreshStatus } from "@/hooks/useStatus";
+import { MATCH_SCORED } from "@/hooks/useScoringRun";
 import { ROUTES } from "@/routes";
 import { renderMarkdown } from "@/util/markdown";
 import { cn } from "@/util/helper";
@@ -71,14 +72,23 @@ export default function Page() {
         load();
     }, [load]);
 
-    const refreshShell = useRefreshShell();
+    // The header's Refresh scores unscored jobs; show this one's match when it lands.
+    useEffect(() => {
+        const reload = (event) => {
+            if (event.detail?.jobId === jobId) load();
+        };
+        window.addEventListener(MATCH_SCORED, reload);
+        return () => window.removeEventListener(MATCH_SCORED, reload);
+    }, [jobId, load]);
+
+    const refreshStatus = useRefreshStatus();
     // An analysis ends with a reload, so the score appears — and a new keyword choice
     // waits in the header and sidebar badges.
     const analysis = useAnalysis(
         useCallback(async () => {
             await load();
-            await refreshShell();
-        }, [load, refreshShell])
+            await refreshStatus();
+        }, [load, refreshStatus])
     );
 
     return (
@@ -87,7 +97,7 @@ export default function Page() {
             {data.status === "error" ? <Problem>{data.error}</Problem> : null}
             {data.status === "missing" ? <Problem>This job no longer exists.</Problem> : null}
             {data.status === "ready" ? (
-                <JobDetails {...data} jobId={jobId} from={from} analysis={analysis} onShortlisted={refreshShell} />
+                <JobDetails {...data} jobId={jobId} from={from} analysis={analysis} onShortlisted={refreshStatus} />
             ) : null}
         </>
     );

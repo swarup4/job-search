@@ -11,7 +11,7 @@ import { Button } from "@/component/ui/button";
 import { Field, Input } from "@/component/ui/field";
 import { TokenInput } from "@/component/ui/token-input";
 import { ApiError, searchJobs, setShortlisted } from "@/services";
-import { useRefreshShell } from "@/hooks/useShellCounts";
+import { useRefreshStatus } from "@/hooks/useStatus";
 import { cn } from "@/util/helper";
 
 const PAGE = 20;
@@ -78,7 +78,7 @@ function SearchJobs() {
   const latest = useRef(0);
   // The query string this page last put in the URL.
   const written = useRef("");
-  const refreshShell = useRefreshShell();
+  const refreshStatus = useRefreshStatus();
 
   const set = (k) => (e) => setQ({ ...q, [k]: e.target.value });
   const setPick = (k, v) => setQ({ ...q, [k]: q[k] === v ? "" : v });
@@ -164,7 +164,7 @@ function SearchJobs() {
 
   async function toggleShortlist(job, next) {
     await setShortlisted(job.id, next);
-    refreshShell();
+    refreshStatus();
   }
 
   const { items, total, indexed } = data;

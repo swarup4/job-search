@@ -13,6 +13,7 @@ from mcp_servers.jobpilot_api.client import (
     link_description,
     list_pending_chunks,
     list_raw_descriptions,
+    list_unscored_jobs,
     reindex_profile,
     search_chunks,
     set_description_status,
@@ -20,6 +21,7 @@ from mcp_servers.jobpilot_api.client import (
     store_chunk_embeddings,
     store_resume,
     update_description,
+    update_job,
     write_match,
 )
 
@@ -39,6 +41,7 @@ __all__ = [
     "link_description",
     "list_pending_chunks",
     "list_raw_descriptions",
+    "list_unscored_jobs",
     "reindex_profile",
     "search_chunks",
     "set_description_status",
@@ -46,5 +49,6 @@ __all__ = [
     "store_chunk_embeddings",
     "store_resume",
     "update_description",
+    "update_job",
     "write_match",
 ]

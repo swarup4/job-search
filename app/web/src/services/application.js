@@ -1,23 +1,5 @@
 import { axiosInstance, orNull } from "@/lib/axiosInstance";
 
-/** GET /api/application — one status, several (an array), or omit it for all. */
-export function listApplications(status) {
-    return axiosInstance.get("/application", {
-        params: { status },
-        // Repeated keys (status=a&status=b), which is what FastAPI reads as a list.
-        paramsSerializer: { indexes: null },
-    });
-}
-
-/**
- * GET /api/application/badges — every number the header and sidebar show, and the
- * Pipeline's review banner: keyword choices waiting (and the oldest one's job), staged
- * applications, shortlisted jobs. One call for all of them.
- */
-export function getBadges() {
-    return axiosInstance.get("/application/badges");
-}
-
 /**
  * GET /api/application/tracker — the Applications screen in one call: `staged` (waiting on
  * your submit) and `submitted` (most recent first), each row with its job's title, company
@@ -27,14 +9,21 @@ export function getTracker() {
     return axiosInstance.get("/application/tracker");
 }
 
-/** GET /api/application/counts — the Pipeline's column totals for you, zeros included. */
-export function getBoardCounts() {
-    return axiosInstance.get("/application/counts");
+/** GET /api/application/board — the Pipeline in one read: column totals, the first
+ * `limit` cards of every column with your match joined in, and the unscored total. */
+export function getBoard(limit) {
+    return axiosInstance.get("/application/board", { params: { limit } });
 }
 
-/** GET /api/application/unstarted — the New column: jobs you have no application for. */
-export function listUnstartedJobs({ limit = 50, skip = 0 } = {}) {
-    return axiosInstance.get("/application/unstarted", { params: { limit, skip } });
+/** GET /api/application/board/{column} — the next cards of one column ("Show more"). */
+export function getBoardColumn(column, { skip, limit }) {
+    return axiosInstance.get(`/application/board/${column}`, { params: { skip, limit } });
+}
+
+/** GET /api/application/shortlist — your shortlisted jobs, newest first, each with its
+ * listing and your match counts joined in. One request for the whole screen. */
+export function getShortlist() {
+    return axiosInstance.get("/application/shortlist");
 }
 
 /** POST /api/application/shortlist/{jobId} — starts your application; a repeat is a no-op. */

@@ -27,7 +27,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel
 
-from config.llm import PROVENANCE, generate
+from config.llm import MATCH, generate
 from mcp_servers import jobpilot_api
 from rag import NEAR_MISS_THRESHOLD, embed_pending, nearest_spans
 
@@ -117,6 +117,24 @@ Rules:
 - At most 5 findings."""
 
 
+class NoDescription(RuntimeError):
+    """Nothing to score: no job description is stored for this job."""
+
+
+async def score_job(job_id: str) -> dict[str, Any]:
+    """Score one job from scratch: extract its requirements, fill its tech stack if it
+    has none (the extraction is paid for already), then `rectify`."""
+    job = await jobpilot_api.get_job(job_id)
+    description = await jobpilot_api.get_description_for_job(job_id)
+    if not description or not description.get("jdText", "").strip():
+        raise NoDescription("no job description is stored for this job")
+
+    requirements = await extract_requirements(_jd_text(description, job.get("techStack")))
+    if job.get("techStack") is None:
+        await jobpilot_api.update_job(job_id, {"techStack": tech_stack(requirements)})
+    return await rectify(job_id, requirements)
+
+
 async def rectify(job_id: str, requirements: list[Requirement] | None = None) -> dict[str, Any]:
     """Score one job against the profile and persist the result through `server`.
 
@@ -156,7 +174,7 @@ async def rectify(job_id: str, requirements: list[Requirement] | None = None) ->
             for item in missing
         ],
         "risks": [{"key": item.key, "title": item.title, "detail": item.detail} for item in risks],
-        "modelName": PROVENANCE,
+        "modelName": MATCH.provenance,
     }
     return await jobpilot_api.write_match(payload)
 
@@ -170,6 +188,7 @@ async def extract_requirements(jd_text: str) -> list[Requirement]:
         Extraction,
         f"Job description:\n\n{jd_text}",
         system=EXTRACT_SYSTEM,
+        endpoint=MATCH,
     )
 
     haystack = _flatten(jd_text)
@@ -232,6 +251,7 @@ async def split_by_profile(
             Diff,
             f"Requirements:\n{listing}\n\nCandidate profile:\n\n{corpus}",
             system=DIFF_SYSTEM,
+            endpoint=MATCH,
         )
         by_key = {item.key: item for item in undecided}
         for verdict in diff.verdicts:
@@ -300,6 +320,7 @@ async def detect_risks(job: dict[str, Any], jd_text: str, profile: dict[str, Any
         f"{jd_text}\n\n"
         f"Candidate:\n{profile_digest(profile)}",
         system=RISK_SYSTEM,
+        endpoint=MATCH,
     )
 
     risks: list[Risk] = []

@@ -6,13 +6,7 @@
 export { AI_URL, API_URL, ApiError, axiosInstance } from "@/lib/axiosInstance";
 
 export { getJob, getJobDetails, listJobs, searchJobs, updateJob } from "./job";
-export {
-    getMatch,
-    getMatchSummaries,
-    getUnscoredJobs,
-    recordSelection,
-    skipSelection,
-} from "./match";
+export { getMatch, recordSelection, skipSelection } from "./match";
 export {
     getBaseResume,
     getBaseResumePdf,
@@ -23,11 +17,10 @@ export {
 export { getTemplatePreview, listTemplates, renderTemplate } from "./template";
 export {
     getApplication,
-    getBadges,
-    getBoardCounts,
+    getBoard,
+    getBoardColumn,
+    getShortlist,
     getTracker,
-    listApplications,
-    listUnstartedJobs,
     setApplicationStatus,
     setShortlisted,
     shortlistJob,
@@ -56,14 +49,8 @@ export {
     updateProfile,
     updateSkill,
 } from "./profile";
-export { getShellCounts } from "./shell";
-export {
-    getDiscoveryRun,
-    getTierSettings,
-    listCareerSources,
-    startDiscovery,
-    updateCareerSource,
-} from "./discovery";
+export { getStatus } from "./status";
+export { getTierSettings, listCareerSources, updateCareerSource } from "./discovery";
 export { getPreferences, savePreferences } from "./preference";
-export { followAnalysis, getAnalysisRun, startAnalysis } from "./analysis";
+export { followRun, startRun } from "./runs";
 export { tailorResume } from "./tailoring";

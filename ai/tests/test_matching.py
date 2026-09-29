@@ -61,7 +61,7 @@ def answers(*replies: object):
     """Stand in for the model, one reply per call, in order."""
     queue = list(replies)
 
-    async def fake(shape, prompt, *, system, max_tokens=2048):
+    async def fake(shape, prompt, *, system, max_tokens=2048, endpoint=None):
         return queue.pop(0)
 
     return fake

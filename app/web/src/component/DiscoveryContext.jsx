@@ -2,33 +2,46 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 
-import { ApiError, getDiscoveryRun, listCareerSources, startDiscovery, updateCareerSource } from "@/services";
-import { usePolledRun } from "@/hooks/usePolledRun";
+import { ApiError, listCareerSources, updateCareerSource } from "@/services";
+import { useRun } from "@/hooks/useRun";
+import { useRefreshStatus } from "@/hooks/useStatus";
+import { toast } from "@/component/ui/toast";
 
 const DiscoveryContext = createContext(null);
 
 /**
  * One copy of the career sources and the current run for the whole Settings page,
- * so the Sources rail and the Last run panel read the same state and poll once.
- * When a run ends the sources are re-read, since every company's result is also
- * stored on its source.
+ * so the Sources rail and the Last run panel read the same state and follow one
+ * stream. When a run ends the sources are re-read, since every company's result is
+ * also stored on its source.
  */
 export function DiscoveryProvider({ children }) {
     const [sources, setSources] = useState(null);
     const [starting, setStarting] = useState(false);
     const loading = useRef(false);
-
-    // When a run ends, re-read the sources: every company's result is stored on it.
-    const poll = usePolledRun(getDiscoveryRun, () => loadSources());
-    const { setError } = poll;
+    const refreshStatus = useRefreshStatus();
+    // loadSources reports into the run's error line, which exists only after useRun.
+    const reportError = useRef(() => {});
 
     const loadSources = useCallback(async () => {
         try {
             setSources(await listCareerSources());
         } catch (failure) {
-            setError(messageOf(failure, "Could not read the career sources."));
+            reportError.current(messageOf(failure, "Could not read the career sources."));
         }
-    }, [setError]);
+    }, []);
+
+    // Asked on load, so the Last run panel shows the latest run and follows it if going.
+    const poll = useRun("discovery", {
+        attachOnMount: true,
+        onFinished: ({ status, error, new: found }) => {
+            if (status === "failed") toast.error(error ?? "Discovery stopped.");
+            else toast.success(`Discovery finished — ${found} new job${found === 1 ? "" : "s"}.`);
+            loadSources();
+            refreshStatus();
+        },
+    });
+    reportError.current = poll.setError;
 
     useEffect(() => {
         // A ref, not state: React's development double-mount fires this twice.
@@ -39,11 +52,8 @@ export function DiscoveryProvider({ children }) {
 
     async function start() {
         setStarting(true);
-        poll.setError(null);
         try {
-            poll.watch(await startDiscovery());
-        } catch (failure) {
-            poll.setError(messageOf(failure, "Could not start a discovery run."));
+            await poll.start();
         } finally {
             setStarting(false);
         }

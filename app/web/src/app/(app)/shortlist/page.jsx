@@ -9,14 +9,8 @@ import { ViewToggle } from "@/component/ViewToggle";
 import { Panel, PanelBody } from "@/component/ui/panel";
 import { buttonVariants } from "@/component/ui/button";
 import { Input } from "@/component/ui/field";
-import {
-  ApiError,
-  getJob,
-  getMatchSummaries,
-  listApplications,
-  unshortlistJob,
-} from "@/services";
-import { useRefreshShell } from "@/hooks/useShellCounts";
+import { ApiError, getShortlist, unshortlistJob } from "@/services";
+import { useRefreshStatus } from "@/hooks/useStatus";
 import { ROUTES } from "@/routes";
 
 /**
@@ -28,17 +22,15 @@ export default function Page() {
   const [filter, setFilter] = useState("");
   const [data, setData] = useState({ status: "loading", saved: [] });
   const fetching = useRef(false);
-  const refreshShell = useRefreshShell();
+  const refreshStatus = useRefreshStatus();
 
   const load = useCallback(async () => {
     try {
-      const applications = await listApplications("shortlisted");
-      const jobs = (await Promise.all(applications.map((row) => getJob(row.jobId)))).filter(Boolean);
-      const summaries = await getMatchSummaries(jobs.map((job) => job.id));
-      const byJob = new Map(summaries.map((summary) => [summary.jobId, summary]));
+      // One request: each row is the job's listing with your match counts joined in.
+      const rows = await getShortlist();
       setData({
         status: "ready",
-        saved: jobs.map((job) => toListItem(job, byJob.get(job.id), { shortlisted: true })),
+        saved: rows.map((row) => toListItem(row, row.score != null ? row : null, { shortlisted: true })),
       });
     } catch (failure) {
       setData({
@@ -60,7 +52,7 @@ export default function Page() {
   async function remove(job) {
     await unshortlistJob(job.id);
     setData((current) => ({ ...current, saved: current.saved.filter((item) => item.id !== job.id) }));
-    refreshShell();
+    refreshStatus();
   }
 
   const { saved } = data;

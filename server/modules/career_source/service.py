@@ -8,6 +8,7 @@ from modules.career_source.models import (
     CareerSourceCreate,
     CareerSourceCreated,
     CareerSourceUpdate,
+    DiscoverySummary,
     Platform,
     RunResult,
 )
@@ -69,3 +70,16 @@ async def record_result(source_id: PydanticObjectId, result: RunResult) -> Caree
     source.lastResult = result
     await source.save()
     return source
+
+
+async def last_run_summary() -> DiscoverySummary:
+    sources = await CareerSource.find({"lastResult": {"$ne": None}}).to_list()
+    results = [source.lastResult for source in sources if source.lastResult is not None]
+    return DiscoverySummary(
+        lastRunAt=max((s.lastRunAt for s in sources if s.lastRunAt), default=None),
+        companies=len(results),
+        ok=sum(1 for r in results if not r.blocked and not r.error and not r.failed),
+        failed=sum(1 for r in results if not r.blocked and (r.error or r.failed)),
+        blocked=sum(1 for r in results if r.blocked),
+        newJobs=sum(r.new for r in results),
+    )

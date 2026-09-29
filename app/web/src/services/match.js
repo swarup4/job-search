@@ -6,24 +6,6 @@ export function getMatch(jobId) {
 }
 
 /**
- * GET /api/match/summaries — score, review state and first risk for many jobs in one
- * call. A job with no match is absent from the answer, not an error.
- */
-export function getMatchSummaries(jobIds) {
-    if (!jobIds.length) return Promise.resolve([]);
-    // Repeated keys (jobIds=a&jobIds=b), which is what FastAPI reads as a list.
-    return axiosInstance.get("/match/summaries", {
-        params: { jobIds },
-        paramsSerializer: { indexes: null },
-    });
-}
-
-/** GET /api/match/unscored — `total` jobs you have not scored yet, and the newest `limit`. */
-export function getUnscoredJobs(limit = 0) {
-    return axiosInstance.get("/match/unscored", { params: { limit } });
-}
-
-/**
  * POST /api/match/{jobId}/selection — resolves the FR-7.3 keyword interrupt.
  *
  * `selectedKeys` must be keys the agent offered in `missing`; the server rejects

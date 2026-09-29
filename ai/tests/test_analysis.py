@@ -277,7 +277,7 @@ async def api(
 
     monkeypatch.setattr(analysis, "analyze_many", analyze_many)
     transport = ASGITransport(app=create_app())
-    async with AsyncClient(transport=transport, base_url="http://test/api/analysis") as http:
+    async with AsyncClient(transport=transport, base_url="http://test/api/runs") as http:
         yield http, release, seen
 
 
@@ -292,20 +292,20 @@ GOOD = {"Authorization": "Bearer good"}
 
 async def test_one_job_from_its_card(api) -> None:
     http, release, _ = api
-    started = await http.post("/run", json={"jobIds": ["j9"]}, headers=GOOD)
+    started = await http.post("/analysis/start", json={"jobIds": ["j9"]}, headers=GOOD)
     assert started.status_code == 202, started.text
     assert started.json()["jobIds"] == ["j9"]
 
     release.set()
     await finish()
-    run = (await http.get("/run", headers=GOOD)).json()
+    run = analysis_api._slot.run.model_dump(mode="json")
     assert run["status"] == "done"
     assert [r["jobId"] for r in run["results"]] == ["j9"]
 
 
 async def test_the_newest_new_jobs_in_bulk(api) -> None:
     http, release, seen = api
-    started = await http.post("/run", json={"newest": 2}, headers=GOOD)
+    started = await http.post("/analysis/start", json={"newest": 2}, headers=GOOD)
     assert started.json()["jobIds"] == ["n1", "n2"]
     release.set()
     await finish()
@@ -315,16 +315,22 @@ async def test_the_newest_new_jobs_in_bulk(api) -> None:
 async def test_exactly_one_way_to_choose_jobs(api) -> None:
     http, _, _ = api
     for body in ({}, {"jobIds": ["a"], "newest": 3}, {"newest": 500}):
-        assert (await http.post("/run", json=body, headers=GOOD)).status_code == 422
+        assert (await http.post("/analysis/start", json=body, headers=GOOD)).status_code == 422
 
 
-async def test_one_run_at_a_time_and_only_its_owner_sees_it(api) -> None:
+async def test_one_run_at_a_time_and_a_second_start_joins_it(api) -> None:
+    """Yours already running: the start answers that run, so the page follows it."""
     http, release, _ = api
-    await http.post("/run", json={"jobIds": ["j1"]}, headers=GOOD)
-    assert (await http.post("/run", json={"jobIds": ["j2"]}, headers=GOOD)).status_code == 409
+    first = (await http.post("/analysis/start", json={"jobIds": ["j1"]}, headers=GOOD)).json()
+    again = await http.post("/analysis/start", json={"jobIds": ["j2"]}, headers=GOOD)
+    other = await http.post(
+        "/analysis/start", json={"jobIds": ["j3"]}, headers={"Authorization": "Bearer other"}
+    )
     release.set()
     await finish()
-    assert (await http.get("/run", headers={"Authorization": "Bearer other"})).json() is None
+
+    assert again.status_code == 200 and again.json()["id"] == first["id"]
+    assert other.status_code == 409
 
 
 def parse_stream(body: str) -> list[tuple[str, str, dict[str, Any]]]:
@@ -341,41 +347,58 @@ def parse_stream(body: str) -> list[tuple[str, str, dict[str, Any]]]:
 
 async def test_every_step_is_streamed_and_the_stream_ends_with_the_run(api) -> None:
     http, release, _ = api
-    await http.post("/run", json={"jobIds": ["j9"]}, headers=GOOD)
+    await http.post("/analysis/start", json={"jobIds": ["j9"]}, headers=GOOD)
     release.set()
     await finish()
 
-    response = await http.get("/run/events", headers=GOOD)
+    response = await http.get("/analysis/events", headers=GOOD)
 
     assert response.headers["content-type"].startswith("text/event-stream")
     events = parse_stream(response.text)
-    assert [kind for _, kind, _ in events] == ["step_started", "step", "job_done", "run_done"]
-    assert events[2][2]["score"] == 60
-    assert events[-1][2] == {"type": "run_done", "status": "done", "error": None}
+    assert [kind for _, kind, _ in events] == [
+        "run_started", "step_started", "step", "job_done", "run_done",
+    ]  # fmt: skip
+    # The first event is the run itself — how a page finds its latest run.
+    assert events[0][2]["run"]["jobIds"] == ["j9"]
+    assert events[3][2]["score"] == 60
+    done = events[-1][2]
+    assert (done["status"], done["error"], done["finishedAt"] is not None) == ("done", None, True)
+
+
+async def test_events_from_before_the_stream_opened_are_marked_replay(api) -> None:
+    """A page joining late shows them, but does not announce them again."""
+    http, release, _ = api
+    await http.post("/analysis/start", json={"jobIds": ["j9"]}, headers=GOOD)
+    release.set()
+    await finish()
+
+    events = parse_stream((await http.get("/analysis/events", headers=GOOD)).text)
+
+    assert all(data["replay"] for _, _, data in events)
 
 
 async def test_a_reconnect_resumes_after_the_last_event_seen(api) -> None:
     http, release, _ = api
-    await http.post("/run", json={"jobIds": ["j9"]}, headers=GOOD)
+    await http.post("/analysis/start", json={"jobIds": ["j9"]}, headers=GOOD)
     release.set()
     await finish()
 
-    response = await http.get("/run/events", headers={**GOOD, "Last-Event-ID": "1"})
+    response = await http.get("/analysis/events", headers={**GOOD, "Last-Event-ID": "2"})
 
     assert [kind for _, kind, _ in parse_stream(response.text)] == ["job_done", "run_done"]
 
 
 async def test_another_account_cannot_follow_the_run(api) -> None:
     http, release, _ = api
-    await http.post("/run", json={"jobIds": ["j9"]}, headers=GOOD)
+    await http.post("/analysis/start", json={"jobIds": ["j9"]}, headers=GOOD)
     release.set()
     await finish()
 
-    response = await http.get("/run/events", headers={"Authorization": "Bearer other"})
+    response = await http.get("/analysis/events", headers={"Authorization": "Bearer other"})
 
     assert response.status_code == 404
 
 
 async def test_needs_a_token(api) -> None:
     http, _, _ = api
-    assert (await http.post("/run", json={"newest": 1})).status_code == 401
+    assert (await http.post("/analysis/start", json={"newest": 1})).status_code == 401

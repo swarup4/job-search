@@ -6,7 +6,7 @@ import Link from "next/link";
 import { ArrowRight, ChevronLeft, FileText, Loader2, RefreshCw, Sparkles } from "lucide-react";
 
 import { ApiError, getMatch, getResume, tailorResume } from "@/services";
-import { useRefreshShell } from "@/hooks/useShellCounts";
+import { useRefreshStatus } from "@/hooks/useStatus";
 import { Badge } from "@/component/ui/badge";
 import { Panel } from "@/component/ui/panel";
 import { Button, buttonVariants } from "@/component/ui/button";
@@ -26,7 +26,7 @@ function sameKeys(a, b) {
 export default function Page() {
     const { id: jobId } = useParams();
     const from = useSearchParams().get("from") ?? undefined;
-    const refreshShell = useRefreshShell();
+    const refreshStatus = useRefreshStatus();
 
     const [match, setMatch] = useState(null);
     const [resume, setResume] = useState(null);
@@ -69,7 +69,7 @@ export default function Page() {
         try {
             setResume(await tailorResume(jobId));
             setActiveLine(null);
-            refreshShell();
+            refreshStatus();
         } catch (failure) {
             setTailorError(failure instanceof ApiError ? failure.message : "Could not tailor the resume.");
         } finally {
