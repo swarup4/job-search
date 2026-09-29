@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSelector } from "react-redux";
 
 import { useRefreshStatus } from "@/hooks/useStatus";
-import { Sidebar } from "@/layout/Sidebar";
+import { MobileNav, Sidebar } from "@/layout/Sidebar";
 import { Topbar } from "@/layout/Topbar";
 import { ROUTES } from "@/routes";
 import { selectAuthStatus } from "@/store/auth/authSlice";
@@ -30,7 +30,8 @@ export function AppShell({ children }) {
     return (
         <div className="min-h-screen bg-background">
             <Topbar />
-            <div className="mx-auto flex max-w-[1560px] gap-5 px-6 py-6">
+            <MobileNav />
+            <div className="mx-auto flex max-w-[1560px] gap-5 px-4 py-4 sm:px-6 sm:py-6">
                 <Sidebar />
                 <main className="min-w-0 grow">{children}</main>
             </div>

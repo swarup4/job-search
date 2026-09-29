@@ -190,3 +190,14 @@ export interface CaptureCreated {
     id: string;
     duplicate: boolean;
 }
+
+/** What the AI tier made of a stored capture: the job, or why there is none. */
+export interface CaptureProcessed {
+    parsed: boolean;
+    jobId: string | null;
+    duplicate: boolean;
+    title: string | null;
+    company: string | null;
+    technologies: number;
+    reason: string | null;
+}

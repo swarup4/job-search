@@ -29,11 +29,14 @@ async def fetch(
     http: Fetcher,
     is_stored: Callable[[str], Awaitable[bool]],
     filters: Filters,
+    limit: int | None = None,
 ) -> Harvest:
     """`is_stored` answers whether a listing URL is already a stored description. A
     stored posting is not fetched again: a daily re-run would otherwise re-download
     every detail only to be told it is a duplicate. `filters` is the run's Search
-    targets — one search per title, capped at `workdayMaxPages` pages each."""
+    targets — one search per title, capped at `workdayMaxPages` pages each. `limit` is
+    how many new postings the run can still take: no more details than that are
+    fetched."""
     settings = source["config"]
     tenant, site = settings["tenant"], settings["site"]
     origin = f"https://{tenant}.{settings['wd']}.myworkdayjobs.com"
@@ -73,6 +76,8 @@ async def fetch(
     stored = await asyncio.gather(*(is_stored(f"{origin}/{site}{path}") for path in ordered))
     fresh = [path for path, known in zip(ordered, stored, strict=True) if not known]
     harvest.known = len(ordered) - len(fresh)
+    if limit is not None:
+        fresh = fresh[:limit]
 
     details = await asyncio.gather(
         *(http.get_json(f"{api}{path}") for path in fresh), return_exceptions=True

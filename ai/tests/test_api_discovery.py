@@ -75,13 +75,15 @@ class Held(asyncio.Event):
     def __init__(self) -> None:
         super().__init__()
         self.filters: list[Any] = []
+        self.limits: list[int | None] = []
 
 
 def scrape_with(monkeypatch: pytest.MonkeyPatch, behaviour: Any) -> Held:
     """Replace the scrape itself."""
     release = Held()
 
-    async def run_all(sources, filters=None, on_result=None):
+    async def run_all(sources, filters=None, on_result=None, limit=None):
+        release.limits.append(limit)
         release.filters.append(filters)
         await release.wait()
         return await behaviour(sources, on_result)
@@ -152,7 +154,7 @@ async def test_another_account_does_not_see_the_run(
     await finish()
 
     seen = await api.get("/discovery/events", headers={"Authorization": "Bearer other"})
-    assert seen.status_code == 404
+    assert seen.status_code == 204
 
 
 async def test_a_token_that_expires_mid_run_says_so(
@@ -186,7 +188,7 @@ async def test_polling_does_not_recheck_the_token_every_time(
     for _ in range(5):
         # No run yet: a 404, but only after the token was accepted.
         response = await api.get("/discovery/events", headers={"Authorization": "Bearer good"})
-        assert response.status_code == 404
+        assert response.status_code == 204
     assert fake.account_checks == 1
 
 
@@ -265,4 +267,35 @@ async def test_another_account_cannot_follow_a_discovery_run(
 
     response = await api.get("/discovery/events", headers={"Authorization": "Bearer other"})
 
-    assert response.status_code == 404
+    assert response.status_code == 204
+
+
+async def test_a_limit_is_kept_on_the_run_and_passed_to_the_scrape(
+    api: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    release = scrape_with(monkeypatch, reports_each)
+    started = await api.post(
+        "/discovery/start", json={"limit": 10}, headers={"Authorization": "Bearer good"}
+    )
+    release.set()
+    await finish()
+
+    assert started.json()["limit"] == 10
+    assert release.limits == [10]
+
+
+async def test_no_body_means_no_limit(api: AsyncClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    release = scrape_with(monkeypatch, reports_each)
+    started = await api.post("/discovery/start", headers={"Authorization": "Bearer good"})
+    release.set()
+    await finish()
+
+    assert started.json()["limit"] is None
+    assert release.limits == [None]
+
+
+async def test_a_limit_below_one_is_refused(api: AsyncClient) -> None:
+    response = await api.post(
+        "/discovery/start", json={"limit": 0}, headers={"Authorization": "Bearer good"}
+    )
+    assert response.status_code == 422

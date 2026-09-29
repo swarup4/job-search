@@ -1,7 +1,9 @@
 """P3-14 — turn a captured page into a `Job`.
 
-A capture is markdown of a career page. This reads it and writes the listing row the
-board shows, then links the two. Discovery by connector (`P3-02`/`P3-03`) will write
+A capture is markdown of a career page. This reads it — title, company, location, the
+four details and the tech stack, in one model call — and writes the listing row the
+board shows, then links the two. Analyze later has only the embedding and the match
+left to do. Discovery by connector (`P3-02`/`P3-03`) will write
 the same shape without an LLM; this is the path for pages a human captured.
 
 Every field written has to be findable in the page. A title or a company the model
@@ -18,6 +20,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from agents.analysis import JobDetails, verify_details
 from config.llm import generate
 from mcp_servers.jobpilot_api import client
 
@@ -49,6 +52,9 @@ Rules:
   Prefer the shortest form the page uses, and return at most 20.
 - `jobType` is one of full_time, contract, part_time, internship, or null.
 - `workMode` is one of on_site, hybrid, remote, or null.
+- `experience` and `salary` are copied from the page verbatim — the exact words it uses,
+  e.g. "6-10 years", "Minimum 8 years of experience", "₹40–55 LPA". Never compute, convert,
+  round or combine figures; null when the page does not state them.
 - `refId` is the board's own requisition id if the page shows one, else null."""
 
 
@@ -59,6 +65,8 @@ class ParsedPosting(BaseModel):
     location: str = ""
     jobType: str | None = None
     workMode: str | None = None
+    experience: str | None = None
+    salary: str | None = None
     refId: str | None = None
     requirements: list[str] = Field(default_factory=list)
 
@@ -117,10 +125,25 @@ async def parse_description(description_id: str) -> ParseOutcome:
     }
     if posting.refId and _flatten(posting.refId) in flat:
         payload["refId"] = posting.refId
-    if posting.jobType in JOB_TYPES:
-        payload["jobType"] = posting.jobType
-    if posting.workMode in WORK_MODES:
-        payload["workMode"] = posting.workMode
+    # The same checks Analyze's details step applies, so a capture never has to be read
+    # twice: figures verbatim, and a work mode or job type only when a word says so.
+    details = verify_details(
+        JobDetails(
+            experience=posting.experience,
+            salary=posting.salary,
+            workMode=posting.workMode if posting.workMode in WORK_MODES else None,
+            jobType=posting.jobType if posting.jobType in JOB_TYPES else None,
+        ),
+        page,
+    )
+    for field, value in {
+        "experienceBand": details.experience,
+        "salaryText": details.salary,
+        "workMode": details.workMode,
+        "jobType": details.jobType,
+    }.items():
+        if value is not None:
+            payload[field] = value
 
     created = await client.create_job(payload)
     job_id = created["id"]

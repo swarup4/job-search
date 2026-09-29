@@ -31,12 +31,15 @@ export function DiscoveryProvider({ children }) {
         }
     }, []);
 
-    // Asked on load, so the Last run panel shows the latest run and follows it if going.
+    // Followed only once you press Run discovery; until then the Last run panel shows
+    // the stored summary from the status store, and a second press rejoins a run going.
     const poll = useRun("discovery", {
-        attachOnMount: true,
-        onFinished: ({ status, error, new: found }) => {
+        onFinished: ({ status, error, new: found, limit }) => {
             if (status === "failed") toast.error(error ?? "Discovery stopped.");
-            else toast.success(`Discovery finished — ${found} new job${found === 1 ? "" : "s"}.`);
+            else
+                toast.success(
+                    `Discovery finished — ${found} new job${found === 1 ? "" : "s"}${limit ? ` (limit ${limit})` : ""}.`
+                );
             loadSources();
             refreshStatus();
         },
@@ -50,10 +53,11 @@ export function DiscoveryProvider({ children }) {
         loadSources();
     }, [loadSources]);
 
-    async function start() {
+    /** `limit`: stop once that many new jobs are stored; omitted, scrape everything. */
+    async function start(limit) {
         setStarting(true);
         try {
-            await poll.start();
+            await poll.start(limit ? { limit } : undefined);
         } finally {
             setStarting(false);
         }

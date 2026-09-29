@@ -20,7 +20,7 @@ export default async function Page() {
                 subtitle="Your resume material. Tailoring may only draw on what exists here — that constraint is what makes the no-fabrication rule enforceable."
             />
 
-            <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="grid grid-cols-[minmax(0,1fr)] gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
                 <div className="flex flex-col gap-5">
                     <ProfileEditor />
                 </div>

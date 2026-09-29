@@ -1,10 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { AlertTriangle, Play, RefreshCw } from "lucide-react";
 
 import { useDiscovery } from "@/component/DiscoveryContext";
 import { Panel, PanelHeader, PanelTitle } from "@/component/ui/panel";
 import { Button } from "@/component/ui/button";
+import { Input } from "@/component/ui/field";
 import { Toggle } from "@/component/ui/toggle";
 import { Tooltip } from "@/component/ui/tooltip";
 import { cn } from "@/util/helper";
@@ -20,17 +22,48 @@ export function DiscoverySources() {
 
     const live = new Map((running ? run.results : []).map((result) => [result.name, result]));
     const enabled = sources?.filter((source) => source.enabled).length ?? 0;
+    // Empty is "every new job"; anything else must be a whole number from 1 to 500.
+    const [limit, setLimit] = useState("");
+    const limitValue = limit.trim() ? Number(limit) : null;
+    const limitOk = limitValue === null || (Number.isInteger(limitValue) && limitValue >= 1 && limitValue <= 500);
 
     return (
         <Panel>
             <PanelHeader>
                 <PanelTitle>Sources</PanelTitle>
                 <span className="grow" />
-                <Button size="sm" onClick={start} disabled={running || starting || !enabled}>
+                <Button
+                    size="sm"
+                    className="shrink-0"
+                    onClick={() => start(limitValue)}
+                    disabled={running || starting || !enabled || !limitOk}
+                >
                     {running ? <RefreshCw className="animate-spin" /> : <Play />}
                     {running ? "Running…" : "Run discovery"}
                 </Button>
             </PanelHeader>
+
+            {/* Its own row: the rail is too narrow for the title, this and the button. */}
+            <label className="flex items-center gap-2 border-b border-border px-5 py-2.5 text-[12.5px] text-muted-foreground">
+                <span className="whitespace-nowrap">Stop after</span>
+                <Input
+                    type="number"
+                    min={1}
+                    max={500}
+                    inputMode="numeric"
+                    placeholder="all"
+                    value={limit}
+                    onChange={(event) => setLimit(event.target.value)}
+                    invalid={!limitOk}
+                    disabled={running}
+                    aria-label="Most new jobs to store"
+                    className="h-8 w-[76px] shrink-0 px-2 text-[13px]"
+                />
+                <span className="whitespace-nowrap">new jobs</span>
+                {limitOk ? null : (
+                    <span className="ml-auto text-right text-[12px] text-risk-ink">a whole number, 1–500</span>
+                )}
+            </label>
 
             <p className="border-b border-border px-5 py-3 text-[12.5px] text-muted-foreground">
                 {summary(sources, enabled, run)}
@@ -94,11 +127,12 @@ function summary(sources, enabled, run) {
 
     const base = `${enabled} of ${sources.length} companies enabled`;
     if (!run) return base;
-    if (run.status === "running") return `${base} · ${run.results.length} of ${run.companies} done`;
+    const cap = run.limit ? ` · up to ${run.limit} new` : "";
+    if (run.status === "running") return `${base} · ${run.results.length} of ${run.companies} done${cap}`;
     if (run.status === "failed") return `${base} · last run stopped: ${run.error}`;
 
     const found = run.results.reduce((total, result) => total + result.new, 0);
-    return `${base} · last run found ${found} new job${found === 1 ? "" : "s"}`;
+    return `${base} · last run found ${found} new job${found === 1 ? "" : "s"}${run.limit ? ` (limit ${run.limit})` : ""}`;
 }
 
 function describe(source, live, running) {
@@ -106,6 +140,7 @@ function describe(source, live, running) {
 
     const result = live.get(source.name) ?? (running ? null : source.lastResult);
     if (!result) return running ? "waiting…" : "not run yet";
+    if (result.skipped) return "skipped — limit reached";
     if (result.blocked) return "blocked by robots.txt";
     if (result.error && !result.new && !result.duplicate) return `error — ${result.error}`;
 

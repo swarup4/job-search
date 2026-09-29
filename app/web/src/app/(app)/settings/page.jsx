@@ -21,14 +21,16 @@ export default function Page() {
             />
 
             <DiscoveryProvider>
-                <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
-                    <div className="flex flex-col gap-5">
+                {/* minmax(0, …) and min-w-0: a grid column otherwise grows to its widest
+                    unbreakable line, which pushed the page wider than a phone. */}
+                <div className="grid grid-cols-[minmax(0,1fr)] gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+                    <div className="flex min-w-0 flex-col gap-5">
                         <SearchTargets />
                         <DiscoveryRunPanel />
                     </div>
 
                     {/* rail */}
-                    <div className="flex flex-col gap-5">
+                    <div className="flex min-w-0 flex-col gap-5">
                         <DiscoverySources />
 
                         <ModelsPanel />

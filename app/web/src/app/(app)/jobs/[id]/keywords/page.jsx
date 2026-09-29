@@ -173,7 +173,7 @@ export default function Page() {
                 />
             ) : null}
 
-            <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)]">
+            <div className="mt-5 grid grid-cols-[minmax(0,1fr)] gap-5 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)]">
                 <Panel className="self-start">
                     <PanelHeader>
                         <PanelTitle>Already in your resume</PanelTitle>

@@ -15,7 +15,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 import config  # noqa: F401 — imported for its .env load
-from api import analysis, discovery, scoring, settings, tailoring
+from api import analysis, capture, discovery, scoring, settings, tailoring
 
 
 def create_app() -> FastAPI:
@@ -23,6 +23,8 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+        # The unpacked extension, which calls /api/capture right after storing a page.
+        allow_origin_regex=r"^chrome-extension://[a-p]{32}$",
         allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -32,6 +34,7 @@ def create_app() -> FastAPI:
     app.include_router(analysis.router, prefix="/api/runs/analysis")
     app.include_router(tailoring.router, prefix="/api/tailoring")
     app.include_router(scoring.router, prefix="/api/runs/scoring")
+    app.include_router(capture.router, prefix="/api/capture")
 
     @app.get("/health")
     async def health() -> dict[str, str]:

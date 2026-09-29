@@ -44,24 +44,49 @@ export function Capture({ tabId }: { tabId: number }) {
         <div className="stack">
             <button type="button" onClick={capture} disabled={state.kind === "busy"}>
                 {state.kind === "busy"
-                    ? "Capturing…"
+                    ? "Capturing and reading…"
                     : state.kind === "done"
                       ? "Capture again"
                       : "Capture this page"}
             </button>
 
-            {state.kind === "done" ? (
-                state.outcome.duplicate ? (
-                    <p className="hint">Already captured — this page has not changed.</p>
-                ) : (
-                    <p className="hint">
-                        Saved {Math.max(1, Math.round(state.outcome.characters / 1000))}k characters
-                        and {state.outcome.links} links from {REGION_NAMES[state.outcome.region]}.
-                    </p>
-                )
-            ) : null}
+            {state.kind === "done" ? <Result outcome={state.outcome} /> : null}
 
             {state.kind === "failed" ? <p className="error">{state.message}</p> : null}
         </div>
+    );
+}
+
+/** Stored, then read: the job it became, why it is not one, or why reading failed. */
+function Result({ outcome }: { outcome: CaptureOutcome }) {
+    if (outcome.duplicate && !outcome.processed && !outcome.processError) {
+        return <p className="hint">Already captured — this page has not changed.</p>;
+    }
+
+    const stored = `Saved ${Math.max(1, Math.round(outcome.characters / 1000))}k characters from ${REGION_NAMES[outcome.region]}.`;
+    if (outcome.processError) {
+        return (
+            <>
+                <p className="hint">{stored}</p>
+                <p className="error">Could not read it into a job: {outcome.processError}</p>
+            </>
+        );
+    }
+
+    const job = outcome.processed;
+    if (!job?.parsed) {
+        return (
+            <>
+                <p className="hint">{stored}</p>
+                <p className="error">Not a job posting — {job?.reason ?? "nothing to read"}.</p>
+            </>
+        );
+    }
+    return (
+        <p className="hint">
+            {job.duplicate ? "Already a job" : "Saved"}: <strong>{job.title}</strong> at {job.company} —{" "}
+            {job.technologies} {job.technologies === 1 ? "technology" : "technologies"}. Analyze it on the
+            dashboard for the match score.
+        </p>
     );
 }

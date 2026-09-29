@@ -45,7 +45,7 @@ export default function Page() {
                 {status.syncedAt ? <AnalyzeNewJobs analysis={analysis} unscored={status.jobs.unscored} /> : null}
             </PageHeader>
 
-            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid grid-cols-[minmax(0,1fr)] gap-5 sm:grid-cols-2 xl:grid-cols-4">
                 <StatCard icon={Briefcase} value={counts?.new ?? "—"} label="New" />
                 <StatCard icon={CheckCheck} value={counts?.shortlisted ?? "—"} label="Reviewed" tone="muted" />
                 <StatCard icon={FileCheck2} value={counts?.staged ?? "—"} label="Resumes tailored" tone="muted" />
@@ -68,7 +68,7 @@ export default function Page() {
             ) : null}
 
             {ready ? (
-                <div className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-5">
+                <div className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-5 md:grid-cols-2 xl:grid-cols-5">
                     {COLUMNS.map((column) => {
                         const data = board.columns[column.key];
                         return (

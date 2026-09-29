@@ -223,7 +223,7 @@ function ExperienceForm({ entry, onSave, onCancel }) {
                     />
                 </Field>
 
-                <div className="grid gap-5 sm:grid-cols-2">
+                <div className="grid grid-cols-[minmax(0,1fr)] gap-5 sm:grid-cols-2">
                     <Field label="Company" error={error("company")}>
                         <Input
                             placeholder="Acme Corp"
@@ -237,7 +237,7 @@ function ExperienceForm({ entry, onSave, onCancel }) {
                     </Field>
                 </div>
 
-                <div className="grid gap-5 sm:grid-cols-2">
+                <div className="grid grid-cols-[minmax(0,1fr)] gap-5 sm:grid-cols-2">
                     <Field label="Start" error={error("startYear")}>
                         <div className="flex gap-2.5">
                             <Select className="w-[104px]" {...formik.getFieldProps("startMonth")}>

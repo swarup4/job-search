@@ -122,16 +122,15 @@ class NoDescription(RuntimeError):
 
 
 async def score_job(job_id: str) -> dict[str, Any]:
-    """Score one job from scratch: extract its requirements, fill its tech stack if it
-    has none (the extraction is paid for already), then `rectify`."""
+    """Score one job from scratch: extract its requirements, then `rectify`."""
     job = await jobpilot_api.get_job(job_id)
     description = await jobpilot_api.get_description_for_job(job_id)
     if not description or not description.get("jdText", "").strip():
         raise NoDescription("no job description is stored for this job")
 
+    # The tech stack is left to capture and Analyze, which read the details with it:
+    # a stack written here would tell Analyze the details were read when they were not.
     requirements = await extract_requirements(_jd_text(description, job.get("techStack")))
-    if job.get("techStack") is None:
-        await jobpilot_api.update_job(job_id, {"techStack": tech_stack(requirements)})
     return await rectify(job_id, requirements)
 
 
