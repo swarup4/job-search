@@ -324,6 +324,16 @@ the API. The other sources, archiving and the scheduler are still open.
   kind-specific service calls are gone. 2 new tests in `ai/tests/test_api_discovery.py`
 
 **UI**
+- ✅ `P3-39` **Run discovery with a limit.** `POST /api/runs/discovery/start` takes an optional
+  `{"limit": N}` (1–500): the run stops once N **new** jobs are stored — duplicates do not
+  count, since a stored posting is recognised before its detail is fetched. The limit is one
+  budget shared by the companies running at once; each adapter is told how many the run can
+  still take, so Workday fetches no more details than that, and a company reached after the
+  budget is spent is reported `skipped` and keeps its last real result. Omitted, the run
+  scrapes everything as before. Settings has an "Up to [ ] new" box beside **Run discovery**
+  (empty = all); the rail, the Last run panel and the finishing toast show the limit. 8 tests.
+  *With four companies at once, a few extra detail requests can be in flight when the limit
+  lands; the number stored is still exact*
 - ✅ `P3-08` Job Search screen built (multi-field search + facets)
 - ✅ `P3-09` Shortlist / Match Review screen built
 - ✅ `P3-10` Job Details screen built

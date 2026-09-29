@@ -131,3 +131,67 @@ function Nav({ active }) {
         </nav>
     );
 }
+
+
+/**
+ * The same links and badges for screens too narrow for the sidebar (below `lg`): one
+ * row under the header that scrolls sideways rather than wrapping.
+ */
+export function MobileNav() {
+    return (
+        <Suspense fallback={<MobileLinks active={null} />}>
+            <RoutedMobileNav />
+        </Suspense>
+    );
+}
+
+function RoutedMobileNav() {
+    const pathname = usePathname();
+    const from = useSearchParams().get("from");
+    return <MobileLinks active={activeHref(pathname, from)} />;
+}
+
+function MobileLinks({ active }) {
+    const { badges } = useSelector(selectStatus);
+    return (
+        <nav
+            aria-label="Sections"
+            className="border-b border-border bg-card lg:hidden"
+        >
+            <div className="mx-auto flex max-w-[1560px] gap-1.5 overflow-x-auto px-4 py-2 sm:px-6">
+                {NAV.map((item) => {
+                    const Icon = ICON[item.icon];
+                    const isActive = active === item.href;
+                    const badge = item.badgeKey ? badges[item.badgeKey] : null;
+                    return (
+                        <Link
+                            key={item.href}
+                            href={item.href}
+                            className={cn(
+                                "flex shrink-0 items-center gap-2 rounded-pill px-3 py-2 text-[13px] whitespace-nowrap transition-colors",
+                                isActive
+                                    ? "bg-primary-tint font-medium text-accent-foreground"
+                                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                            )}
+                        >
+                            <Icon className={cn("size-[15px] shrink-0", isActive && "text-primary")} />
+                            {item.label}
+                            {badge ? (
+                                <span
+                                    className={cn(
+                                        "grid h-[18px] min-w-[18px] place-items-center rounded-pill px-1 text-[10.5px] font-semibold",
+                                        item.badgeKey === "pending"
+                                            ? "bg-attention-solid text-white"
+                                            : "bg-primary text-primary-foreground"
+                                    )}
+                                >
+                                    {badge}
+                                </span>
+                            ) : null}
+                        </Link>
+                    );
+                })}
+            </div>
+        </nav>
+    );
+}

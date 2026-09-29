@@ -260,3 +260,17 @@ async def test_every_saved_title_is_searched() -> None:
     two = FILTERS.model_copy(update={"titles": ["LLM", "GenAI"]})
     await workday.fetch(SOURCE, http, nothing_stored, two)
     assert [s["searchText"] for s in http.searches if s["searchText"]] == ["LLM", "GenAI"]
+
+
+async def test_no_more_details_are_fetched_than_the_run_can_take() -> None:
+    """A run limited to 2 new jobs downloads 2 details, not every new posting."""
+    paths = [f"/job/Pune/a{n}" for n in range(5)]
+    http = FakeFetcher(
+        {("LLM", 0): {"total": 5, "jobPostings": [listing("LLM Engineer", p) for p in paths]}},
+        {p: detail("LLM Engineer", p) for p in paths},
+    )
+
+    harvest = await workday.fetch(SOURCE, http, nothing_stored, FILTERS, limit=2)
+
+    assert len(http.detail_calls) == 2
+    assert len(harvest.postings) == 2

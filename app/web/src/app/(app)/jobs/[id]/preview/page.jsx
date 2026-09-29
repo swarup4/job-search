@@ -194,7 +194,7 @@ export default function Page() {
                 </div>
             </Panel>
 
-            <div className="mt-5 grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(340px,400px)]">
+            <div className="mt-5 grid grid-cols-[minmax(0,1fr)] items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(340px,400px)]">
                 <ResumePreview
                     doc={doc}
                     activeLine={activeLine}

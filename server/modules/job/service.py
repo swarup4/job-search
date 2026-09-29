@@ -6,7 +6,7 @@ from typing import Any
 from beanie import PydanticObjectId
 
 from config.errors import NotFound
-from modules.job.location import canonical_country, parse_location
+from modules.job.location import COUNTRY_NAMES, canonical_country, parse_location
 from modules.job.models import (
     Job,
     JobCreate,
@@ -266,3 +266,18 @@ def like(text: str) -> dict[str, str]:
     """A case-insensitive SQL-style LIKE '%text%'. `re.escape` keeps "C++" a literal
     rather than a broken pattern Mongo would refuse."""
     return {"$regex": re.escape(text), "$options": "i"}
+
+
+async def locations() -> list[str]:
+    """Place names for the Locations box: every city in the stored jobs, most common
+    first, then every country — so a suggestion is either somewhere jobs are, or a
+    country the location parser recognises."""
+    rows = await Job.aggregate(
+        [
+            {"$unwind": "$cities"},
+            {"$group": {"_id": "$cities", "n": {"$sum": 1}}},
+            {"$sort": {"n": -1}},
+        ]
+    ).to_list()
+    cities = [row["_id"] for row in rows]
+    return cities + sorted(set(COUNTRY_NAMES.values()) - set(cities))

@@ -33,7 +33,7 @@ export default function Page() {
                 </Button>
             </PageHeader>
 
-            <div className="grid gap-5 sm:grid-cols-3">
+            <div className="grid grid-cols-[minmax(0,1fr)] gap-5 sm:grid-cols-3">
                 <StatCard icon={Lock} value={1} label="Staged for you" tone="attention" />
                 <StatCard icon={Send} value={counts.active} label="Active applications" />
                 <StatCard icon={CheckCheck} value={counts.interview} label="In interview" tone="muted" />

@@ -10,7 +10,7 @@ import { Tooltip } from "@/component/ui/tooltip";
 /** The templates as cards. Picking one is picking the preference. */
 export function TemplatePicker({ templates, selected, preferred, onSelect, disabled }) {
     return (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {templates.map((template) => (
                 <TemplateCard
                     key={template.id}

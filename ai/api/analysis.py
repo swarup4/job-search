@@ -16,7 +16,6 @@ from typing import Annotated, Literal
 
 import httpx
 from fastapi import APIRouter, Header, HTTPException, Request, Response, status
-from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, model_validator
 
 from agents import analysis
@@ -109,12 +108,13 @@ async def analysis_events(
     request: Request,
     who: Caller,
     last_event_id: Annotated[str | None, Header()] = None,
-) -> StreamingResponse:
+) -> Response:
     """The caller's latest run as a stream: every event so far, then each new one,
     closing after `run_done`. `Last-Event-ID` resumes after a dropped connection."""
     _, account_id = who
     if _slot.run is None or _slot.owner != account_id:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "no analysis run to follow")
+        # "You have no run yet" is an answer, not an error: nothing to stream.
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
     run = _slot.run
     return _slot.log.stream(request, last_event_id, lambda: _slot.run is run)
 

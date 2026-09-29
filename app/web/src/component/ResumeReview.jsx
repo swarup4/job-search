@@ -123,7 +123,7 @@ export function ResumeReview() {
     }
 
     return (
-        <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(360px,420px)]">
+        <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(360px,420px)]">
             <div className="flex flex-col gap-5">
                 <Panel className="p-4">
                     <div className="flex flex-wrap items-center gap-x-5 gap-y-3">

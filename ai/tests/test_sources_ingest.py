@@ -115,7 +115,9 @@ def test_titles_are_matched_on_word_boundaries() -> None:
 
 
 def adapter_returning(harvest: Harvest):
-    async def fetch(source: dict[str, Any], http: Any, is_stored: Any, filters: Any) -> Harvest:
+    async def fetch(
+        source: dict[str, Any], http: Any, is_stored: Any, filters: Any, limit: Any = None
+    ) -> Harvest:
         return harvest
 
     return fetch
@@ -144,7 +146,9 @@ async def test_postings_skipped_as_stored_count_as_duplicates(
 
 
 async def test_robots_is_reported_as_blocked(monkeypatch: pytest.MonkeyPatch) -> None:
-    async def refuse(source: dict[str, Any], http: Any, is_stored: Any, filters: Any) -> Harvest:
+    async def refuse(
+        source: dict[str, Any], http: Any, is_stored: Any, filters: Any, limit: Any = None
+    ) -> Harvest:
         raise RobotsDisallowed("https://zoom.wd5.myworkdayjobs.com/Zoom/")
 
     monkeypatch.setitem(run.ADAPTERS, "workday", refuse)
@@ -180,3 +184,92 @@ def test_unsaved_or_empty_preferences_fall_back_to_the_defaults() -> None:
     assert partial.titles == ["LLM"]
     assert partial.locations == base.DEFAULT_LOCATIONS
     assert partial.workdayMaxPages == base.DEFAULT_WORKDAY_MAX_PAGES
+
+
+# --- a run limited to N new jobs ----------------------------------------------
+
+
+def posting(ref: str) -> Posting:
+    return POSTING.model_copy(update={"refId": ref})
+
+
+async def test_a_limited_run_stores_no_more_than_its_limit(
+    monkeypatch: pytest.MonkeyPatch, fake: FakeClient
+) -> None:
+    monkeypatch.setitem(
+        run.ADAPTERS, "workday", adapter_returning(Harvest(postings=[posting("R1"), posting("R2")]))
+    )
+    budget = run.Budget(1)
+
+    result = await run.run_source({"platform": "workday"}, None, FILTERS, budget)  # type: ignore[arg-type]
+
+    assert result["new"] == 1
+    assert len(fake.jobs) == 1
+    assert budget.spent
+
+
+async def test_a_company_reached_after_the_limit_is_skipped(
+    monkeypatch: pytest.MonkeyPatch, fake: FakeClient
+) -> None:
+    seen: list[Any] = []
+
+    async def fetch(
+        source: Any, http: Any, is_stored: Any, filters: Any, limit: Any = None
+    ) -> Harvest:
+        seen.append(limit)
+        return Harvest(postings=[posting("R1")])
+
+    monkeypatch.setitem(run.ADAPTERS, "workday", fetch)
+
+    result = await run.run_source({"platform": "workday"}, None, FILTERS, run.Budget(0))  # type: ignore[arg-type]
+
+    assert result["skipped"] is True
+    assert seen == [] and fake.jobs == []
+
+
+async def test_the_adapter_is_told_how_many_the_run_can_still_take(
+    monkeypatch: pytest.MonkeyPatch, fake: FakeClient
+) -> None:
+    seen: list[Any] = []
+
+    async def fetch(
+        source: Any, http: Any, is_stored: Any, filters: Any, limit: Any = None
+    ) -> Harvest:
+        seen.append(limit)
+        return Harvest()
+
+    monkeypatch.setitem(run.ADAPTERS, "workday", fetch)
+    await run.run_source({"platform": "workday"}, None, FILTERS, run.Budget(7))  # type: ignore[arg-type]
+    await run.run_source({"platform": "workday"}, None, FILTERS)  # type: ignore[arg-type]
+
+    assert seen == [7, None]
+
+
+async def test_a_skipped_company_keeps_its_last_real_result(
+    monkeypatch: pytest.MonkeyPatch, fake: FakeClient
+) -> None:
+    """Across the run: the limit is shared, and a company never scraped is not recorded."""
+    recorded: list[str] = []
+    reported: dict[str, dict[str, Any]] = {}
+
+    class RunClient:
+        async def description_stored(self, url: str) -> bool:
+            return False
+
+        async def record_source_result(self, source_id: str, result: dict[str, Any]) -> None:
+            recorded.append(source_id)
+
+    monkeypatch.setattr(run, "client", RunClient())
+    monkeypatch.setattr(run, "COMPANIES_AT_ONCE", 1)
+    monkeypatch.setitem(
+        run.ADAPTERS, "workday", adapter_returning(Harvest(postings=[posting("R1"), posting("R2")]))
+    )
+    sources = [{"id": f"s{n}", "name": f"Co{n}", "platform": "workday"} for n in range(3)]
+
+    await run.run_all(
+        sources, FILTERS, on_result=lambda name, result: reported.update({name: result}), limit=2
+    )
+
+    assert len(fake.jobs) == 2
+    assert recorded == ["s0"]
+    assert reported["Co1"]["skipped"] and reported["Co2"]["skipped"]

@@ -387,7 +387,7 @@ async def test_another_account_cannot_follow_the_run(api) -> None:
 
     response = await http.get("/analysis/events", headers={"Authorization": "Bearer other"})
 
-    assert response.status_code == 404
+    assert response.status_code == 204
 
 
 async def test_needs_a_token(api) -> None:

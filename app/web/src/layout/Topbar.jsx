@@ -41,7 +41,7 @@ export function Topbar() {
 
     return (
         <header className="sticky top-0 z-20 border-b border-border bg-card">
-            <div className="mx-auto flex h-[68px] max-w-[1560px] items-center gap-5 px-6">
+            <div className="mx-auto flex h-[68px] max-w-[1560px] items-center gap-3 px-4 sm:gap-5 sm:px-6">
                 <Link href={ROUTES.board} className="flex items-center gap-2.5">
                     <Mark />
                     <span className="text-[20px] font-bold tracking-tight">
@@ -92,9 +92,11 @@ export function Topbar() {
                     onClick={refresh}
                     disabled={refreshing}
                     title="Refresh the counts and score every job that has no match yet"
+                    aria-label={scoring.running ? "Scoring" : "Refresh"}
                 >
                     <RefreshCw className={refreshing || scoring.running ? "animate-spin" : undefined} />
-                    {scoring.running ? "Scoring…" : "Refresh"}
+                    {/* Icon only on a phone, where the header has no room for the word. */}
+                    <span className="hidden sm:inline">{scoring.running ? "Scoring…" : "Refresh"}</span>
                 </Button>
 
                 <SignOutButton />

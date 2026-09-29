@@ -29,3 +29,8 @@ export function getJob(jobId) {
 export function updateJob(jobId, changes) {
     return axiosInstance.patch(`/job/updateJob/${jobId}`, changes);
 }
+
+/** GET /api/job/locations — cities in the stored jobs (most common first), then countries. */
+export function listLocations() {
+    return axiosInstance.get("/job/locations");
+}

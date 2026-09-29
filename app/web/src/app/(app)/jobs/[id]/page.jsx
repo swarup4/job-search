@@ -186,7 +186,7 @@ function JobDetails({ job, description, match, shortlisted, jobId, from, analysi
                 {analysis.error ? <p className="mt-3 text-[12.5px] text-risk-ink">{analysis.error}</p> : null}
             </Panel>
 
-            <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+            <div className="mt-5 grid grid-cols-[minmax(0,1fr)] gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
                 {/* JD body */}
                 <div className="flex flex-col gap-5">
                     <Panel>
