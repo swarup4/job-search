@@ -18,7 +18,6 @@ from typing import Annotated, Any, Literal
 
 import httpx
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
-from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from api.events import EventLog
@@ -46,13 +45,24 @@ class CompanyResult(BaseModel):
     duplicate: int = 0
     failed: int = 0
     blocked: bool = False
+    # Not scraped: the run's limit was reached before this company's turn.
+    skipped: bool = False
     error: str | None = None
+
+
+class DiscoveryRequest(BaseModel):
+    """`limit` stops the run once that many new jobs are stored. Omitted, every enabled
+    company is scraped in full, filtered by your Search targets."""
+
+    limit: int | None = Field(default=None, ge=1, le=500)
 
 
 class DiscoveryRun(BaseModel):
     id: str
     status: Literal["running", "done", "failed"]
     companies: int
+    # How many new jobs this run was asked for; null means every one it finds.
+    limit: int | None = None
     # The Search targets this run was started with, read once at the start — so a
     # change saved mid-run applies to the next run, and the screen can show which.
     filters: Filters
@@ -114,7 +124,9 @@ Caller = Annotated[tuple[str, str], Depends(caller)]
 
 
 @router.post("/start", response_model=DiscoveryRun, status_code=status.HTTP_202_ACCEPTED)
-async def start_discovery(who: Caller, response: Response) -> DiscoveryRun:
+async def start_discovery(
+    who: Caller, response: Response, body: DiscoveryRequest | None = None
+) -> DiscoveryRun:
     token, account_id = who
     if _slot.run is not None and _slot.run.status == "running":
         if _slot.owner != account_id:
@@ -135,6 +147,7 @@ async def start_discovery(who: Caller, response: Response) -> DiscoveryRun:
         id=uuid.uuid4().hex,
         status="running",
         companies=len(sources),
+        limit=body.limit if body else None,
         filters=filters,
         startedAt=datetime.now(UTC),
     )
@@ -148,12 +161,13 @@ async def discovery_events(
     request: Request,
     who: Caller,
     last_event_id: Annotated[str | None, Header()] = None,
-) -> StreamingResponse:
+) -> Response:
     """Your latest run: `run_started` (the run itself), `company_done` as each company
-    finishes, then `run_done`. 404 when you have none."""
+    finishes, then `run_done`. 204 when you have none."""
     _, account_id = who
     if _slot.run is None or _slot.owner != account_id:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "no discovery run to follow")
+        # "You have no run yet" is an answer, not an error: nothing to stream.
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
     run = _slot.run
     return _slot.log.stream(request, last_event_id, lambda: _slot.run is run)
 
@@ -170,7 +184,7 @@ async def _execute(
         log.emit({"type": "company_done", **company.model_dump(), "done": len(run.results)})
 
     try:
-        await scrape.run_all(sources, run.filters, on_result=record)
+        await scrape.run_all(sources, run.filters, on_result=record, limit=run.limit)
         run.status = "done"
     except JobPilotApiError as error:
         run.status = "failed"
@@ -182,6 +196,6 @@ async def _execute(
         run.finishedAt = datetime.now(UTC)
         log.emit(
             {"type": "run_done", "status": run.status, "error": run.error,
-             "finishedAt": run.finishedAt.isoformat(),
+             "finishedAt": run.finishedAt.isoformat(), "limit": run.limit,
              "new": sum(result.new for result in run.results)}
         )  # fmt: skip

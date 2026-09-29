@@ -5,7 +5,7 @@
 
 export { AI_URL, API_URL, ApiError, axiosInstance } from "@/lib/axiosInstance";
 
-export { getJob, getJobDetails, searchJobs, updateJob } from "./job";
+export { getJob, getJobDetails, listLocations, searchJobs, updateJob } from "./job";
 export { getMatch, recordSelection, skipSelection } from "./match";
 export {
     getBaseResume,

@@ -266,15 +266,23 @@ async function captureTab(tabId: number): Promise<CaptureOutcome> {
     if (!reply.value) throw new Error("Found nothing to capture on this page.");
 
     const page = reply.value;
+    // Stored first: a model that fails below loses nothing, and Capture again retries.
     const created = await api.createCapture(page);
-
-    return {
+    const outcome: CaptureOutcome = {
         ...created,
         pageTitle: page.pageTitle,
         region: page.region,
         characters: page.markdown.length,
         links: page.links.length,
     };
+    // An unchanged page is read again only if reading it failed the first time.
+    if (created.duplicate && (await api.captureStatus(created.id)) !== "raw") return outcome;
+    try {
+        outcome.processed = await api.processCapture(created.id);
+    } catch (cause) {
+        outcome.processError = cause instanceof Error ? cause.message : String(cause);
+    }
+    return outcome;
 }
 
 const handlers: {

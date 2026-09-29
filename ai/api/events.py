@@ -1,7 +1,8 @@
 """A background run's progress as server-sent events — shared by analysis and match runs.
 
 Every event is kept for the life of the run, so opening the stream is also how a page
-finds your latest run: it replays from `run_started`, which carries the run itself.
+finds your latest run: it replays from `run_started`, which carries the run itself
+(each run's route answers 204 when there is none).
 Events that already existed when the stream opened are marked `replay: true`, so a page
 joining late can show them without announcing them again. `Last-Event-ID` resumes after
 a dropped connection. The stream closes after `run_done`.

@@ -202,6 +202,10 @@ async def _step(work: Any) -> StepResult:
 async def _details(job: dict[str, Any], text: str) -> str:
     if all(job.get(field) for field in DETAIL_FIELDS):
         return "all details already known"
+    # The tech stack is read with the details — by the capture parser in one call, or by
+    # this run's own later step — so a stack already there means the details were read.
+    if job.get("techStack") is not None:
+        return "already read"
     proposed = await generate(JobDetails, text, system=DETAILS_SYSTEM, max_tokens=512)
     found = verify_details(proposed, text)
     # The board's own values win: only fields the job does not have yet are written.

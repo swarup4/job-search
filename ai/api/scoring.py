@@ -20,7 +20,6 @@ from datetime import UTC, datetime
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Header, HTTPException, Request, Response, status
-from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from agents import matching
@@ -89,10 +88,11 @@ async def scoring_events(
     request: Request,
     who: Caller,
     last_event_id: Annotated[str | None, Header()] = None,
-) -> StreamingResponse:
+) -> Response:
     _, account_id = who
     if _slot.run is None or _slot.owner != account_id:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "no scoring run to follow")
+        # "You have no run yet" is an answer, not an error: nothing to stream.
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
     run = _slot.run
     return _slot.log.stream(request, last_event_id, lambda: _slot.run is run)
 

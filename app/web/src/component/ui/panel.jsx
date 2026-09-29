@@ -17,7 +17,7 @@ function Panel({ className, hover = false, ...props }) {
 function PanelHeader({ className, ...props }) {
     return (
         <div
-            className={cn("flex items-center gap-3 border-b border-border px-5 py-4", className)}
+            className={cn("flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-5 py-4", className)}
             {...props}
         />
     );

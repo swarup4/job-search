@@ -187,7 +187,7 @@ function SearchJobs() {
             e.preventDefault();
             run(q);
           }}
-          className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_auto]"
+          className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_auto]"
         >
           <Field label="Keywords">
             <TokenInput
@@ -212,7 +212,7 @@ function SearchJobs() {
         </form>
 
         {advanced ? (
-          <div className="mt-5 grid gap-4 border-t border-border pt-5 lg:grid-cols-2">
+          <div className="mt-5 grid grid-cols-[minmax(0,1fr)] gap-4 border-t border-border pt-5 lg:grid-cols-2">
             <Field label="Job title">
               <Input placeholder="Words in the title" value={q.title} onChange={set("title")} />
             </Field>

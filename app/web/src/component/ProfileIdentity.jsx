@@ -145,7 +145,7 @@ export function ProfileIdentity() {
                         </Button>
                     </div>
 
-                    <div className="grid gap-5 sm:grid-cols-2">
+                    <div className="grid grid-cols-[minmax(0,1fr)] gap-5 sm:grid-cols-2">
                         <Field label="Full name" error={error("name")}>
                             <Input invalid={Boolean(error("name"))} {...bind("name")} />
                         </Field>

@@ -1,4 +1,4 @@
-import { API_URL } from "@/shared/config";
+import { AI_URL, API_URL } from "@/shared/config";
 import { clearSession, readAccessToken, readPersisted, writeSession } from "@/shared/session";
 import type {
     AnswerBankEntry,
@@ -7,6 +7,7 @@ import type {
     ApplicationStatus,
     CaptureCreated,
     CapturePayload,
+    CaptureProcessed,
     FieldFill,
     JobRead,
     LoginResult,
@@ -48,15 +49,20 @@ function messageFrom(body: unknown, status: number): string {
     return `The API returned ${status}.`;
 }
 
-async function send(path: string, init: RequestInit, token: string | null): Promise<Response> {
+async function send(
+    path: string,
+    init: RequestInit,
+    token: string | null,
+    base: string = API_URL,
+): Promise<Response> {
     const headers = new Headers(init.headers);
     if (init.body) headers.set("Content-Type", "application/json");
     if (token) headers.set("Authorization", `Bearer ${token}`);
 
     try {
-        return await fetch(`${API_URL}${path}`, { ...init, headers });
+        return await fetch(`${base}${path}`, { ...init, headers });
     } catch {
-        throw new ApiError(`Cannot reach the API at ${API_URL}. Is the server running?`, null, path);
+        throw new ApiError(`Cannot reach ${base}. Is the server running?`, null, path);
     }
 }
 
@@ -80,14 +86,19 @@ async function refreshed(): Promise<string | null> {
     return result.accessToken;
 }
 
-async function request<T>(path: string, init: RequestInit = {}, authed = true): Promise<T> {
+async function request<T>(
+    path: string,
+    init: RequestInit = {},
+    authed = true,
+    base: string = API_URL,
+): Promise<T> {
     let token = authed ? await readAccessToken() : null;
-    let response = await send(path, init, token);
+    let response = await send(path, init, token, base);
 
     if (response.status === 401 && authed) {
         token = await refreshed();
         if (!token) throw new ApiError("Sign in again.", 401, path);
-        response = await send(path, init, token);
+        response = await send(path, init, token, base);
     }
 
     if (!response.ok) {
@@ -190,4 +201,14 @@ export function createCapture(page: CapturePayload): Promise<CaptureCreated> {
         method: "POST",
         body: JSON.stringify(page),
     });
+}
+
+/** A stored capture's status: `raw` until it has been read into a job (or discarded). */
+export async function captureStatus(descriptionId: string): Promise<string> {
+    return (await request<{ status: string }>(`/job-description/${descriptionId}`)).status;
+}
+
+/** The AI tier reads a stored capture into a job — one model call, 10–30 s. */
+export function processCapture(descriptionId: string): Promise<CaptureProcessed> {
+    return request<CaptureProcessed>(`/capture/${descriptionId}`, { method: "POST" }, true, AI_URL);
 }

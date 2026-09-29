@@ -68,7 +68,7 @@ export function CertificationsSection() {
                     No certifications yet.
                 </p>
             ) : (
-                <div className="grid sm:grid-cols-2">
+                <div className="grid grid-cols-[minmax(0,1fr)] sm:grid-cols-2">
                     {entries.map((cert, i) => (
                         <div
                             key={cert.id}
@@ -147,7 +147,7 @@ function CertificationForm({ entry, onSave, onCancel }) {
                     />
                 </Field>
 
-                <div className="grid gap-5 sm:grid-cols-2">
+                <div className="grid grid-cols-[minmax(0,1fr)] gap-5 sm:grid-cols-2">
                     <Field label="Issuer" error={error("issuer")}>
                         <Input
                             placeholder="MongoDB"

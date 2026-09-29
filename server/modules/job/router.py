@@ -17,6 +17,11 @@ from modules.job.models import (
 router = APIRouter(tags=["job"])
 
 
+@router.get("/locations", response_model=list[str])
+async def locations(_: CurrentUser) -> list[str]:
+    return await service.locations()
+
+
 @router.post("/search", response_model=JobSearchResult)
 async def search_jobs(filters: JobSearch, user_id: CurrentUser) -> JobSearchResult:
     return await service.search_jobs(user_id, filters)

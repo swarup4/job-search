@@ -58,13 +58,20 @@ export function DiscoveryRunPanel() {
 function LiveRun({ run, running }) {
     const totals = sum(run.results);
     const found = run.results.filter((result) => result.new > 0).sort((a, b) => b.new - a.new);
+    const skipped = run.results.filter((result) => result.skipped).length;
 
     return (
         <>
             <KV label="Triggered" value={`${when(run.startedAt)} · by you, from this page`} />
             <KV label="Finished" value={run.finishedAt ? when(run.finishedAt) : "still running"} />
             <KV label="Took" value={duration(run.startedAt, run.finishedAt)} />
-            <KV label="Companies" value={`${run.results.length} of ${run.companies}${running ? " so far" : ""}`} />
+            <KV label="Limit" value={run.limit ? `${run.limit} new job${run.limit === 1 ? "" : "s"}` : "none — every match"} />
+            <KV
+                label="Companies"
+                value={`${run.results.length} of ${run.companies}${running ? " so far" : ""}${
+                    skipped ? ` · ${skipped} skipped, limit reached` : ""
+                }`}
+            />
             <KV label="Found" value={describeTotals(totals)} />
             {run.filters ? (
                 <>

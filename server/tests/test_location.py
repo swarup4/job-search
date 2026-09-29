@@ -157,3 +157,14 @@ async def test_the_boards_own_country_wins_over_the_text(signed_in: AsyncClient)
 
     assert read["country"] == "United States"
     assert read["cities"] == ["Boston", "Bengaluru"]
+
+
+async def test_location_suggestions_put_your_cities_first(signed_in: AsyncClient) -> None:
+    await signed_in.post("/job/createJob", json=job(location="Pune, India", refId="R1"))
+    await signed_in.post("/job/createJob", json=job(location="Pune; Bengaluru, India", refId="R2"))
+
+    names = (await signed_in.get("/job/locations")).json()
+
+    assert names[:2] == ["Pune", "Bengaluru"]
+    assert "India" in names and "Denmark" in names
+    assert len(names) == len(set(names))

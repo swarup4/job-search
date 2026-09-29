@@ -9,7 +9,8 @@ import { readToken } from "@/lib/session";
  * - `scoring` — a match score for every job you have none for yet
  *
  * `POST /start` starts one (or answers yours, while it is going); `GET /events` streams
- * your latest from `run_started`, which carries the run — or 404s when there is none.
+ * your latest from `run_started`, which carries the run — or answers 204 when there is
+ * none, which `followRun` resolves as `{ none: true }`.
  */
 
 /** POST /api/runs/{kind}/start. Analysis takes `{ jobIds }` or `{ newest }`; the others no body. */
@@ -36,6 +37,8 @@ export async function followRun(kind, { onEvent, lastEventId = null, signal }) {
         if (failure?.name === "AbortError") return;
         throw new ApiError(`Cannot reach the AI tier at ${AI_URL}. Is it running?`, { cause: failure });
     }
+    // 204: you have no run of this kind yet — nothing to stream, and not an error.
+    if (response.status === 204) return { none: true };
     if (!response.ok) {
         const body = await response.json().catch(() => ({}));
         throw new ApiError(body.detail ?? `The AI tier returned ${response.status}.`, {

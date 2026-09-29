@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, Check, Save, ShieldCheck, Star } from "lucide-react";
 
-import { ApiError, getPreferences, getTierSettings, savePreferences } from "@/services";
+import { ApiError, getPreferences, getTierSettings, listLocations, savePreferences } from "@/services";
 import { Panel, PanelBody, PanelHeader, PanelTitle } from "@/component/ui/panel";
 import { Field, Input } from "@/component/ui/field";
 import { TokenInput } from "@/component/ui/token-input";
@@ -40,6 +40,7 @@ export function SearchTargets() {
     const [error, setError] = useState(null);
     const [saving, setSaving] = useState(false);
     const [justSaved, setJustSaved] = useState(false);
+    const [places, setPlaces] = useState([]);
     // A ref, not state: React's development double-mount fires the effect twice.
     const loading = useRef(false);
 
@@ -52,6 +53,8 @@ export function SearchTargets() {
                 setForm(shape(preferences));
             })
             .catch((failure) => setError(messageOf(failure, "Could not read your search targets.")));
+        // Suggestions only: without them the box still takes anything typed.
+        listLocations().then(setPlaces).catch(() => {});
     }, []);
 
     const dirty = Boolean(form && saved) && JSON.stringify(form) !== JSON.stringify(shape(saved));
@@ -115,12 +118,13 @@ export function SearchTargets() {
                             <TokenInput
                                 items={form.locations}
                                 onChange={(locations) => set("locations", locations)}
+                                suggestions={places}
                                 placeholder="e.g. Bengaluru — press Enter to add"
                                 tone="muted"
                             />
                         </Field>
 
-                        <div className="grid gap-5 sm:grid-cols-[minmax(0,1fr)_200px]">
+                        <div className="grid grid-cols-[minmax(0,1fr)] gap-5 sm:grid-cols-[minmax(0,1fr)_200px]">
                             <Field label="Work mode">
                                 <div className="flex flex-wrap gap-2">
                                     {WORK_MODES.map((mode) => {

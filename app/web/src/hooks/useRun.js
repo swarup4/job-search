@@ -11,15 +11,15 @@ const RESULT_EVENTS = new Set(["job_done", "company_done"]);
  * One background run on the AI tier — `discovery`, `analysis` or `scoring` — started or
  * joined, and followed over its event stream until `run_done`.
  *
- * The stream is also how a page finds your latest run: it replays from `run_started`,
- * which carries the run, and marks what had already happened as `replay`. A page that
- * joins (`attachOnMount`, or a start that answers a run already going) shows replayed
- * events without announcing them; a page that started the run announces everything.
+ * The stream replays from `run_started`, which carries the run, and marks what had
+ * already happened as `replay`. A page that joins (a start that answers a run already
+ * going) shows replayed events without announcing them; one that started the run
+ * announces everything.
  *
  * `onEvent(event, { replay })` sees every event; `onFinished` runs once, when the run
  * ends while this page is watching.
  */
-export function useRun(kind, { onEvent, onFinished, attachOnMount = false } = {}) {
+export function useRun(kind, { onEvent, onFinished } = {}) {
     const [run, setRun] = useState(null);
     const [error, setError] = useState(null);
     const [watching, setWatching] = useState(true);
@@ -30,17 +30,8 @@ export function useRun(kind, { onEvent, onFinished, attachOnMount = false } = {}
     const lastId = useRef(null);
     const ended = useRef(false);
     const joining = useRef(false);
-    const mounted = useRef(false);
 
     useEffect(() => () => stream.current?.abort(), []);
-
-    useEffect(() => {
-        // A ref, not state: React's development double-mount fires this twice.
-        if (!attachOnMount || mounted.current) return;
-        mounted.current = true;
-        follow({ join: true, quietIfMissing: true });
-        // Asked once per mount; `kind` never changes for a page.
-    }, [kind, attachOnMount]);
 
     function apply(event) {
         const replay = joining.current && event.replay;
@@ -65,7 +56,7 @@ export function useRun(kind, { onEvent, onFinished, attachOnMount = false } = {}
         if (event.type === "run_done" && !replay) handlers.current.onFinished?.(event);
     }
 
-    async function follow({ join = false, quietIfMissing = false, resume = false } = {}) {
+    async function follow({ join = false, resume = false } = {}) {
         stream.current?.abort();
         const controller = new AbortController();
         stream.current = controller;
@@ -76,7 +67,7 @@ export function useRun(kind, { onEvent, onFinished, attachOnMount = false } = {}
         }
         setWatching(true);
         try {
-            await followRun(kind, {
+            const outcome = await followRun(kind, {
                 onEvent: (event, id) => {
                     lastId.current = id;
                     apply(event);
@@ -84,6 +75,11 @@ export function useRun(kind, { onEvent, onFinished, attachOnMount = false } = {}
                 lastEventId: lastId.current,
                 signal: controller.signal,
             });
+            // 204: the run this page started is already gone — the AI tier restarted.
+            if (outcome?.none) {
+                setError("There is no run to follow.");
+                return;
+            }
             // The stream closed without saying the run ended — the AI tier restarted.
             if (!ended.current && !controller.signal.aborted) {
                 setError("Lost the run's progress.");
@@ -91,8 +87,6 @@ export function useRun(kind, { onEvent, onFinished, attachOnMount = false } = {}
             }
         } catch (failure) {
             if (controller.signal.aborted) return;
-            // No run of yours yet: nothing to show, which is not an error on page load.
-            if (quietIfMissing && failure instanceof ApiError && failure.status === 404) return;
             setError(failure instanceof ApiError ? failure.message : "Lost the run's progress.");
             setWatching(false);
         }

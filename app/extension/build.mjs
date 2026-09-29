@@ -40,6 +40,7 @@ const shared = {
     define: {
         "process.env.NODE_ENV": JSON.stringify(watch ? "development" : "production"),
         __API_URL__: JSON.stringify(process.env.JOBPILOT_API_URL ?? "http://127.0.0.1:8000/api"),
+        __AI_URL__: JSON.stringify(process.env.JOBPILOT_AI_URL ?? "http://127.0.0.1:8001/api"),
     },
 };
 
