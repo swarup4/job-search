@@ -15,6 +15,7 @@ clicked twice means "show me the progress". Another account gets a 409.
 from __future__ import annotations
 
 import asyncio
+import logging
 import uuid
 from datetime import UTC, datetime
 from typing import Annotated, Literal
@@ -27,6 +28,8 @@ from api.discovery import Caller
 from api.events import EventLog
 from mcp_servers.jobpilot_api import client
 from mcp_servers.jobpilot_api.client import JobPilotApiError
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["scoring"])
 
@@ -127,7 +130,10 @@ async def _execute(run: ScoringRun, token: str, log: EventLog) -> None:
     except JobPilotApiError as error:
         run.status = "failed"
         run.error = EXPIRED if error.status == 401 else str(error)[:300]
-    except Exception as error:  # noqa: BLE001 — a background task has no caller to raise to
+        if error.status != 401:
+            logger.error("scoring run %s failed: %s", run.id, error)
+    except Exception as error:  # a background task has no caller to raise to
+        logger.exception("scoring run %s failed", run.id)
         run.status = "failed"
         run.error = f"{type(error).__name__}: {error}"[:300]
     finally:
@@ -148,8 +154,10 @@ async def _score_one(job: dict[str, str], log: EventLog) -> ScoringResult:
     except JobPilotApiError as error:
         if error.status == 401:
             raise
+        logger.error("scoring job %s failed: %s", job["id"], error)
         return ScoringResult(jobId=job["id"], title=title, error=str(error)[:200])
-    except Exception as error:  # noqa: BLE001 — one job's failure must not stop the rest
+    except Exception as error:  # one job's failure must not stop the rest
+        logger.exception("scoring job %s failed", job["id"])
         return ScoringResult(
             jobId=job["id"], title=title, error=f"{type(error).__name__}: {error}"[:200]
         )

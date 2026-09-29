@@ -59,6 +59,7 @@ function LiveRun({ run, running }) {
     const totals = sum(run.results);
     const found = run.results.filter((result) => result.new > 0).sort((a, b) => b.new - a.new);
     const skipped = run.results.filter((result) => result.skipped).length;
+    const bySkill = run.results.reduce((total, result) => total + (result.bySkill ?? 0), 0);
 
     return (
         <>
@@ -73,9 +74,13 @@ function LiveRun({ run, running }) {
                 }`}
             />
             <KV label="Found" value={describeTotals(totals)} />
+            {bySkill ? <KV label="Matched on a skill" value={`${bySkill} posting${bySkill === 1 ? "" : "s"}`} /> : null}
             {run.filters ? (
                 <>
                     <KV label="Searched for" value={run.filters.titles.join(", ")} />
+                    {run.filters.skills?.length ? (
+                        <KV label="Skills in descriptions" value={run.filters.skills.join(", ")} />
+                    ) : null}
                     <KV label="In" value={run.filters.locations.join(", ")} />
                 </>
             ) : null}

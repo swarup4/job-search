@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useSelector } from "react-redux";
 import { Bell, RefreshCw, Search } from "lucide-react";
 import { Button } from "@/component/ui/button";
+import { ErrorLogButton } from "@/component/ErrorLog";
 import { SignOutButton } from "@/component/SignOutButton";
 import { useScoringRun } from "@/hooks/useScoringRun";
 import { useRefreshStatus } from "@/hooks/useStatus";
@@ -76,6 +77,8 @@ export function Topbar() {
                         Synced {ago(syncedAt)}
                     </span>
                 ) : null}
+
+                <ErrorLogButton />
 
                 <button className="relative grid size-10 place-items-center rounded-pill hover:bg-secondary">
                     <Bell className="size-[17px] text-muted-foreground" />

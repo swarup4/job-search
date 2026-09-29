@@ -274,3 +274,42 @@ async def test_no_more_details_are_fetched_than_the_run_can_take() -> None:
 
     assert len(http.detail_calls) == 2
     assert len(harvest.postings) == 2
+
+
+async def test_a_skill_search_keeps_only_postings_whose_description_names_it() -> None:
+    """A title-only search misses "Full Stack Developer" that asks for Node.js; a skill
+    search finds it, and the description decides."""
+    filters = Filters(
+        titles=["Architect"],
+        skills=["Node.js"],
+        locations=["India"],
+        workdayMaxPages=1,
+        skillMaxPages=1,
+    )
+    http = FakeFetcher(
+        {
+            ("Architect", 0): {"total": 0, "jobPostings": []},
+            ("Node.js", 0): {
+                "total": 2,
+                "jobPostings": [
+                    listing("Full Stack Developer", "/job/Pune/n1"),
+                    listing("Full Stack Developer", "/job/Pune/n2"),
+                ],
+            },
+        },
+        {
+            "/job/Pune/n1": detail(
+                "Full Stack Developer", "/job/Pune/n1",
+                jobDescription="<p>Build services in <b>Node.js</b> and MongoDB.</p>",
+            ),
+            "/job/Pune/n2": detail(
+                "Full Stack Developer", "/job/Pune/n2", jobDescription="<p>Build services in Go.</p>"
+            ),
+        },
+    )  # fmt: skip
+
+    harvest = await workday.fetch(SOURCE, http, nothing_stored, filters)
+
+    assert [p.listingUrl.rsplit("/", 1)[-1] for p in harvest.postings] == ["n1"]
+    assert harvest.bySkill == 1
+    assert len(http.detail_calls) == 2

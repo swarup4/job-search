@@ -1,5 +1,4 @@
-import { AI_URL, ApiError, aiInstance } from "@/lib/axiosInstance";
-import { readToken } from "@/lib/session";
+import { AI_URL, ApiError, aiInstance, freshToken } from "@/lib/axiosInstance";
 
 /**
  * Background runs on the AI tier, all shaped the same way under `/api/runs/{kind}`:
@@ -27,7 +26,7 @@ export function startRun(kind, body) {
  * resumes after a dropped connection without replaying what was already shown.
  */
 export async function followRun(kind, { onEvent, lastEventId = null, signal }) {
-    const headers = { Accept: "text/event-stream", Authorization: `Bearer ${readToken()}` };
+    const headers = { Accept: "text/event-stream", Authorization: `Bearer ${await freshToken()}` };
     if (lastEventId != null) headers["Last-Event-ID"] = String(lastEventId);
 
     let response;

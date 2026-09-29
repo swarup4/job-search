@@ -40,3 +40,5 @@ templates/previews/
 .vscode/settings.json
 
 backup/
+# Shared error log, written by the server and the AI tier
+logs/

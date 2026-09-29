@@ -74,6 +74,7 @@ async def run_source(
         matched=harvest.known + len(harvest.postings),
         duplicate=harvest.known,
         failed=harvest.failed,
+        bySkill=harvest.bySkill,
     )
     for posting in harvest.postings:
         # Another company may have taken the last of the limit while this one fetched.

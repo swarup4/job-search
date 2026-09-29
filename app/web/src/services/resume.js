@@ -19,3 +19,8 @@ export function saveBaseResume({ templateId, tex }) {
 export function getBaseResumePdf() {
     return axiosInstance.get("/resume/base/pdf", { responseType: "blob" });
 }
+
+/** GET /api/resume/pdf/{jobId} — the latest tailored .tex compiled by pdflatex. */
+export function getResumePdf(jobId) {
+    return axiosInstance.get(`/resume/pdf/${jobId}`, { responseType: "blob" });
+}

@@ -5,13 +5,14 @@ import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, ChevronLeft, FileText, Loader2, RefreshCw, Sparkles } from "lucide-react";
 
-import { ApiError, getMatch, getResume, tailorResume } from "@/services";
+import { ApiError, getMatch, getResume, getResumePdf, tailorResume } from "@/services";
 import { useRefreshStatus } from "@/hooks/useStatus";
 import { Badge } from "@/component/ui/badge";
 import { Panel } from "@/component/ui/panel";
 import { Button, buttonVariants } from "@/component/ui/button";
-import { SuggestionPanel } from "@/component/SuggestionPanel";
 import { ResumePreview } from "@/component/ResumePreview";
+import { ResumeChat } from "@/component/ResumeChat";
+import { toast } from "@/component/ui/toast";
 import { ROUTES } from "@/routes";
 import { buildDocument } from "@/util/resumeDoc";
 
@@ -34,7 +35,6 @@ export default function Page() {
     const [loadError, setLoadError] = useState(null);
     const [tailoring, setTailoring] = useState(false);
     const [tailorError, setTailorError] = useState(null);
-    const [activeLine, setActiveLine] = useState(null);
 
     const fetching = useRef(false);
 
@@ -58,22 +58,24 @@ export default function Page() {
 
     const doc = useMemo(() => (resume ? buildDocument(resume) : null), [resume]);
 
-    const active = useMemo(
-        () => doc?.lines.find((line) => line.n === activeLine) ?? null,
-        [activeLine, doc]
-    );
-
     async function tailor() {
         setTailoring(true);
         setTailorError(null);
         try {
             setResume(await tailorResume(jobId));
-            setActiveLine(null);
             refreshStatus();
         } catch (failure) {
             setTailorError(failure instanceof ApiError ? failure.message : "Could not tailor the resume.");
         } finally {
             setTailoring(false);
+        }
+    }
+
+    async function downloadPdf() {
+        try {
+            save(await getResumePdf(jobId), doc.file.replace(/\.tex$/, ".pdf"));
+        } catch (failure) {
+            toast.error(failure instanceof ApiError ? failure.message : "Could not compile the PDF.");
         }
     }
 
@@ -195,18 +197,10 @@ export default function Page() {
             </Panel>
 
             <div className="mt-5 grid grid-cols-[minmax(0,1fr)] items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(340px,400px)]">
-                <ResumePreview
-                    doc={doc}
-                    activeLine={activeLine}
-                    onSelect={(n) => setActiveLine((prev) => (prev === n ? null : n))}
-                />
+                <ResumePreview doc={doc} onDownloadPdf={downloadPdf} />
 
-                <div className="xl:sticky xl:top-6">
-                    <SuggestionPanel
-                        keywords={doc.incorporated}
-                        activeLine={active}
-                        onDismiss={() => setActiveLine(null)}
-                    />
+                <div className="xl:sticky xl:bottom-6 xl:self-end">
+                    <ResumeChat />
                 </div>
             </div>
 
@@ -257,4 +251,14 @@ function TopBar({ jobId, from, file }) {
             )}
         </div>
     );
+}
+
+/** Same as ResumeReview's: the PDF needs the bearer token, so it cannot be an `<a href>`. */
+function save(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.click();
+    URL.revokeObjectURL(url);
 }

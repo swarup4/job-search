@@ -72,8 +72,31 @@ function messageFrom(error) {
     return `Cannot reach the API at ${error.config?.baseURL ?? API_URL}. Is the server running?`;
 }
 
-function attachToken(config) {
+// Renewed this long before it expires, so a request never leaves with a token that
+// lapses on the way — which the server would answer with a 401 and a retry.
+const EXPIRY_MARGIN_MS = 60_000;
+
+function expiresSoon(token) {
+    try {
+        const payload = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+        const { exp } = JSON.parse(atob(payload));
+        return typeof exp === "number" && exp * 1000 - Date.now() < EXPIRY_MARGIN_MS;
+    } catch {
+        // Unreadable: send it as it is, and the 401 retry below still covers it.
+        return false;
+    }
+}
+
+/** The access token, renewed first when it is about to expire. Shares the one
+ * in-flight refresh, so a screen loading several calls at once refreshes once. */
+export async function freshToken() {
     const token = readToken();
+    if (token && expiresSoon(token)) return (await refreshAccessToken()) ?? token;
+    return token;
+}
+
+async function attachToken(config) {
+    const token = config.url?.endsWith(REFRESH_PATH) ? readToken() : await freshToken();
     if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
 }
@@ -132,7 +155,8 @@ function refreshAccessToken() {
     return refreshing;
 }
 
-/** Unwraps data on success; on failure, refreshes once and replays on the same instance. */
+/** Unwraps data on success; on a 401, refreshes once and replays on the same instance —
+ * the backstop for a token that expired anyway (a laptop asleep past its expiry). */
 function handleResponses(instance) {
     instance.interceptors.request.use(attachToken);
     instance.interceptors.response.use(
@@ -167,19 +191,60 @@ function handleResponses(instance) {
                 }
             }
 
-            return Promise.reject(
-                new ApiError(messageFrom(error), {
-                    status: error.response?.status ?? null,
-                    url: error.config?.url ?? null,
-                    cause: error,
-                })
-            );
+            const failure = new ApiError(messageFrom(error), {
+                status: error.response?.status ?? null,
+                url: error.config?.url ?? null,
+                cause: error,
+            });
+            if (worthLogging(instance, error, failure)) {
+                reportError({
+                    message: failure.message,
+                    context: {
+                        method: error.config?.method?.toUpperCase() ?? null,
+                        url: `${error.config?.baseURL ?? ""}${error.config?.url ?? ""}`,
+                        status: failure.status,
+                        page: window.location.pathname,
+                    },
+                });
+            }
+            return Promise.reject(failure);
         }
     );
 }
 
 handleResponses(axiosInstance);
 handleResponses(aiInstance);
+
+const ERROR_LOG_PATH = "/errorLog";
+
+/**
+ * 401 is the session ending and 404 is how `orNull` reads "not there yet" — neither is
+ * a fault. The server's own 500s are skipped too: it logged them, with the traceback.
+ */
+function worthLogging(instance, error, failure) {
+    if (typeof window === "undefined" || axios.isCancel(error)) return false;
+    if (failure.status === 401 || failure.status === 404) return false;
+    if (instance === axiosInstance && failure.status >= 500) return false;
+    return !failure.url?.endsWith(ERROR_LOG_PATH);
+}
+
+/**
+ * Adds a browser-side failure to the shared error log. Bare axios, so a failed report
+ * cannot re-enter the interceptors, and it never throws: with the API down there is
+ * nowhere to write it, and the error the user already sees has to stand alone.
+ */
+export function reportError({ message, detail = null, context = {} }) {
+    const token = readToken();
+    if (typeof window === "undefined" || !token) return;
+
+    axios
+        .post(
+            `${API_URL}${ERROR_LOG_PATH}`,
+            { message: String(message).slice(0, 2000), detail: detail?.slice(0, 20000) ?? null, context },
+            { headers: { Authorization: `Bearer ${token}` } }
+        )
+        .catch(() => {});
+}
 
 /**
  * For reads whose absence is a normal state rather than a failure — no profile
