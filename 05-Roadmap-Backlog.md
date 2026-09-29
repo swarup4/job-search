@@ -334,6 +334,18 @@ the API. The other sources, archiving and the scheduler are still open.
   (empty = all); the rail, the Last run panel and the finishing toast show the limit. 8 tests.
   *With four companies at once, a few extra detail requests can be in flight when the limit
   lands; the number stored is still exact*
+- ✅ `P3-40` **Capture reads the page into a job straight away.** The extension's Capture stores
+  the page (`POST /job-description`, as before — so a failed model call loses nothing and a
+  repeat capture is caught before anything is paid for), then calls the AI tier's new `POST
+  /api/capture/{descriptionId}`, which runs the `P3-14` parser: one model call for title,
+  company, location, the tech stack and now **experience and salary**, every value checked
+  against the page — the details through the same `verify_details` Analyze uses. The popup
+  waits and shows "Saved: <title> at <company> — N technologies", or why the page is not a
+  posting. Analyze afterwards runs only **embedding and match**: its details step now skips
+  when the job's tech stack is already read (both come from reading the posting), and the
+  scoring run stopped filling the tech stack, so that stays exact. No schema change. The
+  extension gained host permission for port 8001 (`JOBPILOT_AI_URL`, default
+  `http://127.0.0.1:8001/api`) and the AI tier admits the extension origin. 6 tests
 - ✅ `P3-08` Job Search screen built (multi-field search + facets)
 - ✅ `P3-09` Shortlist / Match Review screen built
 - ✅ `P3-10` Job Details screen built

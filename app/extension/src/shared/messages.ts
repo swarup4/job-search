@@ -3,6 +3,7 @@ import type {
     AnswerBankEntry,
     ApplicantProfile,
     AtsPlatform,
+    CaptureProcessed,
     CaptureRegion,
     FieldFill,
     JobRead,
@@ -75,6 +76,10 @@ export interface CaptureOutcome {
     region: CaptureRegion;
     characters: number;
     links: number;
+    /** The job read from the page; absent for an unchanged page, which was read before. */
+    processed?: CaptureProcessed;
+    /** The page is stored, but reading it failed — Capture again retries. */
+    processError?: string;
 }
 
 export type WorkerRequest =

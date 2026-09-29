@@ -256,3 +256,37 @@ async def test_a_second_capture_keeps_the_stack_already_read(
 
     assert outcome.parsed and outcome.duplicate
     assert fake.updates == []
+
+
+# --- the details, read in the same call ---------------------------------------
+
+
+async def test_details_the_page_states_are_kept_and_invented_ones_dropped(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    stub = FakeClient(
+        {
+            "id": "d3",
+            "url": "https://acme.example/jobs/platform",
+            "jdText": PAGE
+            + "\nYou bring 6-10 years of experience. This is a hybrid, full-time role.\n",
+        }
+    )
+    monkeypatch.setattr(parsing, "client", stub)
+    monkeypatch.setattr(
+        parsing,
+        "generate",
+        answers(
+            posting(
+                experience="6-10 years", salary="₹40 LPA", workMode="hybrid", jobType="contract"
+            )
+        ),
+    )
+
+    await parsing.parse_description("d3")
+
+    written = stub.created[0]
+    assert written["experienceBand"] == "6-10 years"
+    assert written["workMode"] == "hybrid"
+    # Not on the page: an invented salary, and a job type the page contradicts.
+    assert "salaryText" not in written and "jobType" not in written

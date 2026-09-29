@@ -393,3 +393,20 @@ async def test_another_account_cannot_follow_the_run(api) -> None:
 async def test_needs_a_token(api) -> None:
     http, _, _ = api
     assert (await http.post("/analysis/start", json={"newest": 1})).status_code == 401
+
+
+async def test_a_job_whose_stack_was_read_skips_the_details(
+    fake: FakeClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A capture reads details and stack in one call, so Analyze pays for neither again."""
+    fake.job["techStack"] = ["AWS"]
+
+    async def must_not_run(*args: Any, **kwargs: Any) -> JobDetails:
+        raise AssertionError("the details model was called")
+
+    monkeypatch.setattr(analysis, "generate", must_not_run)
+    outcome = await analysis.analyze("j1")
+
+    assert outcome.steps["details"].note == "already read"
+    assert outcome.steps["techStack"].note == "already read"
+    assert outcome.steps["embedding"].ok and outcome.steps["match"].ok
