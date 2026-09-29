@@ -10,6 +10,7 @@ hosted rate limit while making the cost of a click hard to predict.
 from __future__ import annotations
 
 import asyncio
+import logging
 import uuid
 from datetime import UTC, datetime
 from typing import Annotated, Literal
@@ -24,6 +25,8 @@ from api.discovery import Caller
 from api.events import EventLog
 from mcp_servers.jobpilot_api import client
 from mcp_servers.jobpilot_api.client import JobPilotApiError
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["analysis"])
 
@@ -135,7 +138,10 @@ async def _execute(run: AnalysisRun, token: str) -> None:
     except JobPilotApiError as error:
         run.status = "failed"
         run.error = EXPIRED if error.status == 401 else str(error)[:300]
-    except Exception as error:  # noqa: BLE001 — a background task has no caller to raise to
+        if error.status != 401:
+            logger.error("analysis run %s failed: %s", run.id, error)
+    except Exception as error:  # a background task has no caller to raise to
+        logger.exception("analysis run %s failed", run.id)
         run.status = "failed"
         run.error = f"{type(error).__name__}: {error}"[:300]
     finally:

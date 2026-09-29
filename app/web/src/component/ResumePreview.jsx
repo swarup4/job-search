@@ -1,10 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Download, Eye, FileCode2, GitCompareArrows } from "lucide-react";
+import { Download, Eye, FileCode2, GitCompareArrows, Loader2 } from "lucide-react";
 import { Badge } from "@/component/ui/badge";
 import { Panel, PanelHeader } from "@/component/ui/panel";
-import { buttonVariants } from "@/component/ui/button";
+import { Button, buttonVariants } from "@/component/ui/button";
+import { Tooltip } from "@/component/ui/tooltip";
 import { ResumeDocument } from "@/component/ResumeDocument";
 import { TexDiff } from "@/component/TexDiff";
 import { deriveHunks } from "@/util/resumeDoc";
@@ -18,12 +19,22 @@ const TABS = [
 ];
 
 /** Three views of one document, all rendered client-side from the same lines. */
-export function ResumePreview({ doc, activeLine, onSelect }) {
+export function ResumePreview({ doc, onDownloadPdf }) {
     const [tab, setTab] = useState("preview");
+    const [compiling, setCompiling] = useState(false);
 
     const source = useMemo(() => doc.lines.map((line) => line.text).join("\n") + "\n", [doc.lines]);
     const blocks = useMemo(() => texToBlocks(doc.lines), [doc.lines]);
     const hunks = useMemo(() => deriveHunks(doc.lines), [doc.lines]);
+
+    async function savePdf() {
+        setCompiling(true);
+        try {
+            await onDownloadPdf();
+        } finally {
+            setCompiling(false);
+        }
+    }
 
     return (
         <Panel className="overflow-hidden">
@@ -58,15 +69,24 @@ export function ResumePreview({ doc, activeLine, onSelect }) {
                     <span className="font-mono text-[12px] text-muted-foreground">{doc.file}</span>
                 )}
 
-                {/* A real anchor, not a synthesised click — this codebase never fakes one. */}
-                <a
-                    href={`data:application/x-tex;charset=utf-8,${encodeURIComponent(source)}`}
-                    download={doc.file}
-                    className={buttonVariants({ variant: "outline", size: "sm" })}
-                >
-                    <Download />
-                    .tex
-                </a>
+                {tab === "preview" ? (
+                    <Tooltip content="Compile and download as PDF" align="end" className="shrink-0">
+                        <Button variant="outline" size="sm" onClick={savePdf} disabled={compiling}>
+                            {compiling ? <Loader2 className="animate-spin" /> : <Download />}
+                            .pdf
+                        </Button>
+                    </Tooltip>
+                ) : (
+                    /* A real anchor, not a synthesised click — this codebase never fakes one. */
+                    <a
+                        href={`data:application/x-tex;charset=utf-8,${encodeURIComponent(source)}`}
+                        download={doc.file}
+                        className={buttonVariants({ variant: "outline", size: "sm" })}
+                    >
+                        <Download />
+                        .tex
+                    </a>
+                )}
             </PanelHeader>
 
             {tab === "preview" ? (
@@ -78,11 +98,7 @@ export function ResumePreview({ doc, activeLine, onSelect }) {
                         tab === "source" && "max-h-[70vh] overflow-y-auto"
                     )}
                 >
-                    <TexDiff
-                        hunks={tab === "diff" ? hunks : doc.lines}
-                        activeLine={activeLine}
-                        onSelect={onSelect}
-                    />
+                    <TexDiff hunks={tab === "diff" ? hunks : doc.lines} />
                 </div>
             )}
 
@@ -99,8 +115,7 @@ export function ResumePreview({ doc, activeLine, onSelect }) {
                         <>
                             {tab === "diff"
                                 ? `Changed lines with context. Switch to Source for the whole ${doc.lines.length}-line file.`
-                                : `The complete tailored document, ${doc.lines.length} lines.`}{" "}
-                            Click a line to pick it for rewriting.
+                                : `The complete tailored document, ${doc.lines.length} lines.`}
                         </>
                     )}
                 </p>

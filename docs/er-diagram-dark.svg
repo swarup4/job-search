@@ -314,6 +314,22 @@
     <line x1="1039" y1="695" x2="1030" y2="700" stroke="#3a3e47"/>
     <line x1="1053" y1="690" x2="1053" y2="700" stroke="#3a3e47"/>
     <text x="1045" y="599" text-anchor="middle" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#a8acb6">templateId</text>
+    <rect x="1266" y="625" width="176" height="158" rx="4" fill="#1a1d25" stroke="#2d3038"/>
+    <text x="1278" y="644" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="13" font-weight="600" fill="#f0f1f4">preferences</text>
+    <line x1="1266" y1="653" x2="1442" y2="653" stroke="#2d3038"/>
+    <text x="1278" y="666" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#f0f1f4">_id</text>
+    <text x="1430" y="666" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#4FC4BB">PK</text>
+    <text x="1278" y="681" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" font-weight="600" fill="#f0f1f4">userId</text>
+    <text x="1430" y="681" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#4FC4BB">FK UK</text>
+    <text x="1278" y="696" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#f0f1f4">roles</text>
+    <text x="1430" y="696" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#4FC4BB">[]</text>
+    <text x="1278" y="711" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#f0f1f4">skills</text>
+    <text x="1430" y="711" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#4FC4BB">[]</text>
+    <text x="1278" y="726" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#f0f1f4">locations</text>
+    <text x="1430" y="726" text-anchor="end" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="9" fill="#4FC4BB">[]</text>
+    <text x="1278" y="741" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#a8acb6">workMode</text>
+    <text x="1278" y="756" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#a8acb6">minExperience</text>
+    <text x="1278" y="771" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#a8acb6">updatedAt</text>
     <text x="1060" y="786" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#4FC4BB">shared — no userId</text>
     <text x="442" y="801" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#a8acb6">answer_bank has no FK to applications — the extension matches an answer</text>
     <text x="442" y="816" font-family="'SF Mono',SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="10.5" fill="#a8acb6">to a form field by question key at fill time.</text>

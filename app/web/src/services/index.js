@@ -3,7 +3,7 @@
  * reach into a file below it.
  */
 
-export { AI_URL, API_URL, ApiError, axiosInstance } from "@/lib/axiosInstance";
+export { AI_URL, API_URL, ApiError, axiosInstance, reportError } from "@/lib/axiosInstance";
 
 export { getJob, getJobDetails, listLocations, searchJobs, updateJob } from "./job";
 export { getMatch, recordSelection, skipSelection } from "./match";
@@ -11,6 +11,7 @@ export {
     getBaseResume,
     getBaseResumePdf,
     getResume,
+    getResumePdf,
     saveBaseResume,
 } from "./resume";
 export { getTemplatePreview, listTemplates, renderTemplate } from "./template";
@@ -47,3 +48,4 @@ export { getTierSettings, listCareerSources, updateCareerSource } from "./discov
 export { getPreferences, savePreferences } from "./preference";
 export { followRun, startRun } from "./runs";
 export { tailorResume } from "./tailoring";
+export { clearErrorLog, getErrorLog } from "./errorLog";

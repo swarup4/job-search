@@ -38,7 +38,7 @@ export function ResumeChat() {
                 <PanelTitle>Rectify with the model</PanelTitle>
             </PanelHeader>
 
-            <div className="flex min-h-[280px] flex-col gap-3 overflow-y-auto px-5 py-4">
+            <div className="flex min-h-[120px] flex-col gap-3 overflow-y-auto px-5 py-4">
                 {messages.map((message, i) => (
                     <Bubble key={i} role={message.role}>
                         {message.text}
@@ -65,9 +65,9 @@ export function ResumeChat() {
             <div className="flex flex-col gap-2.5 border-t border-border px-5 py-4">
                 <Textarea
                     disabled
-                    rows={3}
+                    rows={2}
                     placeholder="Ask for a change…"
-                    className="min-h-[76px] text-[13px] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="min-h-[52px] text-[13px] disabled:cursor-not-allowed disabled:opacity-60"
                 />
                 <div className="flex items-center gap-3">
                     <p className="text-[12px] text-muted-foreground">

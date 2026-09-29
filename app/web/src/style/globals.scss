@@ -401,5 +401,36 @@ $ring-sizes: (
     &::backdrop {
       background: oklch(0 0 0 / 45%);
     }
+
+    // A full-height sheet on the right edge instead of a centred box.
+    &.drawer {
+      margin: 0 0 0 auto;
+      width: min(480px, 100vw);
+      max-width: none;
+      height: 100dvh;
+      max-height: none;
+      overflow: hidden;
+      border-radius: 0;
+
+      // Only while open: a `display` on the closed dialog would override the UA's
+      // `display: none` and leave it on screen.
+      &[open] {
+        display: flex;
+        flex-direction: column;
+        animation: drawer-in 200ms ease-out;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        &[open] {
+          animation: none;
+        }
+      }
+    }
+  }
+}
+
+@keyframes drawer-in {
+  from {
+    transform: translateX(100%);
   }
 }

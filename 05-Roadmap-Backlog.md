@@ -346,6 +346,17 @@ the API. The other sources, archiving and the scheduler are still open.
   scoring run stopped filling the tech stack, so that stays exact. No schema change. The
   extension gained host permission for port 8001 (`JOBPILOT_AI_URL`, default
   `http://127.0.0.1:8001/api`) and the AI tier admits the extension origin. 6 tests
+- ✅ `P3-41` **Skills: search descriptions, not only titles.** Search targets gained an
+  optional **Skills** list next to Target roles, saved as `preferences.skills` (the
+  `preferences` box is now in the ER diagram). A posting is kept when its **title** has a
+  role — as before — **or** its **description** names a skill, both as whole words; the word
+  check now bounds on letters and digits rather than `\b`, so "C++", ".NET" and "Node.js"
+  match standing alone. Workday searches once per skill too, capped at 2 pages
+  (`SCRAPE_SKILL_MAX_PAGES`), fetches the details of skill-only results — title matches first,
+  so a limited run spends its budget on the surest — and keeps one only if its description
+  names a skill. The run report counts `bySkill`, shown in the Last run panel. Found because a
+  run for roles "Node.js, MongoDB" fetched 397 listings and matched none: titles say "Full
+  Stack Developer", the stack is in the description. 5 tests
 - ✅ `P3-08` Job Search screen built (multi-field search + facets)
 - ✅ `P3-09` Shortlist / Match Review screen built
 - ✅ `P3-10` Job Details screen built

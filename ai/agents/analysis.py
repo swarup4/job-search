@@ -24,6 +24,7 @@ all of them is skipped whole.
 from __future__ import annotations
 
 import asyncio
+import logging
 import re
 from collections.abc import Callable
 from typing import Any, Literal
@@ -35,6 +36,8 @@ from config.llm import generate
 from mcp_servers.jobpilot_api import client
 from mcp_servers.jobpilot_api.client import JobPilotApiError
 from rag.embeddings import VoyageEmbeddings
+
+logger = logging.getLogger(__name__)
 
 DETAIL_FIELDS = ("experienceBand", "salaryText", "workMode", "jobType")
 
@@ -193,8 +196,10 @@ async def _step(work: Any) -> StepResult:
     except JobPilotApiError as error:
         if error.status == 401:
             raise
+        logger.error("analysis step failed: %s", error)
         return StepResult(ok=False, note=str(error)[:200])
-    except Exception as error:  # noqa: BLE001 — one step's failure must not stop the rest
+    except Exception as error:  # one step's failure must not stop the rest
+        logger.exception("analysis step failed")
         return StepResult(ok=False, note=f"{type(error).__name__}: {error}"[:200])
     return StepResult(ok=True, note=note)
 

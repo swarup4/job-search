@@ -34,6 +34,9 @@ DEFAULT_LOCATIONS = [
     part.strip() for part in os.environ.get("SCRAPE_LOCATIONS", "India").split(",") if part.strip()
 ]
 DEFAULT_WORKDAY_MAX_PAGES = int(os.environ.get("SCRAPE_WORKDAY_MAX_PAGES", "5"))
+# Fewer for a skill: every result of a skill search needs its detail fetched before it
+# can be judged, where a role search is filtered on the title for free.
+DEFAULT_SKILL_MAX_PAGES = int(os.environ.get("SCRAPE_SKILL_MAX_PAGES", "2"))
 
 SOURCE = "career_page"
 
@@ -45,6 +48,9 @@ class Filters(BaseModel):
     titles: list[str]
     locations: list[str]
     workdayMaxPages: int
+    # Matched against the description; a posting is kept on a title OR a skill.
+    skills: list[str] = []
+    skillMaxPages: int = DEFAULT_SKILL_MAX_PAGES
 
     @classmethod
     def from_preferences(cls, saved: dict[str, Any] | None) -> Filters:
@@ -55,16 +61,32 @@ class Filters(BaseModel):
             titles=saved.get("roles") or DEFAULT_TITLES,
             locations=saved.get("locations") or DEFAULT_LOCATIONS,
             workdayMaxPages=DEFAULT_WORKDAY_MAX_PAGES,
+            skills=saved.get("skills") or [],
         )
 
     def title_wanted(self, title: str) -> bool:
         """Word-bounded, case-insensitive: "AI" matches "AI / ML Engineer" and "Lead AI
         Architect", not "Maintenance"."""
-        pattern = r"\b(?:" + "|".join(re.escape(term) for term in self.titles) + r")\b"
-        return re.search(pattern, title, re.IGNORECASE) is not None
+        return _mentions(self.titles, title)
+
+    def skill_wanted(self, text: str) -> bool:
+        """A skill named in the description, word-bounded the same way."""
+        return bool(self.skills) and _mentions(self.skills, text)
 
     def location_wanted(self, *places: str) -> bool:
         return any(want.lower() in place.lower() for place in places for want in self.locations)
+
+
+def _mentions(terms: list[str], text: str) -> bool:
+    """Any term as a whole word, ignoring case. Boundaries are letters and digits rather
+    than `\\b`, so "C++", ".NET" and "Node.js" match where they stand alone."""
+    if not terms:
+        return False
+    alternatives = "|".join(re.escape(term) for term in terms)
+    return (
+        re.search(rf"(?<![A-Za-z0-9])(?:{alternatives})(?![A-Za-z0-9])", text, re.IGNORECASE)
+        is not None
+    )
 
 
 class Posting(BaseModel):
@@ -89,6 +111,8 @@ class Harvest(BaseModel):
     fetched: int = 0
     known: int = 0
     failed: int = 0
+    # Kept because the description names a skill, not because the title has a role.
+    bySkill: int = 0
     postings: list[Posting] = []
 
 

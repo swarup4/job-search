@@ -14,6 +14,7 @@ from modules import (
     account,
     application,
     career_source,
+    error_log,
     job,
     job_description,
     match,
@@ -38,6 +39,7 @@ MODULES = (
     career_source,
     preference,
     status,
+    error_log,
 )
 
 

@@ -15,6 +15,7 @@ decides.
 from __future__ import annotations
 
 import asyncio
+import logging
 import re
 from typing import Any
 
@@ -23,6 +24,8 @@ from pydantic import BaseModel, Field
 from agents.analysis import JobDetails, verify_details
 from config.llm import generate
 from mcp_servers.jobpilot_api import client
+
+logger = logging.getLogger(__name__)
 
 # A posting is a few thousand characters. Past this it is a listing page or a nav
 # dump, and the tail adds noise rather than signal.
@@ -166,7 +169,8 @@ async def parse_pending(limit: int = 25) -> list[ParseOutcome]:
     for description in await client.list_raw_descriptions(limit=limit):
         try:
             outcomes.append(await parse_description(description["id"]))
-        except Exception as exc:  # noqa: BLE001 — a bad page must not end the run
+        except Exception as exc:  # a bad page must not end the run
+            logger.exception("parsing description %s failed", description["id"])
             outcomes.append(
                 ParseOutcome(
                     descriptionId=description["id"],

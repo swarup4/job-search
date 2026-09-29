@@ -1,3 +1,5 @@
+from pathlib import PurePosixPath
+
 from beanie import PydanticObjectId
 from fastapi import APIRouter, Response, status
 
@@ -53,3 +55,19 @@ async def store_resume(payload: ResumeStore, user_id: CurrentUser) -> TailoredRe
 @router.get("/getResume/{job_id}", response_model=ResumeRead)
 async def get_resume(job_id: PydanticObjectId, user_id: CurrentUser) -> TailoredResume:
     return await service.get_resume(user_id, job_id)
+
+
+@router.get(
+    "/pdf/{job_id}",
+    responses={
+        200: {"content": {"application/pdf": {"schema": {"type": "string", "format": "binary"}}}}
+    },
+)
+async def download_tailored_pdf(job_id: PydanticObjectId, user_id: CurrentUser) -> Response:
+    resume = await service.get_resume(user_id, job_id)
+    filename = pdf_filename(PurePosixPath(resume.filePath).stem)
+    return Response(
+        content=await to_pdf(resume.tex),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

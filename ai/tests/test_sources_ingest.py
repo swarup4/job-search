@@ -132,7 +132,9 @@ async def test_a_run_counts_new_duplicate_and_failed(
         adapter_returning(Harvest(fetched=40, failed=1, postings=[POSTING])),
     )
     result = await run.run_source({"platform": "workday"}, None, FILTERS)  # type: ignore[arg-type]
-    assert result == {"fetched": 40, "matched": 1, "new": 1, "duplicate": 0, "failed": 1}
+    assert result == {
+        "fetched": 40, "matched": 1, "new": 1, "duplicate": 0, "failed": 1, "bySkill": 0,
+    }  # fmt: skip
 
 
 async def test_postings_skipped_as_stored_count_as_duplicates(
@@ -142,7 +144,9 @@ async def test_postings_skipped_as_stored_count_as_duplicates(
         run.ADAPTERS, "workday", adapter_returning(Harvest(fetched=60, known=9, postings=[POSTING]))
     )
     result = await run.run_source({"platform": "workday"}, None, FILTERS)  # type: ignore[arg-type]
-    assert result == {"fetched": 60, "matched": 10, "new": 1, "duplicate": 9, "failed": 0}
+    assert result == {
+        "fetched": 60, "matched": 10, "new": 1, "duplicate": 9, "failed": 0, "bySkill": 0,
+    }  # fmt: skip
 
 
 async def test_robots_is_reported_as_blocked(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -273,3 +277,29 @@ async def test_a_skipped_company_keeps_its_last_real_result(
     assert len(fake.jobs) == 2
     assert recorded == ["s0"]
     assert reported["Co1"]["skipped"] and reported["Co2"]["skipped"]
+
+
+def test_words_with_symbols_match_as_whole_words() -> None:
+    """`\\b` fails around "+" and ".", so "C++" and ".NET" never matched a title."""
+    filters = Filters(titles=["C++", ".NET", "Node.js"], locations=["India"], workdayMaxPages=1)
+    assert filters.title_wanted("Senior C++ Engineer")
+    assert filters.title_wanted("Full Stack (.NET, React)")
+    assert filters.title_wanted("Node.js Developer")
+    assert not filters.title_wanted("Nodejs-free role")
+
+
+def test_a_skill_is_looked_for_in_the_description() -> None:
+    filters = Filters(
+        titles=["Full Stack"], skills=["Node.js", "MongoDB"], locations=["India"], workdayMaxPages=1
+    )
+    assert filters.skill_wanted("You will build APIs in Node.js and Express.")
+    assert not filters.skill_wanted("You will build APIs in Java.")
+    assert not Filters(titles=["x"], locations=["India"], workdayMaxPages=1).skill_wanted("Node.js")
+
+
+def test_saved_skills_reach_the_run() -> None:
+    filters = Filters.from_preferences(
+        {"roles": ["Backend"], "skills": ["Node.js"], "locations": ["India"]}
+    )
+    assert filters.skills == ["Node.js"]
+    assert Filters.from_preferences(None).skills == []
