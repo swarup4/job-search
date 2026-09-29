@@ -28,11 +28,6 @@ async def create_source(payload: CareerSourceCreate, _: CurrentUser) -> CareerSo
     return await service.create_source(payload)
 
 
-@router.get("/{source_id}", response_model=CareerSourceRead)
-async def get_source(source_id: PydanticObjectId, _: CurrentUser) -> CareerSource:
-    return await service.get_source(source_id)
-
-
 @router.patch("/{source_id}", response_model=CareerSourceRead)
 async def update_source(
     source_id: PydanticObjectId, payload: CareerSourceUpdate, _: CurrentUser

@@ -16,11 +16,6 @@ from modules.resume.models import (
 router = APIRouter(tags=["resume"])
 
 
-@router.get("/versions/{job_id}", response_model=list[ResumeRead])
-async def list_versions(job_id: PydanticObjectId, user_id: CurrentUser) -> list[TailoredResume]:
-    return await service.list_versions(user_id, job_id)
-
-
 @router.get("/base", response_model=BaseResumeRead)
 async def get_base_resume(user_id: CurrentUser) -> BaseResume:
     return await service.get_base_resume(user_id)

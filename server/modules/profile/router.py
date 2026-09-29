@@ -60,11 +60,6 @@ async def reindex(user_id: CurrentUser) -> IndexStats:
 # --- work experience ---------------------------------------------------------
 
 
-@router.get("/getExperience", response_model=list[ExperienceRead])
-async def list_experience(user_id: CurrentUser) -> list[Experience]:
-    return await service.list_experience(user_id)
-
-
 @router.post("/addExperience", response_model=ExperienceRead, status_code=status.HTTP_201_CREATED)
 async def add_experience(payload: ExperienceFields, user_id: CurrentUser) -> Experience:
     return await service.add_experience(user_id, payload)
@@ -83,11 +78,6 @@ async def remove_experience(entry_id: PydanticObjectId, user_id: CurrentUser) ->
 
 
 # --- education ---------------------------------------------------------------
-
-
-@router.get("/getEducation", response_model=list[EducationRead])
-async def list_education(user_id: CurrentUser) -> list[Education]:
-    return await service.list_education(user_id)
 
 
 @router.post("/addEducation", response_model=EducationRead, status_code=status.HTTP_201_CREATED)
@@ -110,11 +100,6 @@ async def remove_education(entry_id: PydanticObjectId, user_id: CurrentUser) -> 
 # --- skills ------------------------------------------------------------------
 
 
-@router.get("/getSkills", response_model=list[SkillRead])
-async def list_skills(user_id: CurrentUser) -> list[Skill]:
-    return await service.list_skills(user_id)
-
-
 @router.post("/addSkill", response_model=SkillRead, status_code=status.HTTP_201_CREATED)
 async def add_skill(payload: SkillFields, user_id: CurrentUser) -> Skill:
     return await service.add_skill(user_id, payload)
@@ -133,11 +118,6 @@ async def remove_skill(entry_id: PydanticObjectId, user_id: CurrentUser) -> None
 
 
 # --- certifications ----------------------------------------------------------
-
-
-@router.get("/getCertifications", response_model=list[CertificationRead])
-async def list_certifications(user_id: CurrentUser) -> list[Certification]:
-    return await service.list_certifications(user_id)
 
 
 @router.post(

@@ -1,4 +1,4 @@
-import { axiosInstance, orNull } from "@/lib/axiosInstance";
+import { axiosInstance } from "@/lib/axiosInstance";
 
 /**
  * GET /api/application/tracker — the Applications screen in one call: `staged` (waiting on
@@ -41,10 +41,6 @@ export function unshortlistJob(jobId) {
 
 export function setShortlisted(jobId, shortlisted) {
     return shortlisted ? shortlistJob(jobId) : unshortlistJob(jobId);
-}
-
-export function getApplication(applicationId) {
-    return orNull(axiosInstance.get(`/application/getApplication/${applicationId}`));
 }
 
 /**

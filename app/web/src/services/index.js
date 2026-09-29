@@ -5,18 +5,16 @@
 
 export { AI_URL, API_URL, ApiError, axiosInstance } from "@/lib/axiosInstance";
 
-export { getJob, getJobDetails, listJobs, searchJobs, updateJob } from "./job";
+export { getJob, getJobDetails, searchJobs, updateJob } from "./job";
 export { getMatch, recordSelection, skipSelection } from "./match";
 export {
     getBaseResume,
     getBaseResumePdf,
     getResume,
-    listResumeVersions,
     saveBaseResume,
 } from "./resume";
 export { getTemplatePreview, listTemplates, renderTemplate } from "./template";
 export {
-    getApplication,
     getBoard,
     getBoardColumn,
     getShortlist,
@@ -26,7 +24,6 @@ export {
     shortlistJob,
     unshortlistJob,
 } from "./application";
-export { listEvents } from "./event";
 export { getIndexStats, reindexProfile } from "./retrieval";
 export {
     addCertification,
@@ -38,11 +35,7 @@ export {
     deleteEducation,
     deleteExperience,
     deleteSkill,
-    getCertifications,
-    getEducation,
-    getExperience,
     getProfile,
-    getSkills,
     updateCertification,
     updateEducation,
     updateExperience,

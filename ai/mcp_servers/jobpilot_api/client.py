@@ -69,11 +69,6 @@ async def get_job(job_id: str) -> dict[str, Any]:
     return await _request("GET", f"/job/getJob/{job_id}")
 
 
-async def list_jobs(limit: int = 50) -> list[dict[str, Any]]:
-    """Newest first."""
-    return await _request("GET", "/job", params={"limit": limit})
-
-
 async def list_unscored_jobs(limit: int) -> list[dict[str, Any]]:
     """The caller's newest jobs with no match yet — what "Analyze new jobs" takes."""
     body = await _request("GET", "/match/unscored", params={"limit": limit})
@@ -129,10 +124,6 @@ async def list_raw_descriptions(limit: int = 50) -> list[dict[str, Any]]:
 
 async def link_description(description_id: str, job_id: str) -> dict[str, Any]:
     return await _request("POST", f"/job-description/link/{description_id}/{job_id}")
-
-
-async def update_description(description_id: str, payload: dict[str, Any]) -> dict[str, Any]:
-    return await _request("PATCH", f"/job-description/{description_id}", json=payload)
 
 
 async def set_description_status(description_id: str, status: str) -> dict[str, Any]:

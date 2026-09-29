@@ -213,7 +213,7 @@ async def test_each_tailoring_run_is_a_new_version(signed_in: AsyncClient) -> No
     second = await signed_in.post("/resume/storeResume", json=resume(job_id, ["Kubernetes"]))
 
     assert second.json()["version"] == 2
-    assert len((await signed_in.get(f"/resume/versions/{job_id}")).json()) == 2
+    assert (await signed_in.get(f"/resume/getResume/{job_id}")).json()["version"] == 2
 
 
 async def test_the_tailored_tex_is_stored_and_read_back_verbatim(

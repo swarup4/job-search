@@ -5,11 +5,6 @@ export function getResume(jobId) {
     return orNull(axiosInstance.get(`/resume/getResume/${jobId}`));
 }
 
-/** GET /api/resume/{jobId}/versions — newest first. */
-export function listResumeVersions(jobId) {
-    return axiosInstance.get(`/resume/versions/${jobId}`);
-}
-
 /** GET /api/resume/base — the default resume. Null until one is submitted. */
 export function getBaseResume() {
     return orNull(axiosInstance.get("/resume/base"));

@@ -1,7 +1,7 @@
 from typing import Literal
 
 from beanie import PydanticObjectId
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Query
 
 from modules.account import CurrentUser
 from modules.application import service
@@ -13,16 +13,13 @@ from modules.application.models import (
     Application,
     ApplicationFill,
     ApplicationRead,
-    ApplicationStage,
     ApplicationStatus,
     Board,
     BoardCard,
-    BoardCounts,
     ShortlistRow,
     StatusTransition,
     Tracker,
 )
-from modules.job import Job, JobRead
 
 router = APIRouter(tags=["application"])
 
@@ -70,18 +67,6 @@ async def board_column(
     return await service.board_column(user_id, column, skip, limit)
 
 
-@router.get("/counts", response_model=BoardCounts)
-async def board_counts(user_id: CurrentUser) -> BoardCounts:
-    return await service.board_counts(user_id)
-
-
-@router.get("/unstarted", response_model=list[JobRead])
-async def unstarted_jobs(
-    user_id: CurrentUser, limit: int = Query(default=50, le=200), skip: int = 0
-) -> list[Job]:
-    return await service.unstarted_jobs(user_id, limit, skip)
-
-
 @router.get("/shortlist", response_model=list[ShortlistRow])
 async def shortlisted_jobs(user_id: CurrentUser) -> list[ShortlistRow]:
     return await service.shortlisted_jobs(user_id)
@@ -95,11 +80,6 @@ async def shortlist(job_id: PydanticObjectId, user_id: CurrentUser) -> Applicati
 @router.delete("/shortlist/{job_id}", response_model=ApplicationRead | None)
 async def unshortlist(job_id: PydanticObjectId, user_id: CurrentUser) -> Application | None:
     return await service.unshortlist(user_id, job_id)
-
-
-@router.get("/for-job/{job_id}", response_model=ApplicationRead | None)
-async def get_for_job(job_id: PydanticObjectId, user_id: CurrentUser) -> Application | None:
-    return await service.get_for_job(user_id, job_id)
 
 
 @router.post("/fill/{application_id}", response_model=ApplicationRead)
@@ -122,15 +102,3 @@ async def list_applications(
     statuses: list[ApplicationStatus] | None = Query(default=None, alias="status"),
 ) -> list[Application]:
     return await service.list_applications(user_id, statuses)
-
-
-@router.post(
-    "/stageApplication", response_model=ApplicationRead, status_code=status.HTTP_201_CREATED
-)
-async def stage_application(payload: ApplicationStage, user_id: CurrentUser) -> Application:
-    return await service.stage_application(user_id, payload)
-
-
-@router.get("/getApplication/{application_id}", response_model=ApplicationRead)
-async def get_application(application_id: PydanticObjectId, user_id: CurrentUser) -> Application:
-    return await service.get_application(user_id, application_id)

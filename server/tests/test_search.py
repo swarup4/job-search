@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from httpx import AsyncClient
 
-from tests.test_board import score, sign_up
+from tests.test_board import score, sign_up, stage
 
 
 async def add_job(
@@ -144,10 +144,7 @@ async def test_another_accounts_score_and_shortlist_stay_theirs(client: AsyncCli
 async def test_a_withdrawn_application_is_not_shortlisted(signed_in: AsyncClient) -> None:
     job_id = await add_job(signed_in, "R1", "LLM Engineer")
     await signed_in.post(f"/application/shortlist/{job_id}")
-    await signed_in.post(
-        "/application/stageApplication",
-        json={"jobId": job_id, "resumeId": "0" * 24, "texPath": "out/resume.tex"},
-    )
+    await stage(signed_in, job_id)
     await signed_in.delete(f"/application/shortlist/{job_id}")
 
     [row] = (await signed_in.post("/job/search", json={})).json()["jobs"]
