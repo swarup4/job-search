@@ -10,8 +10,10 @@ matches have run out.
 from __future__ import annotations
 
 import asyncio
+import re
 from collections.abc import Awaitable, Callable, Iterator
 from datetime import UTC, datetime
+from html import unescape
 from typing import Any
 
 from sources.base import Filters, Harvest, Posting
@@ -69,10 +71,26 @@ async def fetch(
             if not hits or (page + 1) * PAGE_SIZE >= total:
                 break
 
+    # A skill search keeps every result for now: whether it counts is decided on the
+    # description, which only the detail carries. Fewer pages, since each one costs.
+    by_skill: set[str] = set()
+    for keyword in filters.skills:
+        total = 0
+        for page in range(filters.skillMaxPages):
+            data = await http.post_json(f"{api}/jobs", _search(keyword, facets, page * PAGE_SIZE))
+            total = total or data.get("total", 0)
+            listings = data.get("jobPostings", [])
+            harvest.fetched += len(listings)
+            by_skill.update(row["externalPath"] for row in listings)
+            if not listings or (page + 1) * PAGE_SIZE >= total:
+                break
+    by_skill -= paths
+
     # Workday's `externalUrl` is the site URL plus the listing's path, which is how a
     # stored posting is recognised before its detail is fetched. A tenant that builds
     # it differently is never recognised, and is simply fetched as before.
-    ordered = sorted(paths)
+    # Title matches first, so a limited run spends its budget on the surest ones.
+    ordered = sorted(paths) + sorted(by_skill)
     stored = await asyncio.gather(*(is_stored(f"{origin}/{site}{path}") for path in ordered))
     fresh = [path for path, known in zip(ordered, stored, strict=True) if not known]
     harvest.known = len(ordered) - len(fresh)
@@ -82,14 +100,25 @@ async def fetch(
     details = await asyncio.gather(
         *(http.get_json(f"{api}{path}") for path in fresh), return_exceptions=True
     )
-    for detail in details:
+    for path, detail in zip(fresh, details, strict=True):
         if isinstance(detail, BaseException):
             harvest.failed += 1
             continue
         posting = _posting(detail["jobPostingInfo"], source["name"], filters)
-        if posting is not None:
-            harvest.postings.append(posting)
+        if posting is None:
+            continue
+        if path in by_skill:
+            # Found only by a skill search: kept when its description names a skill.
+            if not filters.skill_wanted(_text(posting.html)):
+                continue
+            harvest.bySkill += 1
+        harvest.postings.append(posting)
     return harvest
+
+
+def _text(html: str) -> str:
+    """The description without its markup, so a skill split by a tag still reads."""
+    return unescape(re.sub(r"<[^>]+>", " ", html))
 
 
 def _search(text: str, facets: dict[str, list[str]], offset: int) -> dict[str, Any]:

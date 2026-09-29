@@ -10,12 +10,15 @@ from __future__ import annotations
 
 import os
 from collections.abc import AsyncIterator
+from pathlib import Path
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from config import error_log
 from config.database import connect, disconnect
 from main import create_app
+from modules.error_log import service as error_log_service
 
 TEST_DB = "jobpilot_test"
 
@@ -23,6 +26,15 @@ TEST_DB = "jobpilot_test"
 # must never reach Atlas, and a suite that creates and drops a database should not be
 # doing it over the network on someone's cluster. `TEST_MONGODB_URI` overrides.
 os.environ["MONGODB_URI"] = os.environ.get("TEST_MONGODB_URI", "mongodb://127.0.0.1:27017")
+
+
+@pytest.fixture(autouse=True)
+def log_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Errors the suite provokes on purpose stay out of the real `logs/errors.jsonl`."""
+    path = tmp_path / "errors.jsonl"
+    monkeypatch.setattr(error_log, "ERROR_LOG_PATH", path)
+    monkeypatch.setattr(error_log_service, "ERROR_LOG_PATH", path)
+    return path
 
 
 @pytest.fixture

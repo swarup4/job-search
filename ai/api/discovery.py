@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import logging
 import time
 import uuid
 from datetime import UTC, datetime
@@ -25,6 +26,8 @@ from mcp_servers.jobpilot_api import client
 from mcp_servers.jobpilot_api.client import JobPilotApiError
 from sources import run as scrape
 from sources.base import Filters
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["discovery"])
 
@@ -47,6 +50,8 @@ class CompanyResult(BaseModel):
     blocked: bool = False
     # Not scraped: the run's limit was reached before this company's turn.
     skipped: bool = False
+    # Of `matched`, how many came in on a skill in the description, not a role in the title.
+    bySkill: int = 0
     error: str | None = None
 
 
@@ -189,7 +194,10 @@ async def _execute(
     except JobPilotApiError as error:
         run.status = "failed"
         run.error = EXPIRED if error.status == 401 else str(error)[:300]
-    except Exception as error:  # noqa: BLE001 — a background task has no caller to raise to
+        if error.status != 401:
+            logger.error("discovery run %s failed: %s", run.id, error)
+    except Exception as error:  # a background task has no caller to raise to
+        logger.exception("discovery run %s failed", run.id)
         run.status = "failed"
         run.error = f"{type(error).__name__}: {error}"[:300]
     finally:

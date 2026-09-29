@@ -21,6 +21,7 @@ const WORK_MODES = [
 function shape(preferences) {
     return {
         roles: preferences.roles,
+        skills: preferences.skills ?? [],
         locations: preferences.locations,
         workMode: preferences.workMode ?? null,
         minExperience: preferences.minExperience ?? null,
@@ -108,6 +109,17 @@ export function SearchTargets() {
                                 items={form.roles}
                                 onChange={(roles) => set("roles", roles)}
                                 placeholder="e.g. GenAI Engineer — press Enter to add"
+                            />
+                        </Field>
+
+                        <Field
+                            label="Skills"
+                            hint="Optional. A listing is also kept when its description names one of these — for technologies job titles rarely carry, like Node.js or MongoDB. Each one is a separate search, and every result's details are fetched to check, so a run takes longer."
+                        >
+                            <TokenInput
+                                items={form.skills}
+                                onChange={(skills) => set("skills", skills)}
+                                placeholder="e.g. Node.js — press Enter to add"
                             />
                         </Field>
 

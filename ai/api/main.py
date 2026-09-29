@@ -8,6 +8,7 @@ forwards, so nothing off this machine should be able to reach it.
 
 from __future__ import annotations
 
+import logging
 import os
 
 import uvicorn
@@ -16,9 +17,17 @@ from fastapi.middleware.cors import CORSMiddleware
 
 import config  # noqa: F401 — imported for its .env load
 from api import analysis, capture, discovery, scoring, settings, tailoring
+from config.error_log import ErrorLogHandler
 
 
 def create_app() -> FastAPI:
+    handler = ErrorLogHandler("ai")
+    # Uvicorn reports an exception a route lets escape on its own logger, which does
+    # not propagate to the root.
+    for logger in (logging.getLogger(), logging.getLogger("uvicorn.error")):
+        if not any(isinstance(existing, ErrorLogHandler) for existing in logger.handlers):
+            logger.addHandler(handler)
+
     app = FastAPI(title="JobPilot AI", version="1.0.0")
     app.add_middleware(
         CORSMiddleware,

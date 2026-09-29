@@ -64,3 +64,17 @@ async def test_nothing_to_search_for_is_refused(signed_in: AsyncClient) -> None:
 async def test_an_unknown_work_mode_is_refused(signed_in: AsyncClient) -> None:
     response = await signed_in.put("/preference", json={**TARGETS, "workMode": "Hybrid preferred"})
     assert response.status_code == 422
+
+
+async def test_skills_are_optional_and_saved_tidied(signed_in: AsyncClient) -> None:
+    """Skills are matched against descriptions; none is a valid answer."""
+    assert (await signed_in.get("/preference")).json()["skills"] == []
+
+    saved = await signed_in.put(
+        "/preference", json={**TARGETS, "skills": [" Node.js ", "MongoDB", "node.js"]}
+    )
+    assert saved.status_code == 200, saved.text
+    assert (await signed_in.get("/preference")).json()["skills"] == ["Node.js", "MongoDB"]
+
+    cleared = await signed_in.put("/preference", json=TARGETS)
+    assert cleared.json()["skills"] == []
