@@ -164,10 +164,6 @@ async def update_profile(user_id: PydanticObjectId, payload: ProfileUpdate) -> P
 # cannot reach another user's row.
 
 
-async def list_experience(user_id: PydanticObjectId) -> list[Experience]:
-    return await Experience.find({"userId": user_id}).to_list()
-
-
 async def add_experience(user_id: PydanticObjectId, payload: ExperienceFields) -> Experience:
     entry = Experience(userId=user_id, **payload.model_dump())
     await entry.insert()
@@ -199,10 +195,6 @@ async def remove_experience(user_id: PydanticObjectId, entry_id: PydanticObjectI
 
 
 # --- education ---------------------------------------------------------------
-
-
-async def list_education(user_id: PydanticObjectId) -> list[Education]:
-    return await Education.find({"userId": user_id}).to_list()
 
 
 async def add_education(user_id: PydanticObjectId, payload: EducationFields) -> Education:
@@ -238,10 +230,6 @@ async def remove_education(user_id: PydanticObjectId, entry_id: PydanticObjectId
 # --- skills ------------------------------------------------------------------
 
 
-async def list_skills(user_id: PydanticObjectId) -> list[Skill]:
-    return await Skill.find({"userId": user_id}).to_list()
-
-
 async def add_skill(user_id: PydanticObjectId, payload: SkillFields) -> Skill:
     entry = Skill(userId=user_id, **payload.model_dump())
     await entry.insert()
@@ -273,10 +261,6 @@ async def remove_skill(user_id: PydanticObjectId, entry_id: PydanticObjectId) ->
 
 
 # --- certifications ----------------------------------------------------------
-
-
-async def list_certifications(user_id: PydanticObjectId) -> list[Certification]:
-    return await Certification.find({"userId": user_id}).to_list()
 
 
 async def add_certification(

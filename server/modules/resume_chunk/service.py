@@ -80,18 +80,6 @@ async def replace_chunks(user_id: PydanticObjectId, chunks: list[ChunkFields]) -
     return await stats(user_id)
 
 
-async def list_chunks(
-    user_id: PydanticObjectId, limit: int = 200, skip: int = 0
-) -> list[ResumeChunk]:
-    return (
-        await ResumeChunk.find(ResumeChunk.userId == user_id)
-        .sort(+ResumeChunk.ordinal)
-        .skip(skip)
-        .limit(limit)
-        .to_list()
-    )
-
-
 async def pending_chunks(user_id: PydanticObjectId, limit: int = 200) -> list[ResumeChunk]:
     """Chunks with no vector yet — the AI tier's work queue."""
     return (

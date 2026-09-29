@@ -23,7 +23,7 @@ from modules.application.models import (
     Tracker,
     TrackerRow,
 )
-from modules.job import Job, count_jobs, get_job, list_jobs
+from modules.job import Job, count_jobs, get_job
 from modules.match import pending_counts
 
 # Before the user reports a submit. Past these, the row records what was actually sent.
@@ -41,6 +41,10 @@ class SubmitNotConfirmed(Conflict):
 
 class AlreadySubmitted(Conflict):
     """A submitted application leaves the shortlist through its own status, not the bookmark."""
+
+
+async def get_for_job(user_id: PydanticObjectId, job_id: PydanticObjectId) -> Application | None:
+    return await Application.find_one(Application.userId == user_id, Application.jobId == job_id)
 
 
 async def shortlist(user_id: PydanticObjectId, job_id: PydanticObjectId) -> Application:
@@ -111,10 +115,6 @@ async def get_application(
     return application
 
 
-async def get_for_job(user_id: PydanticObjectId, job_id: PydanticObjectId) -> Application | None:
-    return await Application.find_one(Application.userId == user_id, Application.jobId == job_id)
-
-
 async def list_applications(
     user_id: PydanticObjectId, statuses: list[ApplicationStatus] | None = None
 ) -> list[Application]:
@@ -131,11 +131,6 @@ async def list_applications(
 async def _started_job_ids(user_id: PydanticObjectId) -> list[PydanticObjectId]:
     rows = await Application.find(Application.userId == user_id).to_list()
     return [row.jobId for row in rows]
-
-
-async def unstarted_jobs(user_id: PydanticObjectId, limit: int, skip: int) -> list[Job]:
-    """The New column: jobs this user has no application for, newest first."""
-    return await list_jobs(limit=limit, skip=skip, exclude=await _started_job_ids(user_id))
 
 
 async def board_counts(user_id: PydanticObjectId) -> BoardCounts:

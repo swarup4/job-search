@@ -903,6 +903,17 @@ above is unprovable until this exists.
 - ⬜ `CC-06` **The AI tier's API token is one global.** `client.set_token` is module state, so a
   second account calling tailoring while another's analysis or discovery run is going would switch
   that run onto its token. Harmless with one user; the fix is a client per request or per run
+- ✅ `CC-07` **Dead endpoints removed (2026-09-29).** Fifteen API server routes no caller used —
+  checked against the dashboard, the extension and the AI tier's client, tests excluded:
+  `GET /job`, `GET /match/summaries`, `GET /application/counts`, `/unstarted`,
+  `/for-job/{jobId}`, `/getApplication/{id}`, `POST /application/stageApplication`,
+  `GET /resume/versions/{jobId}`, `GET /resume-chunk`, `PATCH /job-description/{id}`,
+  `GET /career-source/{id}` and the four `GET /profile/get{Experience,Education,Skills,
+  Certifications}`. The service functions and models only they used went too; tests that
+  staged or inspected through them now go through the services. Kept on purpose, though
+  nothing calls them yet: the profile deletes (My Details has no delete button), template
+  upload / read / update / download, `POST /career-source` (`P3-27`) and `PUT
+  /application/applicant` (its only way in)
 
 **CI is now the one that should not wait.** The suites exist but run only when someone runs
 them; `CC-05` makes them run on every push before this is used against real job applications.

@@ -7,7 +7,6 @@ from modules.match.models import (
     KeywordSelection,
     Match,
     MatchRead,
-    MatchSummary,
     MatchWrite,
     UnscoredJobs,
 )
@@ -20,13 +19,6 @@ async def unscored(
     user_id: CurrentUser, limit: int = Query(default=10, ge=0, le=50)
 ) -> UnscoredJobs:
     return await service.unscored(user_id, limit)
-
-
-@router.get("/summaries", response_model=list[MatchSummary])
-async def summaries(
-    user_id: CurrentUser, job_ids: list[PydanticObjectId] = Query(alias="jobIds", max_length=200)
-) -> list[MatchSummary]:
-    return await service.summaries(user_id, job_ids)
 
 
 @router.post("/selection/{job_id}", response_model=MatchRead)

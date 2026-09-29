@@ -1,10 +1,5 @@
 import { axiosInstance, orNull } from "@/lib/axiosInstance";
 
-/** GET /api/job — the shared catalogue, newest first. Nothing on a job is per-user. */
-export function listJobs({ company, limit = 50, skip = 0 } = {}) {
-    return axiosInstance.get("/job", { params: { company, limit, skip } });
-}
-
 /**
  * POST /api/job/search — the Search screen. Empty fields are dropped; `total` counts every
  * match and `jobs` is one page of them, newest first.

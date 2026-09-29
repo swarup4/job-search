@@ -27,11 +27,6 @@ export async function signup({ name, email, password }) {
     return toSession(await axiosInstance.post("/account/signup", { name, email, password }));
 }
 
-/** GET /api/account/getAccount — `role` lives on the account, not the profile. */
-export function getAccount() {
-    return axiosInstance.get("/account/getAccount");
-}
-
 /** PATCH /api/account/updateAccount — partial; sends only what changed. */
 export function updateAccount(changes) {
     return axiosInstance.patch("/account/updateAccount", changes);

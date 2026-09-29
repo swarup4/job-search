@@ -38,8 +38,3 @@ async def store_embeddings(payload: EmbeddingBatch, user_id: CurrentUser) -> Emb
 async def search(payload: SearchQuery, user_id: CurrentUser) -> list[ChunkMatch]:
     """Nearest chunks to an already-embedded query. Atlas only — see `service.search`."""
     return await service.search(user_id, payload.vector, payload.limit)
-
-
-@router.get("", response_model=list[ResumeChunkRead])
-async def list_chunks(user_id: CurrentUser, limit: int = 200, skip: int = 0) -> list[ResumeChunk]:
-    return await service.list_chunks(user_id, limit, skip)

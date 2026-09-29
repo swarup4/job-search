@@ -145,13 +145,6 @@ class JobDescriptionDetail(JobDescriptionRead):
         return data
 
 
-class JobDescriptionUpdate(BaseModel):
-    """What parsing learns after the capture was stored. Every field optional: a
-    PATCH sends only what changed."""
-
-    htmlString: str | None = None
-
-
 class JobDescriptionCreated(BaseModel):
     """`duplicate` is how the popup says "already captured" instead of saving twice."""
 

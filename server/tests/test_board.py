@@ -1,10 +1,14 @@
-"""The reads the Pipeline board is built from: counts per column, match summaries for
+"""The reads the Pipeline board is built from: counts per column, match headlines for
 the cards on screen, which job the keyword gate should open next — and the shortlist,
 which is the user's own application row, never a field on the shared job."""
 
 from __future__ import annotations
 
+from beanie import PydanticObjectId
 from httpx import AsyncClient
+
+from modules.application import ApplicationStage, stage_application
+from modules.application.service import get_for_job
 
 
 async def make_job(client: AsyncClient, title: str, ref: str) -> str:
@@ -57,12 +61,34 @@ async def score(
     assert response.status_code == 201, response.text
 
 
+async def user_id(client: AsyncClient) -> PydanticObjectId:
+    return PydanticObjectId((await client.get("/account/getAccount")).json()["id"])
+
+
 async def stage(client: AsyncClient, job_id: str) -> None:
-    response = await client.post(
-        "/application/stageApplication",
-        json={"jobId": job_id, "resumeId": "0" * 24, "texPath": "out/resume.tex"},
-    )
-    assert response.status_code == 201, response.text
+    """What storing a tailored resume does, without a match and a resume to store."""
+    await stage_application(
+        await user_id(client),
+        ApplicationStage(
+            jobId=PydanticObjectId(job_id), resumeId=PydanticObjectId("0" * 24),
+            texPath="out/resume.tex",
+        ),
+    )  # fmt: skip
+
+
+async def application_for(client: AsyncClient, job_id: str) -> dict | None:
+    """Your application row for a job, as the API would render it; None when there is none."""
+    row = await get_for_job(await user_id(client), PydanticObjectId(job_id))
+    return None if row is None else {**row.model_dump(mode="json"), "id": str(row.id)}
+
+
+async def pipeline(client: AsyncClient) -> dict:
+    return (await client.get("/status")).json()["pipeline"]
+
+
+async def new_ids(client: AsyncClient) -> list[str]:
+    cards = (await client.get("/application/board/new", params={"limit": 50})).json()
+    return [card["id"] for card in cards]
 
 
 async def sign_up(client: AsyncClient, email: str) -> None:
@@ -79,38 +105,9 @@ async def test_counts_cover_every_column(signed_in: AsyncClient) -> None:
     await signed_in.post(f"/application/shortlist/{first}")
     await stage(signed_in, second)
 
-    counts = (await signed_in.get("/application/counts")).json()
-    assert counts == {"new": 1, "shortlisted": 1, "staged": 1, "applied": 0, "interview": 0}
-
-
-async def test_counts_need_a_token(client: AsyncClient) -> None:
-    assert (await client.get("/application/counts")).status_code == 401
-
-
-async def test_summaries_return_only_scored_jobs(signed_in: AsyncClient) -> None:
-    scored = await make_job(signed_in, "LLM Engineer", "R1")
-    unscored = await make_job(signed_in, "GenAI Engineer", "R2")
-    await score(
-        signed_in,
-        scored,
-        82,
-        risks=[{"key": "seniority", "title": "Seniority mismatch", "detail": "Asks for 15 years"}],
-    )
-
-    rows = (
-        await signed_in.get("/match/summaries", params=[("jobIds", scored), ("jobIds", unscored)])
-    ).json()
-    assert rows == [
-        {
-            "jobId": scored,
-            "score": 82,
-            "reviewState": "pending",
-            "risk": "Seniority mismatch",
-            "riskCount": 1,
-            "presentCount": 1,
-            "missingCount": 1,
-        }
-    ]
+    assert await pipeline(signed_in) == {
+        "new": 1, "shortlisted": 1, "staged": 1, "applied": 0, "interview": 0,
+    }  # fmt: skip
 
 
 async def test_analysis_details_can_be_written_to_a_job(signed_in: AsyncClient) -> None:
@@ -154,11 +151,11 @@ async def test_another_account_still_sees_the_job_as_new(client: AsyncClient) ->
     await sign_up(client, "one@example.com")
     job_id = await make_job(client, "LLM Engineer", "R1")
     await client.post(f"/application/shortlist/{job_id}")
-    assert (await client.get("/application/unstarted")).json() == []
+    assert await new_ids(client) == []
 
     await sign_up(client, "two@example.com")
-    assert [job["id"] for job in (await client.get("/application/unstarted")).json()] == [job_id]
-    assert (await client.get("/application/counts")).json()["shortlisted"] == 0
+    assert await new_ids(client) == [job_id]
+    assert (await pipeline(client))["shortlisted"] == 0
 
 
 async def test_unshortlisting_an_untouched_job_returns_it_to_new(signed_in: AsyncClient) -> None:
@@ -168,8 +165,8 @@ async def test_unshortlisting_an_untouched_job_returns_it_to_new(signed_in: Asyn
     response = await signed_in.delete(f"/application/shortlist/{job_id}")
     assert response.status_code == 200, response.text
     assert response.json() is None
-    assert (await signed_in.get(f"/application/for-job/{job_id}")).json() is None
-    assert (await signed_in.get("/application/counts")).json()["new"] == 1
+    assert await application_for(signed_in, job_id) is None
+    assert (await pipeline(signed_in))["new"] == 1
 
 
 async def test_unshortlisting_after_tailoring_withdraws(signed_in: AsyncClient) -> None:
@@ -187,7 +184,7 @@ async def test_unshortlisting_after_tailoring_withdraws(signed_in: AsyncClient) 
 async def test_a_submitted_application_cannot_be_unshortlisted(signed_in: AsyncClient) -> None:
     job_id = await make_job(signed_in, "LLM Engineer", "R1")
     await stage(signed_in, job_id)
-    application = (await signed_in.get(f"/application/for-job/{job_id}")).json()
+    application = await application_for(signed_in, job_id)
     await signed_in.patch(
         f"/application/status/{application['id']}",
         json={"status": "applied", "confirmedByUser": True},
@@ -214,7 +211,7 @@ async def test_shortlisting_an_unknown_job_is_refused(signed_in: AsyncClient) ->
 async def test_scoring_does_not_move_a_job(signed_in: AsyncClient) -> None:
     job_id = await make_job(signed_in, "LLM Engineer", "R1")
     await score(signed_in, job_id, 80)
-    assert (await signed_in.get("/application/counts")).json()["new"] == 1
+    assert (await pipeline(signed_in))["new"] == 1
 
 
 async def test_unscored_lists_jobs_without_a_match(signed_in: AsyncClient) -> None:
