@@ -72,16 +72,6 @@ async def get_resume(user_id: PydanticObjectId, job_id: PydanticObjectId) -> Tai
     return resume
 
 
-async def list_versions(
-    user_id: PydanticObjectId, job_id: PydanticObjectId
-) -> list[TailoredResume]:
-    return (
-        await TailoredResume.find(TailoredResume.userId == user_id, TailoredResume.jobId == job_id)
-        .sort(-TailoredResume.version)
-        .to_list()
-    )
-
-
 async def _latest(user_id: PydanticObjectId, job_id: PydanticObjectId) -> TailoredResume | None:
     return (
         await TailoredResume.find(TailoredResume.userId == user_id, TailoredResume.jobId == job_id)

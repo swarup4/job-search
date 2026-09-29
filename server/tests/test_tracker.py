@@ -5,12 +5,12 @@ from __future__ import annotations
 
 from httpx import AsyncClient
 
-from tests.test_board import make_job, sign_up, stage
+from tests.test_board import application_for, make_job, sign_up, stage
 
 
 async def submit(client: AsyncClient, job_id: str, note: str | None = None) -> None:
     await stage(client, job_id)
-    application = (await client.get(f"/application/for-job/{job_id}")).json()
+    application = await application_for(client, job_id)
     response = await client.patch(
         f"/application/status/{application['id']}",
         json={"status": "applied", "confirmedByUser": True, "note": note},
@@ -60,7 +60,7 @@ async def test_a_shortlist_undone_before_sending_is_left_out(signed_in: AsyncCli
 async def test_a_withdrawal_after_submitting_stays_listed(signed_in: AsyncClient) -> None:
     job_id = await make_job(signed_in, "LLM Engineer", "R1")
     await submit(signed_in, job_id)
-    application = (await signed_in.get(f"/application/for-job/{job_id}")).json()
+    application = await application_for(signed_in, job_id)
     await signed_in.patch(f"/application/status/{application['id']}", json={"status": "withdrawn"})
 
     [row] = (await signed_in.get("/application/tracker")).json()["submitted"]
@@ -70,7 +70,7 @@ async def test_a_withdrawal_after_submitting_stays_listed(signed_in: AsyncClient
 async def test_the_fill_report_is_counted(signed_in: AsyncClient) -> None:
     job_id = await make_job(signed_in, "LLM Engineer", "R1")
     await stage(signed_in, job_id)
-    application = (await signed_in.get(f"/application/for-job/{job_id}")).json()
+    application = await application_for(signed_in, job_id)
     await signed_in.post(
         f"/application/fill/{application['id']}",
         json={

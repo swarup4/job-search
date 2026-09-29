@@ -38,7 +38,6 @@ class FakeClient:
         self.description = description if description is not None else {"id": "d1", "jdText": JD}
         self.match: dict[str, Any] | None = None
         self.job_updates: list[dict[str, Any]] = []
-        self.description_updates: list[dict[str, Any]] = []
         self.embeddings: list[list[float]] = []
         # What the match step was handed: None means it extracted for itself.
         self.rectified_with: list[list[Any] | None] = []
@@ -56,12 +55,6 @@ class FakeClient:
 
     async def update_job(self, job_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         self.job_updates.append(payload)
-        return {}
-
-    async def update_description(
-        self, description_id: str, payload: dict[str, Any]
-    ) -> dict[str, Any]:
-        self.description_updates.append(payload)
         return {}
 
     async def store_description_embedding(
@@ -134,9 +127,7 @@ async def test_every_step_writes_its_own_field(fake: FakeClient) -> None:
 
     assert outcome.score == 72
     assert all(step.ok for step in outcome.steps.values()), outcome.steps
-    assert not any("htmlString" in update for update in fake.description_updates)
     assert fake.embeddings == [[0.1, 0.2, 0.3]]
-    assert fake.description_updates == []
     # Only the technologies, and the match reuses the same extraction.
     assert {"techStack": ["AWS", "RAG"]} in fake.job_updates
     assert [len(handed or []) for handed in fake.rectified_with] == [3]
@@ -155,7 +146,7 @@ async def test_a_job_already_matched_is_skipped_whole(fake: FakeClient) -> None:
     assert outcome.skipped == "already analyzed"
     assert outcome.score == 64
     assert outcome.steps == {}
-    assert fake.embeddings == [] and fake.job_updates == [] and fake.description_updates == []
+    assert fake.embeddings == [] and fake.job_updates == []
 
 
 async def test_a_matched_job_without_a_stack_gets_only_the_stack(fake: FakeClient) -> None:

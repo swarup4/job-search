@@ -11,7 +11,6 @@ from modules.job_description.models import (
     JobDescriptionCreated,
     JobDescriptionDetail,
     JobDescriptionRead,
-    JobDescriptionUpdate,
 )
 
 router = APIRouter(tags=["job-description"])
@@ -59,13 +58,6 @@ async def store_embedding(
     description_id: PydanticObjectId, payload: EmbeddingWrite, _: CurrentUser
 ) -> JobDescription:
     return await service.store_embedding(description_id, payload.embedding)
-
-
-@router.patch("/{description_id}", response_model=JobDescriptionRead)
-async def update_description(
-    description_id: PydanticObjectId, payload: JobDescriptionUpdate, _: CurrentUser
-) -> JobDescription:
-    return await service.update_description(description_id, payload)
 
 
 @router.get("/{description_id}", response_model=JobDescriptionDetail)

@@ -20,7 +20,6 @@ from mcp_servers.jobpilot_api.client import (
     set_token,
     store_chunk_embeddings,
     store_resume,
-    update_description,
     update_job,
     write_match,
 )
@@ -48,7 +47,6 @@ __all__ = [
     "set_token",
     "store_chunk_embeddings",
     "store_resume",
-    "update_description",
     "update_job",
     "write_match",
 ]

@@ -10,8 +10,11 @@ vector cannot be written onto somebody else's chunk.
 from __future__ import annotations
 
 import pytest
+from beanie import PydanticObjectId
 from httpx import AsyncClient
 
+from modules.resume_chunk import ResumeChunk
+from modules.resume_chunk.models import ResumeChunkRead
 from modules.resume_chunk.service import cosine_from_score
 
 ROLE = {
@@ -30,9 +33,16 @@ SKILLS = {"name": "GenAI", "items": ["LangChain", "LangGraph", "RAG"]}
 
 
 async def chunks(client: AsyncClient) -> list[dict]:
-    response = await client.get("/resume-chunk")
-    assert response.status_code == 200, response.text
-    return response.json()
+    """Your chunks in order, as the API renders them — read from the store, since no
+    screen lists them."""
+    account = PydanticObjectId((await client.get("/account/getAccount")).json()["id"])
+    rows = (
+        await ResumeChunk.find(ResumeChunk.userId == account).sort(+ResumeChunk.ordinal).to_list()
+    )
+    return [
+        ResumeChunkRead.model_validate(row, from_attributes=True).model_dump(mode="json")
+        for row in rows
+    ]
 
 
 async def stats(client: AsyncClient) -> dict:
@@ -210,7 +220,7 @@ async def test_a_batch_naming_a_chunk_that_no_longer_exists_is_refused(
     await signed_in.post("/profile/addSkill", json=SKILLS)
     stale = [chunk["id"] for chunk in await chunks(signed_in)]
     await signed_in.delete(
-        f"/profile/deleteSkill/{(await signed_in.get('/profile/getSkills')).json()[0]['id']}"
+        f"/profile/deleteSkill/{(await signed_in.get('/profile/getProfile')).json()['skill'][0]['id']}"
     )
 
     response = await signed_in.put(

@@ -1,5 +1,5 @@
 from beanie import PydanticObjectId
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, status
 
 from modules.account import CurrentUser
 from modules.job import service
@@ -15,16 +15,6 @@ from modules.job.models import (
 )
 
 router = APIRouter(tags=["job"])
-
-
-@router.get("", response_model=list[JobRead])
-async def list_jobs(
-    _: CurrentUser,
-    company: str | None = None,
-    limit: int = Query(default=50, le=200),
-    skip: int = 0,
-) -> list[Job]:
-    return await service.list_jobs(company, limit, skip)
 
 
 @router.post("/search", response_model=JobSearchResult)

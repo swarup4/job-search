@@ -8,7 +8,6 @@ from modules.job_description.models import (
     JobDescription,
     JobDescriptionCreate,
     JobDescriptionCreated,
-    JobDescriptionUpdate,
 )
 
 
@@ -100,15 +99,5 @@ async def set_status(description_id: PydanticObjectId, status: DescriptionStatus
     back in the parse queue."""
     description = await get_description(description_id)
     description.status = status
-    await description.save()
-    return description
-
-
-async def update_description(
-    description_id: PydanticObjectId, payload: JobDescriptionUpdate
-) -> JobDescription:
-    description = await get_description(description_id)
-    for field, value in payload.model_dump(exclude_none=True).items():
-        setattr(description, field, value)
     await description.save()
     return description
