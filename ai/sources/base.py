@@ -72,6 +72,8 @@ class Posting(BaseModel):
     title: str
     company: str
     location: str
+    # The board's own country field. The server reads one from `location` without it.
+    country: str | None = None
     jobType: str | None = None
     workMode: str | None = None
     postedAt: datetime | None = None
@@ -110,6 +112,7 @@ async def ingest(posting: Posting) -> bool:
             "title": posting.title,
             "company": posting.company,
             "location": posting.location,
+            "country": posting.country,
             "jobType": posting.jobType,
             "workMode": posting.workMode,
             "source": SOURCE,

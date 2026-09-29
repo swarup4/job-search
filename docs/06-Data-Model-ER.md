@@ -203,6 +203,11 @@ string, so the dashed relationships above are resolved in application code by id
 A module queries only its own collections. Cross-module reads go through the other module's
 `__init__.py` — `match/service.py` calls `job.get_job()`, it never touches `db.jobs`.
 
+**Two deliberate exceptions, both read-only `$lookup`s in `job/service.py`:** Search joins each
+result row with the caller's `matches` and `applications`, and Job details joins
+`job_descriptions` plus the caller's match and application — one request per screen instead of
+three. Both filter on the caller's `userId`; neither writes outside `jobs`.
+
 ---
 
 ## Indexes

@@ -134,6 +134,7 @@ def _posting(info: dict[str, Any], company: str, filters: Filters) -> Posting | 
         title=info["title"],
         company=company,
         location=location,
+        country=country or None,
         jobType=JOB_TYPES.get((info.get("timeType") or "").lower()),
         workMode=WORK_MODES.get((info.get("remoteType") or "").lower()),
         postedAt=datetime.fromisoformat(started).replace(tzinfo=UTC) if started else None,

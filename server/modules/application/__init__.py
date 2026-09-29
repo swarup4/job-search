@@ -7,7 +7,7 @@ from modules.application.models import (
     ApplicationStage,
 )
 from modules.application.router import router
-from modules.application.service import stage_application
+from modules.application.service import badges, board_counts, stage_application
 
 NAME = "application"
 
@@ -17,6 +17,8 @@ __all__ = [
     "ApplicantProfile",
     "Application",
     "ApplicationStage",
+    "badges",
+    "board_counts",
     "router",
     "stage_application",
 ]

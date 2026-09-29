@@ -1,25 +1,26 @@
 /**
- * The fixture stores the base document once plus per-job line changes, so the Diff
- * and Source views can never disagree — both read the same composed document.
- * Replace `resume.json` with the server's response and these two functions stay.
+ * The Preview, Diff and Source views all read these lines, so they can never disagree.
+ * Lines come from the tailored `.tex` as stored, and `changes` mark which of them moved
+ * and what each was — never re-derived from the base resume, which Regenerate rewrites.
  */
-export function buildDocument(resume, jobId) {
-    const job = resume.jobs[jobId] ?? resume.jobs[Object.keys(resume.jobs)[0]];
+export function buildDocument(resume) {
+    const changed = new Map(resume.changes.map((change) => [change.lineNo, change]));
+    const text = resume.tex.endsWith("\n") ? resume.tex.slice(0, -1) : resume.tex;
 
-    const lines = resume.base.map((text, i) => {
+    const lines = text.split("\n").map((line, i) => {
         const n = i + 1;
-        const tailored = job.changes[n];
-        return tailored ? { n, text: tailored, add: true, was: text } : { n, text };
+        const change = changed.get(n);
+        return change ? { n, text: line, add: true, was: change.previous } : { n, text: line };
     });
 
     return {
-        file: job.file,
-        from: resume.template,
-        incorporated: job.incorporated,
-        declined: job.declined,
+        file: resume.filePath.split("/").pop(),
+        filePath: resume.filePath,
+        incorporated: resume.incorporated,
+        declined: resume.declined,
         lines,
         added: lines.filter((l) => l.add).length,
-        removed: lines.filter((l) => l.was).length,
+        removed: lines.filter((l) => l.was != null).length,
     };
 }
 

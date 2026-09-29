@@ -260,6 +260,42 @@ class BoardCounts(BaseModel):
     interview: int = 0
 
 
+class BoardCard(BaseModel):
+    """One Pipeline card: the job, your match's headline, and — for an application
+    column — what the column says about it."""
+
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
+    id: PydanticObjectId  # the job's, since a card opens the job
+    title: str
+    company: str
+    location: str
+    source: str
+    discoveredAt: datetime
+    # Your match, null until you analyze the job.
+    score: int | None = None
+    reviewState: str | None = None
+    # The first risk's title — a card has room for one.
+    risk: str | None = None
+    # From your application, null in New.
+    texPath: str | None = None
+    stagedAt: datetime | None = None
+    lastActivityAt: datetime | None = None
+    lastActivityNote: str | None = None
+
+
+class BoardColumn(BaseModel):
+    count: int
+    cards: list[BoardCard]
+
+
+class Board(BaseModel):
+    """The Pipeline's cards, the first few of every column. Its totals and the unscored
+    count come from `GET /status`, like every other number outside a page's list."""
+
+    columns: dict[str, BoardColumn]
+
+
 class Badges(BaseModel):
     """Every number the header and sidebar show, in one read. The Applications badge is
     `keywordSelections` + `staged`; `nextJobId` is the longest-waiting keyword choice,
@@ -269,6 +305,29 @@ class Badges(BaseModel):
     nextJobId: PydanticObjectId | None = None
     staged: int
     shortlisted: int
+
+
+class ShortlistRow(BaseModel):
+    """One job on the Shortlist screen: the listing and your match counts, joined in."""
+
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
+    id: PydanticObjectId  # the job's, since the screen links to it
+    title: str
+    company: str
+    location: str
+    source: str
+    jobType: str | None = None
+    workMode: str | None = None
+    salaryText: str | None = None
+    postedAt: datetime | None = None
+    discoveredAt: datetime
+    shortlistedAt: datetime | None = None
+    # Null until you analyze the job; the counts are 0 then.
+    score: int | None = None
+    riskCount: int = 0
+    presentCount: int = 0
+    missingCount: int = 0
 
 
 class TrackerRow(BaseModel):

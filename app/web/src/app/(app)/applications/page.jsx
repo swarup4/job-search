@@ -12,7 +12,7 @@ import { Panel, PanelBody, PanelHeader, PanelTitle } from "@/component/ui/panel"
 import { buttonVariants } from "@/component/ui/button";
 import { Tooltip } from "@/component/ui/tooltip";
 import { ApiError, getTracker, unshortlistJob } from "@/services";
-import { useRefreshShell } from "@/hooks/useShellCounts";
+import { useRefreshStatus } from "@/hooks/useStatus";
 import { ROUTES } from "@/routes";
 import { cn } from "@/util/helper";
 
@@ -43,7 +43,7 @@ const CLOSED = new Set(["rejected", "withdrawn"]);
 export default function Page() {
     const [data, setData] = useState({ status: "loading", shortlisted: [], staged: [], submitted: [] });
     const fetching = useRef(false);
-    const refreshShell = useRefreshShell();
+    const refreshStatus = useRefreshStatus();
 
     const load = useCallback(async () => {
         try {
@@ -74,7 +74,7 @@ export default function Page() {
             ...current,
             shortlisted: current.shortlisted.filter((other) => other.id !== row.id),
         }));
-        refreshShell();
+        refreshStatus();
     }
 
     const { shortlisted, staged, submitted } = data;

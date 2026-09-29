@@ -6,7 +6,7 @@ import Link from "next/link";
 import { AlertTriangle, ArrowRight, Check, ChevronLeft, Loader2, Quote } from "lucide-react";
 
 import { ApiError, getJob, getMatch, recordSelection, skipSelection } from "@/services";
-import { useRefreshShell } from "@/hooks/useShellCounts";
+import { useRefreshStatus } from "@/hooks/useStatus";
 import { Badge } from "@/component/ui/badge";
 import { Button, buttonVariants } from "@/component/ui/button";
 import { Checkbox } from "@/component/ui/checkbox";
@@ -27,7 +27,7 @@ export default function Page() {
     const { id: jobId } = useParams();
     const from = useSearchParams().get("from") ?? undefined;
     const router = useRouter();
-    const refreshShell = useRefreshShell();
+    const refreshStatus = useRefreshStatus();
 
     const [job, setJob] = useState(null);
     const [match, setMatch] = useState(null);
@@ -70,7 +70,7 @@ export default function Page() {
         setSaving(true);
         try {
             await recordSelection(jobId, [...selected]);
-            refreshShell();
+            refreshStatus();
             router.push(ROUTES.preview(jobId, from));
         } catch (failure) {
             toast.error(failure instanceof ApiError ? failure.message : "Could not save your selection.");
@@ -82,7 +82,7 @@ export default function Page() {
         setSaving(true);
         try {
             await skipSelection(jobId);
-            refreshShell();
+            refreshStatus();
             router.push(from === "shortlist" ? ROUTES.shortlist : ROUTES.search);
         } catch (failure) {
             toast.error(failure instanceof ApiError ? failure.message : "Could not skip this job.");

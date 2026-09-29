@@ -37,6 +37,8 @@ class JobCreate(BaseModel):
     title: str
     company: str
     location: str
+    # The board's own country field, when it has one; otherwise read from `location`.
+    country: str | None = None
     jobType: JobType | None = None
     workMode: WorkMode | None = None
     experienceBand: str | None = None
@@ -55,6 +57,13 @@ class Job(Document):
     title: str
     company: str
     location: str
+    # Read from `location` on create (modules/job/location.py) — the board's own
+    # country when it supplied one. Both empty when the text names neither.
+    country: str | None = None
+    cities: list[str] = Field(default_factory=list)
+    # The technologies the posting names, each backed by a verbatim span of its text.
+    # Null until analysis or the capture parser has read it; [] when it names none.
+    techStack: list[str] | None = None
     jobType: JobType | None = None
     workMode: WorkMode | None = None
     experienceBand: str | None = None
@@ -87,6 +96,7 @@ class JobUpdate(BaseModel):
     workMode: WorkMode | None = None
     experienceBand: str | None = Field(default=None, max_length=60)
     salaryText: str | None = Field(default=None, max_length=80)
+    techStack: list[str] | None = Field(default=None, max_length=30)
 
 
 class JobRead(BaseModel):
@@ -100,6 +110,9 @@ class JobRead(BaseModel):
     title: str
     company: str
     location: str
+    country: str | None = None
+    cities: list[str] = Field(default_factory=list)
+    techStack: list[str] | None = None
     jobType: JobType | None = None
     workMode: WorkMode | None = None
     experienceBand: str | None = None
@@ -119,9 +132,45 @@ class JobDescriptionPart(BaseModel):
     url: str
     pageTitle: str = ""
     jdText: str
-    requirements: list[str] = Field(default_factory=list)
     links: list[str] = Field(default_factory=list)
     capturedAt: datetime
+
+
+# The caller's match as the details page reads it. Spelled out here rather than
+# imported: `match` already depends on this module, so importing back is a cycle.
+class DetailPresent(BaseModel):
+    label: str
+
+
+class DetailMissing(BaseModel):
+    key: str
+    label: str
+    mentions: int = 1
+    evidence: str
+    nearMiss: str | None = None
+
+
+class DetailRisk(BaseModel):
+    key: str
+    title: str
+    detail: str
+
+
+class DetailReview(BaseModel):
+    state: str
+    selectedKeys: list[str] = Field(default_factory=list)
+    reviewedAt: datetime | None = None
+
+
+class DetailMatch(BaseModel):
+    id: PydanticObjectId
+    score: int
+    present: list[DetailPresent] = Field(default_factory=list)
+    missing: list[DetailMissing] = Field(default_factory=list)
+    risks: list[DetailRisk] = Field(default_factory=list)
+    review: DetailReview
+    modelName: str | None = None
+    scoredAt: datetime
 
 
 class JobDetailRead(BaseModel):
@@ -136,6 +185,9 @@ class JobDetailRead(BaseModel):
     title: str
     company: str
     location: str
+    country: str | None = None
+    cities: list[str] = Field(default_factory=list)
+    techStack: list[str] | None = None
     jobType: JobType | None = None
     workMode: WorkMode | None = None
     experienceBand: str | None = None
@@ -147,6 +199,9 @@ class JobDetailRead(BaseModel):
     applicantCount: int | None = None
     discoveredAt: datetime
     description: JobDescriptionPart | None = None
+    # The caller's own: null before they analyze it, false before they shortlist it.
+    match: DetailMatch | None = None
+    shortlisted: bool = False
 
 
 class JobCreated(BaseModel):
@@ -185,6 +240,9 @@ class JobSearchHit(BaseModel):
     title: str
     company: str
     location: str
+    country: str | None = None
+    cities: list[str] = Field(default_factory=list)
+    techStack: list[str] | None = None
     jobType: JobType | None = None
     workMode: WorkMode | None = None
     experienceBand: str | None = None

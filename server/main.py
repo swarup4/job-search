@@ -21,6 +21,7 @@ from modules import (
     profile,
     resume,
     resume_chunk,
+    status,
     template,
 )
 
@@ -36,6 +37,7 @@ MODULES = (
     account,
     career_source,
     preference,
+    status,
 )
 
 

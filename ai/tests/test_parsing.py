@@ -40,6 +40,8 @@ class FakeClient:
 
     def __init__(self, description: dict[str, Any] | None = None) -> None:
         self.description = description or DESCRIPTION
+        # The shared job as the server already holds it, for a duplicate capture.
+        self.existing: dict[str, Any] | None = None
         self.created: list[dict[str, Any]] = []
         self.linked: list[tuple[str, str]] = []
         self.statuses: list[tuple[str, str]] = []
@@ -50,7 +52,10 @@ class FakeClient:
 
     async def create_job(self, payload: dict[str, Any]) -> dict[str, Any]:
         self.created.append(payload)
-        return {"id": "j1", "duplicate": False}
+        return {"id": "j1", "duplicate": self.existing is not None}
+
+    async def get_job(self, job_id: str) -> dict[str, Any]:
+        return self.existing or {}
 
     async def link_description(self, description_id: str, job_id: str) -> dict[str, Any]:
         self.linked.append((description_id, job_id))
@@ -60,9 +65,7 @@ class FakeClient:
         self.statuses.append((description_id, status))
         return {}
 
-    async def update_description(
-        self, description_id: str, payload: dict[str, Any]
-    ) -> dict[str, Any]:
+    async def update_job(self, job_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         self.updates.append(payload)
         return {}
 
@@ -130,7 +133,7 @@ async def test_a_technology_the_page_never_names_is_dropped(
     await parsing.parse_description("d1")
 
     assert "requirements" not in fake.created[0]
-    assert fake.updates[0]["requirements"] == ["Kubernetes", "Terraform"]
+    assert fake.updates[0]["techStack"] == ["Kubernetes", "Terraform"]
 
 
 async def test_a_requisition_id_the_page_never_shows_is_dropped(
@@ -179,7 +182,7 @@ async def test_a_restated_posting_is_capped(
 
     await parsing.parse_description("d1")
 
-    assert len(fake.updates[0]["requirements"]) == parsing.MAX_STACK
+    assert len(fake.updates[0]["techStack"]) == parsing.MAX_STACK
 
 
 # --- pages that are not postings ---------------------------------------------
@@ -240,3 +243,16 @@ async def test_one_failure_does_not_end_the_batch(monkeypatch: pytest.MonkeyPatc
 
     assert [o.parsed for o in outcomes] == [False, True]
     assert "server said no" in (outcomes[0].reason or "")
+
+
+async def test_a_second_capture_keeps_the_stack_already_read(
+    fake: FakeClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The job is shared: recapturing it is no reason to rewrite another run's stack."""
+    fake.existing = {"id": "j1", "techStack": ["Go"]}
+    monkeypatch.setattr(parsing, "generate", answers(posting()))
+
+    outcome = await parsing.parse_description("d1")
+
+    assert outcome.parsed and outcome.duplicate
+    assert fake.updates == []

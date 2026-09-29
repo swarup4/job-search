@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+from dataclasses import dataclass
 from typing import Any
 from urllib.parse import urlparse
 
@@ -34,15 +35,44 @@ LLM_ATTEMPTS = int(os.environ.get("LLM_ATTEMPTS", "3"))
 LLM_DISABLE_THINKING = os.environ.get("LLM_DISABLE_THINKING", "").lower() in {"1", "true", "yes"}
 
 
-def _host() -> str:
-    host = urlparse(LLM_BASE_URL).hostname or ""
+def _host(base_url: str) -> str:
+    host = urlparse(base_url).hostname or ""
     return "huggingface" if "huggingface" in host else host or "unknown"
 
 
-LLM_HOST = _host()
-# Provenance, not routing: a score from one model is not comparable to a score from
-# another, so `Match.modelName` records which produced it.
-PROVENANCE = f"{LLM_HOST}/{LLM_MODEL}"
+@dataclass(frozen=True)
+class Endpoint:
+    base_url: str
+    api_key: str
+    model: str
+    disable_thinking: bool
+
+    @property
+    def host(self) -> str:
+        return _host(self.base_url)
+
+    @property
+    def provenance(self) -> str:
+        # Provenance, not routing: a score from one model is not comparable to a score
+        # from another, so `Match.modelName` records which produced it.
+        return f"{self.host}/{self.model}"
+
+
+DEFAULT = Endpoint(LLM_BASE_URL, LLM_API_KEY, LLM_MODEL, LLM_DISABLE_THINKING)
+
+# Match scoring can run on its own model — a local one, so the profile and the JD never
+# leave the machine — while parsing, details and tailoring stay on DEFAULT. Each unset
+# value falls back to DEFAULT's. A local server usually needs no key.
+MATCH = Endpoint(
+    base_url=os.environ.get("MATCH_LLM_BASE_URL", LLM_BASE_URL),
+    api_key=os.environ.get("MATCH_LLM_API_KEY", LLM_API_KEY),
+    model=os.environ.get("MATCH_LLM_MODEL", LLM_MODEL),
+    disable_thinking=os.environ.get("MATCH_LLM_DISABLE_THINKING", str(LLM_DISABLE_THINKING)).lower()
+    in {"1", "true", "yes"},
+)
+
+LLM_HOST = DEFAULT.host
+PROVENANCE = DEFAULT.provenance
 
 
 class GenerationError(RuntimeError):
@@ -77,6 +107,7 @@ async def generate[T: BaseModel](
     *,
     system: str,
     max_tokens: int = 2048,
+    endpoint: Endpoint = DEFAULT,
 ) -> T:
     """Ask for one structured answer and hand back a validated model."""
     schema = strict_schema(shape)
@@ -87,7 +118,7 @@ async def generate[T: BaseModel](
 
     failure = ""
     for _ in range(LLM_ATTEMPTS):
-        raw = await _complete(messages, schema, shape.__name__, max_tokens)
+        raw = await _complete(endpoint, messages, schema, shape.__name__, max_tokens)
         try:
             return shape.model_validate_json(raw)
         except ValidationError as exc:
@@ -103,17 +134,20 @@ async def generate[T: BaseModel](
                 },
             ]
 
-    raise GenerationError(f"{PROVENANCE} would not produce a valid {shape.__name__}: {failure}")
+    raise GenerationError(
+        f"{endpoint.provenance} would not produce a valid {shape.__name__}: {failure}"
+    )
 
 
 async def _complete(
+    endpoint: Endpoint,
     messages: list[dict[str, str]],
     schema: dict[str, Any],
     name: str,
     max_tokens: int,
 ) -> str:
     payload: dict[str, Any] = {
-        "model": LLM_MODEL,
+        "model": endpoint.model,
         "messages": messages,
         # Extraction and scoring are not creative tasks, and a re-score should agree
         # with the score it replaces.
@@ -124,25 +158,25 @@ async def _complete(
             "json_schema": {"name": name, "strict": True, "schema": schema},
         },
     }
-    if LLM_DISABLE_THINKING:
+    if endpoint.disable_thinking:
         payload["chat_template_kwargs"] = {"enable_thinking": False}
 
     async with httpx.AsyncClient(timeout=LLM_TIMEOUT) as client:
         response = await client.post(
-            f"{LLM_BASE_URL.rstrip('/')}/chat/completions",
+            f"{endpoint.base_url.rstrip('/')}/chat/completions",
             json=payload,
-            headers={"Authorization": f"Bearer {LLM_API_KEY}"},
+            headers={"Authorization": f"Bearer {endpoint.api_key}"},
         )
         if response.status_code >= 400:
             raise GenerationError(
-                f"{LLM_HOST} returned {response.status_code}: {response.text[:300]}"
+                f"{endpoint.host} returned {response.status_code}: {response.text[:300]}"
             )
         body = response.json()
 
     try:
         return body["choices"][0]["message"]["content"] or ""
     except (KeyError, IndexError) as exc:
-        raise GenerationError(f"unreadable completion from {LLM_HOST}: {body}") from exc
+        raise GenerationError(f"unreadable completion from {endpoint.host}: {body}") from exc
 
 
 def _first_errors(exc: ValidationError, limit: int = 3) -> str:

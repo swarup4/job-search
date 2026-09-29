@@ -62,7 +62,7 @@ export const toast = {
 const TONE = {
     success: { icon: Check, accent: "bg-primary", ink: "text-primary" },
     error: { icon: AlertTriangle, accent: "bg-risk-solid", ink: "text-risk-ink" },
-    info: { icon: Info, accent: "bg-muted-foreground", ink: "text-muted-foreground" },
+    info: { icon: Info, accent: "bg-info-solid", ink: "text-info-ink" },
 };
 
 /**

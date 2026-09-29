@@ -11,9 +11,9 @@ import { AnalysisProgress, AnalyzeNewJobs, useAnalysis } from "@/component/Analy
 import { Panel } from "@/component/ui/panel";
 import { buttonVariants } from "@/component/ui/button";
 import { COLUMNS, usePipeline } from "@/hooks/usePipeline";
-import { useRefreshShell } from "@/hooks/useShellCounts";
+import { useRefreshStatus } from "@/hooks/useStatus";
 import { ROUTES } from "@/routes";
-import { selectShell } from "@/store/shell/shellSlice";
+import { selectStatus } from "@/store/status/statusSlice";
 import { cn } from "@/util/helper";
 
 /**
@@ -23,23 +23,26 @@ import { cn } from "@/util/helper";
  */
 export default function Page() {
     const board = usePipeline();
-    const refreshShell = useRefreshShell();
+    const refreshStatus = useRefreshStatus();
     // When an analysis finishes, reload so the analyzed jobs show their scores, and
     // the badges pick up the keyword choices it created.
     const { reload } = board;
     const analysis = useAnalysis(
         useCallback(async () => {
             await reload();
-            await refreshShell();
-        }, [reload, refreshShell])
+            await refreshStatus();
+        }, [reload, refreshStatus])
     );
     const ready = board.status === "ready";
-    const counts = ready ? board.counts : null;
+    // Totals and the unscored count come from the status store, like every number
+    // outside a list; "—" until the first read lands.
+    const status = useSelector(selectStatus);
+    const counts = status.syncedAt ? status.pipeline : null;
 
     return (
         <>
             <PageHeader title="Pipeline" subtitle="Every job discovery found, and where each one stands.">
-                {ready ? <AnalyzeNewJobs analysis={analysis} unscored={board.unscored} /> : null}
+                {status.syncedAt ? <AnalyzeNewJobs analysis={analysis} unscored={status.jobs.unscored} /> : null}
             </PageHeader>
 
             <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
@@ -90,7 +93,7 @@ export default function Page() {
 /** The approval gate — the one coloured surface on the page. Hidden when nothing waits. */
 function ReviewGate() {
     // The same numbers the header and sidebar show, loaded once by the shell.
-    const pending = useSelector(selectShell);
+    const { badges: pending } = useSelector(selectStatus);
     const total = pending.keywordSelections + pending.staged;
     if (!total) return null;
 

@@ -125,10 +125,10 @@ async def parse_description(description_id: str) -> ParseOutcome:
     created = await client.create_job(payload)
     job_id = created["id"]
     await client.link_description(description_id, job_id)
-    # The stack is parsed out of the prose, so it is stored with the prose.
-    await client.update_description(
-        description_id, {"requirements": _verified_stack(posting.requirements, flat)}
-    )
+    # A job that already had a stack keeps it: the listing is shared, and a second
+    # capture of it is not a reason to rewrite what another run read.
+    if not created.get("duplicate") or (await client.get_job(job_id)).get("techStack") is None:
+        await client.update_job(job_id, {"techStack": _verified_stack(posting.requirements, flat)})
     return ParseOutcome(
         descriptionId=description_id,
         parsed=True,

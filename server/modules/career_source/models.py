@@ -58,6 +58,21 @@ class CareerSource(Document):
         ]
 
 
+class DiscoverySummary(BaseModel):
+    """The last discovery, from what each company stored when it was last scraped.
+    Companies are shared, so this is the latest state of every source, not one run."""
+
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
+    lastRunAt: datetime | None = None
+    # Companies with a stored result; of those, blocked by robots.txt or erroring.
+    companies: int = 0
+    ok: int = 0
+    failed: int = 0
+    blocked: int = 0
+    newJobs: int = 0
+
+
 class CareerSourceUpdate(BaseModel):
     """Every field optional: a PATCH sends only what changed."""
 

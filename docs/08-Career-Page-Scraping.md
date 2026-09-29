@@ -224,9 +224,10 @@ only".
 
 **API**
 - ✅ `P10-01` `ai/api/` — the AI tier's own FastAPI server (`python -m api.main`, loopback,
-  port 8001). `POST /api/discovery/run` takes the dashboard's bearer token, checks it by asking
+  port 8001). `POST /api/runs/discovery/start` takes the dashboard's bearer token, checks it by asking
   the server whose it is (`getAccount`), and starts `run_all()` in the background; `GET
-  /api/discovery/run` returns progress. One run at a time (409 otherwise), visible only to the
+  /api/runs/discovery/events` streams its progress. One run at a time — a second start by the
+  same account answers the running one, another account gets 409 — visible only to the
   account that started it. The token is used for that run and kept nowhere. 7 tests
 - ⬜ `P10-02` Archive a job that has disappeared from its board since the last run
 - ⬜ `P10-03` Mark a source `failing` after two bad runs in a row, so a changed endpoint is visible

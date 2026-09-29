@@ -11,7 +11,8 @@ export function MatchScore({ value, size = "md" }) {
   const { box, stroke } = GEO[size] ?? GEO.md;
   const r = (box - stroke) / 2;
   const circumference = 2 * Math.PI * r;
-  const strong = value >= 80;
+  const scored = value != null;
+  const strong = scored && value >= 80;
 
   return (
     <div
@@ -30,7 +31,7 @@ export function MatchScore({ value, size = "md" }) {
           strokeWidth={stroke}
         />
         {/* A zero-length arc still paints its round cap as a dot, so 0 draws none. */}
-        {value > 0 ? (
+        {scored && value > 0 ? (
           <circle
             className="match-score__value"
             cx={box / 2}
@@ -42,9 +43,17 @@ export function MatchScore({ value, size = "md" }) {
           />
         ) : null}
       </svg>
+      {/* One inline run inside the grid cell, so the % sits on the number's baseline
+          instead of becoming a second grid row. */}
       <span className="match-score__label">
-        {value}
-        {size === "lg" ? <span className="match-score__pct">%</span> : null}
+        {scored ? (
+          <span>
+            {value}
+            {size === "lg" ? <span className="match-score__pct">%</span> : null}
+          </span>
+        ) : (
+          "—"
+        )}
       </span>
     </div>
   );

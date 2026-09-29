@@ -15,7 +15,6 @@ JOB = {
     "company": "Acme",
     "location": "Bengaluru, India",
     "source": "linkedin",
-    "requirements": ["kubernetes", "terraform", "aws"],
 }
 
 JD_TEXT = "Run our Kubernetes clusters and write Terraform for the AWS estate."
@@ -70,10 +69,14 @@ async def make_match(client: AsyncClient, job_id: str) -> None:
     assert response.status_code == 201, response.text
 
 
-def resume(job_id: str, incorporated: list[str]) -> dict:
+TEX = "\\section{Skills}\nPython, AWS\n"
+
+
+def resume(job_id: str, incorporated: list[str], tex: str = TEX) -> dict:
     return {
         "jobId": job_id,
         "filePath": f"output/tailored/{job_id}.tex",
+        "tex": tex,
         "incorporated": incorporated,
         "declined": [],
         "changes": [],
@@ -211,6 +214,55 @@ async def test_each_tailoring_run_is_a_new_version(signed_in: AsyncClient) -> No
 
     assert second.json()["version"] == 2
     assert len((await signed_in.get(f"/resume/versions/{job_id}")).json()) == 2
+
+
+async def test_the_tailored_tex_is_stored_and_read_back_verbatim(
+    signed_in: AsyncClient,
+) -> None:
+    """The preview screen builds its lines from this, not from the base resume,
+    so a Regenerate of the base cannot shift the changed lines."""
+    job_id = await make_job(signed_in)
+    await make_match(signed_in, job_id)
+    await signed_in.post(
+        f"/match/selection/{job_id}", json={"selectedKeys": ["kubernetes"], "skip": False}
+    )
+    tailored = "\\section{Skills}\nPython, AWS, Kubernetes\n"
+    change = {"lineNo": 2, "text": "Python, AWS, Kubernetes", "previous": "Python, AWS"}
+
+    await signed_in.post(
+        "/resume/storeResume",
+        json={**resume(job_id, ["Kubernetes"], tex=tailored), "changes": [change]},
+    )
+    read = (await signed_in.get(f"/resume/getResume/{job_id}")).json()
+
+    assert read["tex"] == tailored
+    assert read["changes"] == [change]
+
+
+async def test_the_latest_version_is_the_one_read(signed_in: AsyncClient) -> None:
+    job_id = await make_job(signed_in)
+    await make_match(signed_in, job_id)
+    await signed_in.post(
+        f"/match/selection/{job_id}", json={"selectedKeys": ["kubernetes"], "skip": False}
+    )
+
+    await signed_in.post("/resume/storeResume", json=resume(job_id, [], tex="first\n"))
+    await signed_in.post("/resume/storeResume", json=resume(job_id, [], tex="second\n"))
+    read = (await signed_in.get(f"/resume/getResume/{job_id}")).json()
+
+    assert (read["version"], read["tex"]) == (2, "second\n")
+
+
+async def test_a_resume_without_its_tex_is_refused(signed_in: AsyncClient) -> None:
+    job_id = await make_job(signed_in)
+    await make_match(signed_in, job_id)
+    await signed_in.post(
+        f"/match/selection/{job_id}", json={"selectedKeys": ["kubernetes"], "skip": False}
+    )
+
+    response = await signed_in.post("/resume/storeResume", json=resume(job_id, [], tex=""))
+
+    assert response.status_code == 422
 
 
 # --- what the AI tier is allowed to read -------------------------------------

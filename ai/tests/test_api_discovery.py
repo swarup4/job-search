@@ -4,6 +4,7 @@ run that loses its token reports."""
 from __future__ import annotations
 
 import asyncio
+import json
 from collections.abc import AsyncIterator
 from typing import Any
 
@@ -64,7 +65,7 @@ def fake(monkeypatch: pytest.MonkeyPatch) -> FakeClient:
 @pytest.fixture
 async def api(fake: FakeClient) -> AsyncIterator[AsyncClient]:
     transport = ASGITransport(app=create_app())
-    async with AsyncClient(transport=transport, base_url="http://test/api/discovery") as http:
+    async with AsyncClient(transport=transport, base_url="http://test/api/runs") as http:
         yield http
 
 
@@ -101,11 +102,11 @@ async def finish() -> None:
 
 
 async def test_no_token_is_refused(api: AsyncClient) -> None:
-    assert (await api.post("/run")).status_code == 401
+    assert (await api.post("/discovery/start")).status_code == 401
 
 
 async def test_a_token_the_server_rejects_is_refused(api: AsyncClient) -> None:
-    response = await api.post("/run", headers={"Authorization": "Bearer forged"})
+    response = await api.post("/discovery/start", headers={"Authorization": "Bearer forged"})
     assert response.status_code == 401
 
 
@@ -113,7 +114,7 @@ async def test_a_run_reports_every_company(
     api: AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     release = scrape_with(monkeypatch, reports_each)
-    started = await api.post("/run", headers={"Authorization": "Bearer good"})
+    started = await api.post("/discovery/start", headers={"Authorization": "Bearer good"})
     assert started.status_code == 202
     assert started.json()["status"] == "running"
     assert started.json()["companies"] == 2
@@ -121,7 +122,7 @@ async def test_a_run_reports_every_company(
     release.set()
     await finish()
 
-    run = (await api.get("/run", headers={"Authorization": "Bearer good"})).json()
+    run = discovery._slot.run.model_dump(mode="json")
     assert run["status"] == "done"
     assert [r["name"] for r in run["results"]] == ["Accenture", "Zoom"]
     assert run["results"][0]["new"] == 2
@@ -130,10 +131,13 @@ async def test_a_run_reports_every_company(
 
 async def test_one_run_at_a_time(api: AsyncClient, monkeypatch: pytest.MonkeyPatch) -> None:
     release = scrape_with(monkeypatch, reports_each)
-    await api.post("/run", headers={"Authorization": "Bearer good"})
+    await api.post("/discovery/start", headers={"Authorization": "Bearer good"})
 
-    second = await api.post("/run", headers={"Authorization": "Bearer good"})
-    assert second.status_code == 409
+    second = await api.post("/discovery/start", headers={"Authorization": "Bearer good"})
+    other = await api.post("/discovery/start", headers={"Authorization": "Bearer other"})
+    # Yours already running: the start answers it; another account is refused.
+    assert second.status_code == 200
+    assert other.status_code == 409
 
     release.set()
     await finish()
@@ -143,13 +147,12 @@ async def test_another_account_does_not_see_the_run(
     api: AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     release = scrape_with(monkeypatch, reports_each)
-    await api.post("/run", headers={"Authorization": "Bearer good"})
+    await api.post("/discovery/start", headers={"Authorization": "Bearer good"})
     release.set()
     await finish()
 
-    seen = await api.get("/run", headers={"Authorization": "Bearer other"})
-    assert seen.status_code == 200
-    assert seen.json() is None
+    seen = await api.get("/discovery/events", headers={"Authorization": "Bearer other"})
+    assert seen.status_code == 404
 
 
 async def test_a_token_that_expires_mid_run_says_so(
@@ -160,11 +163,11 @@ async def test_a_token_that_expires_mid_run_says_so(
         raise JobPilotApiError(401, "token expired")
 
     release = scrape_with(monkeypatch, expires)
-    await api.post("/run", headers={"Authorization": "Bearer good"})
+    await api.post("/discovery/start", headers={"Authorization": "Bearer good"})
     release.set()
     await finish()
 
-    run = (await api.get("/run", headers={"Authorization": "Bearer good"})).json()
+    run = discovery._slot.run.model_dump(mode="json")
     assert run["status"] == "failed"
     assert run["error"] == discovery.EXPIRED
     assert [r["name"] for r in run["results"]] == ["Accenture"]
@@ -172,7 +175,7 @@ async def test_a_token_that_expires_mid_run_says_so(
 
 async def test_nothing_to_run_is_refused(api: AsyncClient, fake: FakeClient) -> None:
     fake.sources = []
-    response = await api.post("/run", headers={"Authorization": "Bearer good"})
+    response = await api.post("/discovery/start", headers={"Authorization": "Bearer good"})
     assert response.status_code == 422
     assert "seed" in response.json()["detail"]
 
@@ -181,24 +184,25 @@ async def test_polling_does_not_recheck_the_token_every_time(
     api: AsyncClient, fake: FakeClient
 ) -> None:
     for _ in range(5):
-        response = await api.get("/run", headers={"Authorization": "Bearer good"})
-        assert response.status_code == 200
+        # No run yet: a 404, but only after the token was accepted.
+        response = await api.get("/discovery/events", headers={"Authorization": "Bearer good"})
+        assert response.status_code == 404
     assert fake.account_checks == 1
 
 
 async def test_a_token_is_rechecked_once_the_cache_lapses(
     api: AsyncClient, fake: FakeClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    await api.get("/run", headers={"Authorization": "Bearer good"})
+    await api.get("/discovery/events", headers={"Authorization": "Bearer good"})
     monkeypatch.setattr(discovery, "VERIFIED_FOR", 0.0)
-    await api.get("/run", headers={"Authorization": "Bearer good"})
+    await api.get("/discovery/events", headers={"Authorization": "Bearer good"})
     assert fake.account_checks == 2
 
 
 async def test_a_rejected_token_is_not_cached(api: AsyncClient, fake: FakeClient) -> None:
     for _ in range(2):
         assert (
-            await api.get("/run", headers={"Authorization": "Bearer forged"})
+            await api.get("/discovery/events", headers={"Authorization": "Bearer forged"})
         ).status_code == 401
     assert fake.account_checks == 2
 
@@ -217,7 +221,7 @@ async def test_a_run_uses_the_saved_search_targets(
     api: AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     release = scrape_with(monkeypatch, reports_each)
-    started = (await api.post("/run", headers={"Authorization": "Bearer good"})).json()
+    started = (await api.post("/discovery/start", headers={"Authorization": "Bearer good"})).json()
     release.set()
     await finish()
 
@@ -225,3 +229,40 @@ async def test_a_run_uses_the_saved_search_targets(
     assert started["filters"]["locations"] == ["Bengaluru"]
     assert release.filters[0].titles == ["GenAI Engineer", "LLM"]
     assert release.filters[0].workdayMaxPages == DEFAULT_WORKDAY_MAX_PAGES
+
+
+async def test_each_company_is_streamed_as_it_finishes(
+    api: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    release = scrape_with(monkeypatch, reports_each)
+    await api.post("/discovery/start", headers={"Authorization": "Bearer good"})
+    release.set()
+    await finish()
+
+    body = (await api.get("/discovery/events", headers={"Authorization": "Bearer good"})).text
+    events = [
+        json.loads(line[len("data: ") :]) for line in body.splitlines() if line.startswith("data: ")
+    ]
+
+    assert [event["type"] for event in events] == [
+        "run_started", "company_done", "company_done", "run_done",
+    ]  # fmt: skip
+    # The run itself, so the Last run panel can show it without another request.
+    assert events[0]["run"]["companies"] == 2
+    assert events[0]["run"]["filters"]["titles"] == ["GenAI Engineer", "LLM"]
+    assert [event["name"] for event in events[1:3]] == ["Accenture", "Zoom"]
+    assert (events[-1]["status"], events[-1]["new"]) == ("done", 4)
+    assert events[-1]["finishedAt"] is not None
+
+
+async def test_another_account_cannot_follow_a_discovery_run(
+    api: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    release = scrape_with(monkeypatch, reports_each)
+    await api.post("/discovery/start", headers={"Authorization": "Bearer good"})
+    release.set()
+    await finish()
+
+    response = await api.get("/discovery/events", headers={"Authorization": "Bearer other"})
+
+    assert response.status_code == 404

@@ -2,15 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import {
-    ApiError,
-    getBoardCounts,
-    getJob,
-    getMatchSummaries,
-    getUnscoredJobs,
-    listApplications,
-    listUnstartedJobs,
-} from "@/services";
+import { ApiError, getBoard, getBoardColumn } from "@/services";
 
 /** Cards loaded per column at a time; "Show more" fetches the next page. */
 const PAGE = 5;
@@ -28,13 +20,6 @@ export const COLUMNS = [
     { key: "interview", label: "Interview", empty: "Applications that reached an interview." },
 ];
 
-const APPLICATION_STATUSES = {
-    shortlisted: ["shortlisted"],
-    staged: ["staged"],
-    applied: ["applied", "viewed"],
-    interview: ["interview"],
-};
-
 const SOURCE_LABEL = {
     career_page: "Career page",
     linkedin: "LinkedIn",
@@ -44,43 +29,24 @@ const SOURCE_LABEL = {
 };
 
 /**
- * Everything the Pipeline screen shows, from the API: per-column counts, the first
- * cards of each column with their match scores, and how many jobs are still unscored
- * for the Analyze button. The review banner reads the shell's badges instead.
+ * The Pipeline's cards, in one request: the first few of each column with your match
+ * joined in, each column with its own total for "Show more". The stat cards, the
+ * Analyze button's count and the review banner read the status store instead.
  */
 export function usePipeline() {
     const [state, setState] = useState({ status: "loading" });
-    // Each application column is listed once; "Show more" pages through this copy.
-    const applications = useRef({});
     const loading = useRef(false);
 
     const load = useCallback(async () => {
         try {
-            const keys = Object.keys(APPLICATION_STATUSES);
-            const [counts, unscored, firstNew, ...lists] = await Promise.all([
-                getBoardCounts(),
-                getUnscoredJobs(0),
-                listUnstartedJobs({ limit: PAGE }),
-                ...keys.map((key) => listApplications(APPLICATION_STATUSES[key])),
-            ]);
-            applications.current = Object.fromEntries(keys.map((key, i) => [key, lists[i]]));
-
-            const columns = { new: { count: counts.new, cards: await jobCards(firstNew) } };
-            await Promise.all(
-                keys.map(async (key) => {
-                    columns[key] = {
-                        count: applications.current[key].length,
-                        cards: await applicationCards(key, applications.current[key].slice(0, PAGE)),
-                    };
-                })
+            const board = await getBoard(PAGE);
+            const columns = Object.fromEntries(
+                Object.entries(board.columns).map(([key, column]) => [
+                    key,
+                    { count: column.count, cards: column.cards.map((card) => toCard(key, card)) },
+                ])
             );
-
-            setState({
-                status: "ready",
-                counts,
-                unscored: unscored.total,
-                columns,
-            });
+            setState({ status: "ready", columns });
         } catch (failure) {
             setState({ status: "error", error: messageOf(failure, "Could not load the pipeline.") });
         }
@@ -97,10 +63,9 @@ export function usePipeline() {
     const loadMore = useCallback(async (key, shown) => {
         setState((current) => patchColumn(current, key, { loadingMore: true, error: null }));
         try {
-            const more =
-                key === "new"
-                    ? await jobCards(await listUnstartedJobs({ limit: PAGE, skip: shown }))
-                    : await applicationCards(key, applications.current[key].slice(shown, shown + PAGE));
+            const more = (await getBoardColumn(key, { skip: shown, limit: PAGE })).map((card) =>
+                toCard(key, card)
+            );
             setState((current) =>
                 patchColumn(current, key, {
                     loadingMore: false,
@@ -117,58 +82,34 @@ export function usePipeline() {
     return { ...state, loadMore, reload: load };
 }
 
-async function summariesFor(jobs) {
-    const summaries = await getMatchSummaries(jobs.map((job) => job.id));
-    return new Map(summaries.map((summary) => [summary.jobId, summary]));
-}
-
-async function jobCards(jobs) {
-    const byJob = await summariesFor(jobs);
-    return jobs.map((job) => toCard(job, byJob.get(job.id)));
-}
-
-/** Applications as cards: each one's job, and what the column needs to say about it. */
-async function applicationCards(key, rows) {
-    const jobs = await Promise.all(rows.map((application) => getJob(application.jobId)));
-    const pairs = rows.map((application, i) => [application, jobs[i]]).filter(([, job]) => job);
-    const byJob = await summariesFor(pairs.map(([, job]) => job));
-    return pairs.map(([application, job]) =>
-        toCard(job, byJob.get(job.id), {
-            file: key === "staged" ? fileName(application.texPath) : null,
-            when:
-                key === "interview"
-                    ? application.lastActivityNote ||
-                      `Interview · ${ago(application.lastActivityAt ?? application.stagedAt)}`
-                    : null,
-            strong: key === "interview",
-        })
-    );
-}
-
 /**
- * The shape JobCard reads. A card needing your keyword choice says so before any risk,
- * since that one blocks the job from moving on.
+ * The shape JobCard reads, from one board card. A card needing your keyword choice says
+ * so before any risk, since that one blocks the job from moving on.
  */
-function toCard(job, summary, { file = null, when = null, strong = false } = {}) {
+function toCard(key, card) {
     let flag = null;
-    if (summary?.reviewState === "pending") flag = { kind: "attention", text: "Keywords await you" };
-    else if (summary?.risk) flag = { kind: "risk", text: summary.risk };
+    if (card.reviewState === "pending") flag = { kind: "attention", text: "Keywords await you" };
+    else if (card.risk) flag = { kind: "risk", text: card.risk };
 
-    const meta = [job.location, when ?? ago(job.discoveredAt), when ? null : SOURCE_LABEL[job.source]]
+    const when =
+        key === "interview"
+            ? card.lastActivityNote || `Interview · ${ago(card.lastActivityAt ?? card.stagedAt)}`
+            : null;
+    const meta = [card.location, when ?? ago(card.discoveredAt), when ? null : SOURCE_LABEL[card.source]]
         .filter(Boolean)
         .join(" · ");
 
     return {
-        id: job.id,
-        company: job.company,
-        role: job.title,
+        id: card.id,
+        company: card.company,
+        role: card.title,
         // 0 until the job has been compared with your resume; `scored` says which.
-        match: summary?.score ?? 0,
-        scored: Boolean(summary),
+        match: card.score ?? 0,
+        scored: card.score != null,
         meta,
         flag,
-        file,
-        strong,
+        file: key === "staged" ? fileName(card.texPath) : null,
+        strong: key === "interview",
     };
 }
 
