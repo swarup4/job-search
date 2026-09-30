@@ -1,7 +1,5 @@
 """The AI tier's HTTP surface — only what the dashboard has to start by hand.
 
-    python -m api.main
-
 Localhost only, like the API server: it acts with whatever token the dashboard
 forwards, so nothing off this machine should be able to reach it.
 """
@@ -18,6 +16,9 @@ from fastapi.middleware.cors import CORSMiddleware
 import config  # noqa: F401 — imported for its .env load
 from api import analysis, capture, discovery, scoring, settings, tailoring
 from config.error_log import ErrorLogHandler
+from config.errors import DomainError, handle_domain_error
+
+MODULES = (discovery, analysis, scoring, tailoring, capture, settings)
 
 
 def create_app() -> FastAPI:
@@ -38,12 +39,12 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    app.include_router(discovery.router, prefix="/api/runs/discovery")
-    app.include_router(settings.router, prefix="/api/settings")
-    app.include_router(analysis.router, prefix="/api/runs/analysis")
-    app.include_router(tailoring.router, prefix="/api/tailoring")
-    app.include_router(scoring.router, prefix="/api/runs/scoring")
-    app.include_router(capture.router, prefix="/api/capture")
+
+    # Every service error reaches HTTP here — see config/errors.py.
+    app.add_exception_handler(DomainError, handle_domain_error)
+
+    for module in MODULES:
+        app.include_router(module.router, prefix=f"/api/{module.PREFIX}")
 
     @app.get("/health")
     async def health() -> dict[str, str]:
@@ -57,7 +58,8 @@ app = create_app()
 
 if __name__ == "__main__":
     uvicorn.run(
-        "api.main:app",
+        "main:app",
+        # NFR-4 — bind loopback, never 0.0.0.0.
         host=os.environ.get("AI_HOST", "127.0.0.1"),
         port=int(os.environ.get("AI_PORT", "8001")),
     )

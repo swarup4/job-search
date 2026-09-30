@@ -223,7 +223,7 @@ only".
 ⬜ **not started.** Turning a set of adapters into something you use every day.
 
 **API**
-- ✅ `P10-01` `ai/api/` — the AI tier's own FastAPI server (`python -m api.main`, loopback,
+- ✅ `P10-01` `ai/api/` — the AI tier's own FastAPI server (`python main.py` in `ai/`, loopback,
   port 8001). `POST /api/runs/discovery/start` takes the dashboard's bearer token, checks it by asking
   the server whose it is (`getAccount`), and starts `run_all()` in the background; `GET
   /api/runs/discovery/events` streams its progress. One run at a time — a second start by the

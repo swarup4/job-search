@@ -211,7 +211,7 @@ export function ModelsPanel() {
                 setError(
                     failure instanceof ApiError && !failure.isOffline && failure.status !== 404
                         ? failure.message
-                        : "Start or restart the AI tier (python -m api.main in ai/) to see what it is using."
+                        : "Start or restart the AI tier (python main.py in ai/) to see what it is using."
                 )
             );
     }, []);

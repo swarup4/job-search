@@ -1,1 +1,1 @@
-"""The AI tier's HTTP surface. See api/main.py."""
+"""The AI tier's HTTP modules, mounted by main.py."""
