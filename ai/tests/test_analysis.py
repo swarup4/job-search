@@ -39,7 +39,7 @@ class FakeClient:
         self.match: dict[str, Any] | None = None
         self.job_updates: list[dict[str, Any]] = []
         self.embeddings: list[list[float]] = []
-        # What the match step was handed: None means it extracted for itself.
+        # What the match step was handed: None means it read the posting itself.
         self.rectified_with: list[list[Any] | None] = []
 
     async def get_job(self, job_id: str) -> dict[str, Any]:
@@ -80,21 +80,31 @@ def fake(monkeypatch: pytest.MonkeyPatch) -> FakeClient:
             experience="6-10 years", salary="40 LPA", workMode="hybrid", jobType="contract"
         )
 
-    async def extract(jd_text: str) -> list[matching.Requirement]:
-        return [
-            matching.Requirement(key="aws", label="AWS", kind="tech", mentions=1, evidence="AWS"),
-            matching.Requirement(
-                key="6-10-years", label="6-10 years", kind="qualification", mentions=1, evidence="x"
-            ),
-            matching.Requirement(key="rag", label="RAG", kind="tech", mentions=1, evidence="RAG"),
-        ]
+    async def ensure_brief(description: dict[str, Any], job: dict[str, Any]) -> matching.Brief:
+        return matching.Brief(
+            requirements=[
+                matching.Requirement(
+                    key="aws", label="AWS", kind="tech", mentions=1, evidence="AWS"
+                ),
+                matching.Requirement(
+                    key="6-10-years",
+                    label="6-10 years",
+                    kind="qualification",
+                    mentions=1,
+                    evidence="x",
+                ),
+                matching.Requirement(
+                    key="rag", label="RAG", kind="tech", mentions=1, evidence="RAG"
+                ),
+            ]
+        )
 
-    async def rectify(job_id: str, requirements: list[Any] | None = None) -> dict[str, Any]:
-        client.rectified_with.append(requirements)
+    async def rectify(job_id: str, brief: matching.Brief | None = None) -> dict[str, Any]:
+        client.rectified_with.append(brief.requirements if brief else None)
         return {"score": 72, "present": [{"label": "AWS"}], "missing": [{"label": "RAG"}]}
 
     monkeypatch.setattr(analysis, "generate", proposes)
-    monkeypatch.setattr(matching, "extract_requirements", extract)
+    monkeypatch.setattr(matching, "ensure_brief", ensure_brief)
     monkeypatch.setattr(matching, "rectify", rectify)
     return client
 
@@ -128,7 +138,7 @@ async def test_every_step_writes_its_own_field(fake: FakeClient) -> None:
     assert outcome.score == 72
     assert all(step.ok for step in outcome.steps.values()), outcome.steps
     assert fake.embeddings == [[0.1, 0.2, 0.3]]
-    # Only the technologies, and the match reuses the same extraction.
+    # Only the technologies, and the match reuses the same brief.
     assert {"techStack": ["AWS", "RAG"]} in fake.job_updates
     assert [len(handed or []) for handed in fake.rectified_with] == [3]
 
@@ -150,7 +160,7 @@ async def test_a_job_already_matched_is_skipped_whole(fake: FakeClient) -> None:
 
 
 async def test_a_matched_job_without_a_stack_gets_only_the_stack(fake: FakeClient) -> None:
-    """Jobs analyzed before the tech stack existed: one extraction, no second match."""
+    """Jobs analyzed before the tech stack existed: one brief, no second match."""
     fake.match = {"score": 64}
     fake.description = {"id": "d1", "jdText": JD, "hasEmbedding": True}
     outcome = await analysis.analyze("j1")

@@ -23,6 +23,7 @@ from agents.analysis import AnalysisOutcome
 from api.analysis.models import AnalysisRequest, AnalysisRun
 from api.events import EventLog
 from config.errors import BadGateway, Conflict, Invalid
+from config.llm import track_usage
 from mcp_servers.jobpilot_api import client
 from mcp_servers.jobpilot_api.client import JobPilotApiError
 
@@ -89,21 +90,25 @@ async def _execute(run: AnalysisRun, token: str) -> None:
         run.results.append(outcome)
         log.emit({"type": "job_done", **outcome.model_dump()})
 
-    try:
-        await analysis.analyze_many(run.jobIds, on_result=finished, on_event=log.emit)
-        run.status = "done"
-    except JobPilotApiError as error:
-        run.status = "failed"
-        run.error = EXPIRED if error.status == 401 else str(error)[:300]
-        if error.status != 401:
-            logger.error("analysis run %s failed: %s", run.id, error)
-    except Exception as error:  # a background task has no caller to raise to
-        logger.exception("analysis run %s failed", run.id)
-        run.status = "failed"
-        run.error = f"{type(error).__name__}: {error}"[:300]
-    finally:
-        run.finishedAt = datetime.now(UTC)
-        log.emit(
-            {"type": "run_done", "status": run.status, "error": run.error,
-             "finishedAt": run.finishedAt.isoformat()}
-        )  # fmt: skip
+    with track_usage() as usage:
+        try:
+            await analysis.analyze_many(run.jobIds, on_result=finished, on_event=log.emit)
+            run.status = "done"
+        except JobPilotApiError as error:
+            run.status = "failed"
+            run.error = EXPIRED if error.status == 401 else str(error)[:300]
+            if error.status != 401:
+                logger.error("analysis run %s failed: %s", run.id, error)
+        except Exception as error:  # a background task has no caller to raise to
+            logger.exception("analysis run %s failed", run.id)
+            run.status = "failed"
+            run.error = f"{type(error).__name__}: {error}"[:300]
+        finally:
+            run.finishedAt = datetime.now(UTC)
+            logger.info(
+                "analysis run %s: %d jobs, tokens %s", run.id, len(run.jobIds), usage.summary()
+            )
+            log.emit(
+                {"type": "run_done", "status": run.status, "error": run.error,
+                 "finishedAt": run.finishedAt.isoformat(), "usage": usage.summary()}
+            )  # fmt: skip

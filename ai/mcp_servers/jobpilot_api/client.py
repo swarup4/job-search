@@ -107,6 +107,12 @@ async def store_description_embedding(description_id: str, vector: list[float]) 
     )
 
 
+async def store_brief(description_id: str, brief: dict[str, Any]) -> dict[str, Any]:
+    """The posting read into requirements and constraints, stored on its description —
+    which every later read of that description then carries as `brief`."""
+    return await _request("PUT", f"/job-description/storeBrief/{description_id}", json=brief)
+
+
 async def get_account() -> dict[str, Any]:
     """The signed-in account. Doubles as the check that a forwarded token is real."""
     return await _request("GET", "/account/getAccount")
@@ -155,6 +161,20 @@ async def reindex_profile() -> dict[str, Any]:
     """Re-cut My Details into chunks. Returns the index stats. Text only — the server
     never embeds anything, which is why this leaves chunks pending."""
     return await _request("POST", "/profile/reindex")
+
+
+async def get_skill_inventory() -> dict[str, Any] | None:
+    """The profile read into skills, or None before the first one is built."""
+    try:
+        return await _request("GET", "/skill-inventory/getInventory")
+    except JobPilotApiError as error:
+        if error.status == 404:
+            return None
+        raise
+
+
+async def replace_skill_inventory(inventory: dict[str, Any]) -> dict[str, Any]:
+    return await _request("PUT", "/skill-inventory/replaceInventory", json=inventory)
 
 
 async def list_pending_chunks(limit: int = 200) -> list[dict[str, Any]]:

@@ -25,6 +25,7 @@ from agents import matching
 from api.events import EventLog
 from api.scoring.models import ScoringResult, ScoringRun
 from config.errors import Conflict
+from config.llm import track_usage
 from mcp_servers.jobpilot_api import client
 from mcp_servers.jobpilot_api.client import JobPilotApiError
 
@@ -76,43 +77,46 @@ async def _execute(run: ScoringRun, token: str, log: EventLog) -> None:
     log.emit({"type": "run_started", "run": run.model_dump(mode="json")})
     # A job that failed stays unscored and would come back in every batch.
     attempted: set[str] = set()
-    try:
-        while True:
-            batch = [
-                job
-                for job in await client.list_unscored_jobs(limit=BATCH)
-                if job["id"] not in attempted
-            ]
-            if not batch:
-                break
-            for job in batch:
-                attempted.add(job["id"])
-                result = await _score_one(job, log)
-                if result.error is None:
-                    run.scored += 1
-                else:
-                    run.failed += 1
-                run.results.append(result)
-                log.emit(
-                    {"type": "job_done", **result.model_dump(), "scored": run.scored,
-                     "failed": run.failed}
-                )  # fmt: skip
-        run.status = "done"
-    except JobPilotApiError as error:
-        run.status = "failed"
-        run.error = EXPIRED if error.status == 401 else str(error)[:300]
-        if error.status != 401:
-            logger.error("scoring run %s failed: %s", run.id, error)
-    except Exception as error:  # a background task has no caller to raise to
-        logger.exception("scoring run %s failed", run.id)
-        run.status = "failed"
-        run.error = f"{type(error).__name__}: {error}"[:300]
-    finally:
-        run.finishedAt = datetime.now(UTC)
-        log.emit(
-            {"type": "run_done", "status": run.status, "error": run.error, "scored": run.scored,
-             "failed": run.failed, "finishedAt": run.finishedAt.isoformat()}
-        )  # fmt: skip
+    with track_usage() as usage:
+        try:
+            while True:
+                batch = [
+                    job
+                    for job in await client.list_unscored_jobs(limit=BATCH)
+                    if job["id"] not in attempted
+                ]
+                if not batch:
+                    break
+                for job in batch:
+                    attempted.add(job["id"])
+                    result = await _score_one(job, log)
+                    if result.error is None:
+                        run.scored += 1
+                    else:
+                        run.failed += 1
+                    run.results.append(result)
+                    log.emit(
+                        {"type": "job_done", **result.model_dump(), "scored": run.scored,
+                         "failed": run.failed}
+                    )  # fmt: skip
+            run.status = "done"
+        except JobPilotApiError as error:
+            run.status = "failed"
+            run.error = EXPIRED if error.status == 401 else str(error)[:300]
+            if error.status != 401:
+                logger.error("scoring run %s failed: %s", run.id, error)
+        except Exception as error:  # a background task has no caller to raise to
+            logger.exception("scoring run %s failed", run.id)
+            run.status = "failed"
+            run.error = f"{type(error).__name__}: {error}"[:300]
+        finally:
+            run.finishedAt = datetime.now(UTC)
+            logger.info("scoring run %s: %d jobs, tokens %s", run.id, run.scored, usage.summary())
+            log.emit(
+                {"type": "run_done", "status": run.status, "error": run.error,
+                 "scored": run.scored, "failed": run.failed,
+                 "finishedAt": run.finishedAt.isoformat(), "usage": usage.summary()}
+            )  # fmt: skip
 
 
 async def _score_one(job: dict[str, str], log: EventLog) -> ScoringResult:

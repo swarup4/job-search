@@ -35,6 +35,53 @@ class DescriptionStatus(StrEnum):
     DISCARDED = "discarded"
 
 
+class RequirementKind(StrEnum):
+    TECH = "tech"
+    QUALIFICATION = "qualification"
+    PRACTICE = "practice"
+
+
+class WorkMode(StrEnum):
+    ON_SITE = "on_site"
+    HYBRID = "hybrid"
+    REMOTE = "remote"
+
+
+class BriefRequirement(BaseModel):
+    key: str = Field(min_length=1, max_length=80)
+    label: str = Field(min_length=1, max_length=60)
+    kind: RequirementKind
+    mentions: int = Field(default=1, ge=1)
+    # Copied from `jdText` and checked against it by the AI tier before it is sent.
+    evidence: str = Field(min_length=1, max_length=1_000)
+
+
+class JobBriefWrite(BaseModel):
+    """A posting read once into what scoring needs, so a re-score never sends the
+    whole description to the model again."""
+
+    requirements: list[BriefRequirement] = Field(default_factory=list, max_length=40)
+    seniority: str | None = Field(default=None, max_length=60)
+    minYears: int | None = Field(default=None, ge=0, le=50)
+    locationRule: str | None = Field(default=None, max_length=200)
+    workMode: WorkMode | None = None
+    modelName: str = Field(min_length=1, max_length=200)
+    # Bumped by the AI tier when the brief prompt changes, so older briefs are rebuilt
+    # rather than compared against a newer one's idea of a requirement.
+    briefVersion: int = Field(ge=1)
+
+    @model_validator(mode="after")
+    def _keys_are_unique(self) -> "JobBriefWrite":
+        keys = [item.key for item in self.requirements]
+        if len(keys) != len(set(keys)):
+            raise ValueError("requirement keys must be unique")
+        return self
+
+
+class JobBrief(JobBriefWrite):
+    builtAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
 class JobDescriptionCreate(BaseModel):
     """One career page, converted to markdown in the browser. Nothing here is parsed
     into job fields — that happens later, off the stored text."""
@@ -79,6 +126,10 @@ class JobDescription(Document):
     # Built from `jdText`, never from `htmlString`. Null until the AI tier has
     # embedded it; a `$vectorSearch` index covers this field.
     embedding: list[float] | None = None
+
+    # Null until a scoring run has read the posting. `jdText` never changes under a
+    # given `contentHash`, so a brief stays true for the row it is stored on.
+    brief: JobBrief | None = None
 
     # Both stored rather than derived, so a listing can answer "did this work?"
     # without loading the text. Visible text near zero is a sign-in wall or a
@@ -134,6 +185,7 @@ class JobDescriptionDetail(JobDescriptionRead):
     links: list[str] = Field(default_factory=list)
     # Whether the AI tier has embedded it, so Analyze can skip that step.
     hasEmbedding: bool = False
+    brief: JobBrief | None = None
 
     @model_validator(mode="before")
     @classmethod

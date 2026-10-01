@@ -10,21 +10,27 @@ checked against the page. Analyze then has only the embedding and the match to d
 
 from __future__ import annotations
 
+import logging
+
 import httpx
 
 from agents import parsing
 from api.capture.models import CaptureResult
 from config.errors import BadGateway, Unauthorized, Upstream
-from config.llm import GenerationError
+from config.llm import GenerationError, track_usage
 from mcp_servers.jobpilot_api import client
 from mcp_servers.jobpilot_api.client import JobPilotApiError
+
+logger = logging.getLogger(__name__)
 
 EXPIRED = "Your session expired. Sign in again and capture the page again."
 
 
 async def process_capture(description_id: str) -> CaptureResult:
     try:
-        outcome = await parsing.parse_description(description_id)
+        with track_usage() as usage:
+            outcome = await parsing.parse_description(description_id)
+        logger.info("capture %s: tokens %s", description_id, usage.summary())
         if not outcome.parsed or outcome.jobId is None:
             return CaptureResult(parsed=False, reason=outcome.reason)
         job = await client.get_job(outcome.jobId)

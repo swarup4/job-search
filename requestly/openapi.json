@@ -5,83 +5,14 @@
     "version": "1.0.0"
   },
   "paths": {
-    "/api/job": {
+    "/api/job/locations": {
       "get": {
         "tags": [
           "job"
         ],
-        "summary": "List Jobs",
-        "operationId": "list_jobs_api_job_get",
+        "summary": "Locations",
+        "operationId": "locations_api_job_locations_get",
         "parameters": [
-          {
-            "name": "status",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "$ref": "#/components/schemas/JobStatus"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Status"
-            }
-          },
-          {
-            "name": "shortlisted",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "boolean"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Shortlisted"
-            }
-          },
-          {
-            "name": "company",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Company"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "maximum": 200,
-              "default": 50,
-              "title": "Limit"
-            }
-          },
-          {
-            "name": "skip",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 0,
-              "title": "Skip"
-            }
-          },
           {
             "name": "authorization",
             "in": "header",
@@ -99,6 +30,43 @@
             }
           }
         ]
+      }
+    },
+    "/api/job/search": {
+      "post": {
+        "tags": [
+          "job"
+        ],
+        "summary": "Search Jobs",
+        "operationId": "search_jobs_api_job_search_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobSearch"
+              }
+            }
+          }
+        }
       }
     },
     "/api/job/createJob": {
@@ -138,14 +106,13 @@
         }
       }
     },
-    "/api/job/getJobDescription/{job_id}": {
+    "/api/job/getJob/{job_id}": {
       "get": {
         "tags": [
           "job"
         ],
-        "summary": "Get Job Description",
-        "description": "What the matching step reads. Same row as `getJob`, with the JD prose.",
-        "operationId": "get_job_description_api_job_getJobDescription__job_id__get",
+        "summary": "Get Job",
+        "operationId": "get_job_api_job_getJob__job_id__get",
         "parameters": [
           {
             "name": "job_id",
@@ -174,13 +141,13 @@
         ]
       }
     },
-    "/api/job/getJob/{job_id}": {
+    "/api/job/getJobDetails/{job_id}": {
       "get": {
         "tags": [
           "job"
         ],
-        "summary": "Get Job",
-        "operationId": "get_job_api_job_getJob__job_id__get",
+        "summary": "Get Job Details",
+        "operationId": "get_job_details_api_job_getJobDetails__job_id__get",
         "parameters": [
           {
             "name": "job_id",
@@ -254,14 +221,387 @@
         }
       }
     },
-    "/api/match/pending": {
+    "/api/job-description": {
+      "get": {
+        "tags": [
+          "job-description"
+        ],
+        "summary": "List Descriptions",
+        "operationId": "list_descriptions_api_job_description_get",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/DescriptionStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "url",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Url"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "job-description"
+        ],
+        "summary": "Create Description",
+        "operationId": "create_description_api_job_description_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobDescriptionCreate"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/job-description/for-job/{job_id}": {
+      "get": {
+        "tags": [
+          "job-description"
+        ],
+        "summary": "Get For Job",
+        "operationId": "get_for_job_api_job_description_for_job__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ]
+      }
+    },
+    "/api/job-description/link/{description_id}/{job_id}": {
+      "post": {
+        "tags": [
+          "job-description"
+        ],
+        "summary": "Link To Job",
+        "operationId": "link_to_job_api_job_description_link__description_id___job_id__post",
+        "parameters": [
+          {
+            "name": "description_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          },
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ]
+      }
+    },
+    "/api/job-description/status/{description_id}": {
+      "patch": {
+        "tags": [
+          "job-description"
+        ],
+        "summary": "Set Status",
+        "operationId": "set_status_api_job_description_status__description_id__patch",
+        "parameters": [
+          {
+            "name": "description_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          },
+          {
+            "name": "new_status",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/DescriptionStatus"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ]
+      }
+    },
+    "/api/job-description/embedding/{description_id}": {
+      "put": {
+        "tags": [
+          "job-description"
+        ],
+        "summary": "Store Embedding",
+        "operationId": "store_embedding_api_job_description_embedding__description_id__put",
+        "parameters": [
+          {
+            "name": "description_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmbeddingWrite"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/job-description/storeBrief/{description_id}": {
+      "put": {
+        "tags": [
+          "job-description"
+        ],
+        "summary": "Store Brief",
+        "operationId": "store_brief_api_job_description_storeBrief__description_id__put",
+        "parameters": [
+          {
+            "name": "description_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobBriefWrite"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/job-description/{description_id}": {
+      "get": {
+        "tags": [
+          "job-description"
+        ],
+        "summary": "Get Description",
+        "operationId": "get_description_api_job_description__description_id__get",
+        "parameters": [
+          {
+            "name": "description_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ]
+      }
+    },
+    "/api/match/unscored": {
       "get": {
         "tags": [
           "match"
         ],
-        "summary": "Pending",
-        "operationId": "pending_api_match_pending_get",
+        "summary": "Unscored",
+        "operationId": "unscored_api_match_unscored_get",
         "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 0,
+              "default": 10,
+              "title": "Limit"
+            }
+          },
           {
             "name": "authorization",
             "in": "header",
@@ -371,41 +711,6 @@
         ],
         "summary": "Get Match",
         "operationId": "get_match_api_match_getMatch__job_id__get",
-        "parameters": [
-          {
-            "name": "job_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/PydanticObjectId"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ]
-      }
-    },
-    "/api/resume/versions/{job_id}": {
-      "get": {
-        "tags": [
-          "resume"
-        ],
-        "summary": "List Versions",
-        "operationId": "list_versions_api_resume_versions__job_id__get",
         "parameters": [
           {
             "name": "job_id",
@@ -594,6 +899,247 @@
             }
           }
         ]
+      }
+    },
+    "/api/resume/pdf/{job_id}": {
+      "get": {
+        "tags": [
+          "resume"
+        ],
+        "summary": "Download Tailored Pdf",
+        "operationId": "download_tailored_pdf_api_resume_pdf__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ]
+      }
+    },
+    "/api/resume-chunk/stats": {
+      "get": {
+        "tags": [
+          "resume-chunk"
+        ],
+        "summary": "Index Stats",
+        "description": "What the \"Indexed for retrieval\" panel shows.",
+        "operationId": "index_stats_api_resume_chunk_stats_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ]
+      }
+    },
+    "/api/resume-chunk/pending": {
+      "get": {
+        "tags": [
+          "resume-chunk"
+        ],
+        "summary": "Pending Chunks",
+        "description": "The AI tier's work queue \u2014 everything of mine still waiting for a vector.",
+        "operationId": "pending_chunks_api_resume_chunk_pending_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 200,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ]
+      }
+    },
+    "/api/resume-chunk/embeddings": {
+      "put": {
+        "tags": [
+          "resume-chunk"
+        ],
+        "summary": "Store Embeddings",
+        "operationId": "store_embeddings_api_resume_chunk_embeddings_put",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmbeddingBatch"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/resume-chunk/search": {
+      "post": {
+        "tags": [
+          "resume-chunk"
+        ],
+        "summary": "Search",
+        "description": "Nearest chunks to an already-embedded query. Atlas only \u2014 see `service.search`.",
+        "operationId": "search_api_resume_chunk_search_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchQuery"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/skill-inventory/getInventory": {
+      "get": {
+        "tags": [
+          "skill-inventory"
+        ],
+        "summary": "Get Inventory",
+        "description": "404 until the first scoring run has built one \u2014 the AI tier's cue to build it.",
+        "operationId": "get_inventory_api_skill_inventory_getInventory_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ]
+      }
+    },
+    "/api/skill-inventory/replaceInventory": {
+      "put": {
+        "tags": [
+          "skill-inventory"
+        ],
+        "summary": "Replace Inventory",
+        "operationId": "replace_inventory_api_skill_inventory_replaceInventory_put",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SkillInventoryWrite"
+              }
+            }
+          }
+        }
       }
     },
     "/api/template/render/{template_id}": {
@@ -953,13 +1499,206 @@
         ]
       }
     },
-    "/api/application/for-job/{job_id}": {
+    "/api/application/tracker": {
       "get": {
         "tags": [
           "application"
         ],
-        "summary": "Get For Job",
-        "operationId": "get_for_job_api_application_for_job__job_id__get",
+        "summary": "Tracker",
+        "description": "The Applications screen in one call: staged and submitted, with each job joined.",
+        "operationId": "tracker_api_application_tracker_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ]
+      }
+    },
+    "/api/application/board": {
+      "get": {
+        "tags": [
+          "application"
+        ],
+        "summary": "Board",
+        "operationId": "board_api_application_board_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 5,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ]
+      }
+    },
+    "/api/application/board/{column}": {
+      "get": {
+        "tags": [
+          "application"
+        ],
+        "summary": "Board Column",
+        "operationId": "board_column_api_application_board__column__get",
+        "parameters": [
+          {
+            "name": "column",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "new",
+                "shortlisted",
+                "staged",
+                "applied",
+                "interview"
+              ],
+              "type": "string",
+              "title": "Column"
+            }
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 5,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ]
+      }
+    },
+    "/api/application/shortlist": {
+      "get": {
+        "tags": [
+          "application"
+        ],
+        "summary": "Shortlisted Jobs",
+        "operationId": "shortlisted_jobs_api_application_shortlist_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ]
+      }
+    },
+    "/api/application/shortlist/{job_id}": {
+      "post": {
+        "tags": [
+          "application"
+        ],
+        "summary": "Shortlist",
+        "operationId": "shortlist_api_application_shortlist__job_id__post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "application"
+        ],
+        "summary": "Unshortlist",
+        "operationId": "unshortlist_api_application_shortlist__job_id__delete",
         "parameters": [
           {
             "name": "job_id",
@@ -1093,7 +1832,10 @@
             "schema": {
               "anyOf": [
                 {
-                  "$ref": "#/components/schemas/ApplicationStatus"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApplicationStatus"
+                  }
                 },
                 {
                   "type": "null"
@@ -1119,185 +1861,6 @@
             }
           }
         ]
-      }
-    },
-    "/api/application/stageApplication": {
-      "post": {
-        "tags": [
-          "application"
-        ],
-        "summary": "Stage Application",
-        "operationId": "stage_application_api_application_stageApplication_post",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ApplicationStage"
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/application/getApplication/{application_id}": {
-      "get": {
-        "tags": [
-          "application"
-        ],
-        "summary": "Get Application",
-        "operationId": "get_application_api_application_getApplication__application_id__get",
-        "parameters": [
-          {
-            "name": "application_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/PydanticObjectId"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ]
-      }
-    },
-    "/api/event": {
-      "get": {
-        "tags": [
-          "event"
-        ],
-        "summary": "List Events",
-        "operationId": "list_events_api_event_get",
-        "parameters": [
-          {
-            "name": "jobId",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "$ref": "#/components/schemas/PydanticObjectId"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Jobid"
-            }
-          },
-          {
-            "name": "eventType",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "$ref": "#/components/schemas/EventType"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Eventtype"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "maximum": 500,
-              "default": 100,
-              "title": "Limit"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ]
-      }
-    },
-    "/api/event/appendEvent": {
-      "post": {
-        "tags": [
-          "event"
-        ],
-        "summary": "Append Event",
-        "operationId": "append_event_api_event_appendEvent_post",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/EventAppend"
-              }
-            }
-          }
-        }
       }
     },
     "/api/profile/createProfile": {
@@ -1402,13 +1965,14 @@
         }
       }
     },
-    "/api/profile/getExperience": {
-      "get": {
+    "/api/profile/reindex": {
+      "post": {
         "tags": [
           "profile"
         ],
-        "summary": "List Experience",
-        "operationId": "list_experience_api_profile_getExperience_get",
+        "summary": "Reindex",
+        "description": "Rebuild the retrieval chunks now. Every edit below already does this, so this\nis for the panel's button and for a profile that predates chunking \u2014 cutting a\nprofile up is what this module knows how to do, which is why the route is here\nrather than on `resume-chunk`.",
+        "operationId": "reindex_api_profile_reindex_post",
         "parameters": [
           {
             "name": "authorization",
@@ -1546,33 +2110,6 @@
         ]
       }
     },
-    "/api/profile/getEducation": {
-      "get": {
-        "tags": [
-          "profile"
-        ],
-        "summary": "List Education",
-        "operationId": "list_education_api_profile_getEducation_get",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ]
-      }
-    },
     "/api/profile/addEducation": {
       "post": {
         "tags": [
@@ -1690,33 +2227,6 @@
         ]
       }
     },
-    "/api/profile/getSkills": {
-      "get": {
-        "tags": [
-          "profile"
-        ],
-        "summary": "List Skills",
-        "operationId": "list_skills_api_profile_getSkills_get",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ]
-      }
-    },
     "/api/profile/addSkill": {
       "post": {
         "tags": [
@@ -1815,33 +2325,6 @@
               "$ref": "#/components/schemas/PydanticObjectId"
             }
           },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ]
-      }
-    },
-    "/api/profile/getCertifications": {
-      "get": {
-        "tags": [
-          "profile"
-        ],
-        "summary": "List Certifications",
-        "operationId": "list_certifications_api_profile_getCertifications_get",
-        "parameters": [
           {
             "name": "authorization",
             "in": "header",
@@ -2099,6 +2582,378 @@
         }
       }
     },
+    "/api/career-source": {
+      "get": {
+        "tags": [
+          "career-source"
+        ],
+        "summary": "List Sources",
+        "operationId": "list_sources_api_career_source_get",
+        "parameters": [
+          {
+            "name": "enabled",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Enabled"
+            }
+          },
+          {
+            "name": "platform",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Platform"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Platform"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "career-source"
+        ],
+        "summary": "Create Source",
+        "operationId": "create_source_api_career_source_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CareerSourceCreate"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/career-source/{source_id}": {
+      "patch": {
+        "tags": [
+          "career-source"
+        ],
+        "summary": "Update Source",
+        "operationId": "update_source_api_career_source__source_id__patch",
+        "parameters": [
+          {
+            "name": "source_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CareerSourceUpdate"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/career-source/result/{source_id}": {
+      "put": {
+        "tags": [
+          "career-source"
+        ],
+        "summary": "Record Result",
+        "operationId": "record_result_api_career_source_result__source_id__put",
+        "parameters": [
+          {
+            "name": "source_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PydanticObjectId"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunResult"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/preference": {
+      "get": {
+        "tags": [
+          "preference"
+        ],
+        "summary": "Get Preference",
+        "operationId": "get_preference_api_preference_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "preference"
+        ],
+        "summary": "Save Preference",
+        "operationId": "save_preference_api_preference_put",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreferenceFields"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/status": {
+      "get": {
+        "tags": [
+          "status"
+        ],
+        "summary": "Get Status",
+        "operationId": "get_status_api_status_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ]
+      }
+    },
+    "/api/errorLog": {
+      "get": {
+        "tags": [
+          "errorLog"
+        ],
+        "summary": "List Errors",
+        "operationId": "list_errors_api_errorLog_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "default": 200,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "errorLog"
+        ],
+        "summary": "Report Error",
+        "operationId": "report_error_api_errorLog_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ErrorReport"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "errorLog"
+        ],
+        "summary": "Clear Errors",
+        "operationId": "clear_errors_api_errorLog_delete",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ]
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health",
@@ -2147,17 +3002,6 @@
         "type": "object",
         "title": "AccountUpdate",
         "description": "What the profile page may change. Email and password are deliberately absent:\none is the login key and the other needs hashing, so both need their own flow."
-      },
-      "Actor": {
-        "type": "string",
-        "enum": [
-          "user",
-          "agent",
-          "extension",
-          "scheduler"
-        ],
-        "title": "Actor",
-        "description": "Who caused it. The audit trail behind every guardrail claim."
       },
       "Address": {
         "properties": {
@@ -2378,49 +3222,10 @@
         "title": "ApplicationFill",
         "description": "The extension reporting what it filled. Reporting only \u2014 it submits nothing."
       },
-      "ApplicationStage": {
-        "properties": {
-          "jobId": {
-            "$ref": "#/components/schemas/PydanticObjectId"
-          },
-          "resumeId": {
-            "$ref": "#/components/schemas/PydanticObjectId"
-          },
-          "texPath": {
-            "type": "string",
-            "title": "Texpath"
-          },
-          "ats": {
-            "$ref": "#/components/schemas/AtsPlatform",
-            "default": "other"
-          },
-          "applyUrl": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 2083,
-                "minLength": 1,
-                "format": "uri"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Applyurl"
-          }
-        },
-        "type": "object",
-        "required": [
-          "jobId",
-          "resumeId",
-          "texPath"
-        ],
-        "title": "ApplicationStage",
-        "description": "What `resume` posts once a .tex exists for the job."
-      },
       "ApplicationStatus": {
         "type": "string",
         "enum": [
+          "shortlisted",
           "staged",
           "applied",
           "viewed",
@@ -2430,18 +3235,7 @@
           "withdrawn"
         ],
         "title": "ApplicationStatus",
-        "description": "STAGED is pre-submit. Everything after it is a human's doing."
-      },
-      "AtsPlatform": {
-        "type": "string",
-        "enum": [
-          "workday",
-          "greenhouse",
-          "lever",
-          "linkedin_easy_apply",
-          "other"
-        ],
-        "title": "AtsPlatform"
+        "description": "SHORTLISTED and STAGED are pre-submit. Everything after STAGED is a human's doing."
       },
       "BaseResumeStore": {
         "properties": {
@@ -2502,6 +3296,164 @@
         ],
         "title": "Body_upload_template_api_template_upload_post"
       },
+      "BriefRequirement": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Label"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/RequirementKind"
+          },
+          "mentions": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Mentions",
+            "default": 1
+          },
+          "evidence": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Evidence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "kind",
+          "evidence"
+        ],
+        "title": "BriefRequirement"
+      },
+      "CaptureRegion": {
+        "type": "string",
+        "enum": [
+          "main",
+          "article",
+          "heuristic",
+          "body",
+          "feed"
+        ],
+        "title": "CaptureRegion",
+        "description": "Which rule picked the stored fragment. `body` means none of them were\nconfident, so the whole page is in there and a parser should expect noise."
+      },
+      "CareerSourceCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Name"
+          },
+          "careersUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Careersurl"
+          },
+          "platform": {
+            "$ref": "#/components/schemas/Platform"
+          },
+          "config": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Config"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": true
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "platform",
+          "config"
+        ],
+        "title": "CareerSourceCreate"
+      },
+      "CareerSourceUpdate": {
+        "properties": {
+          "careersUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Careersurl"
+          },
+          "config": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "title": "CareerSourceUpdate",
+        "description": "Every field optional: a PATCH sends only what changed."
+      },
       "CertificationFields": {
         "properties": {
           "name": {
@@ -2531,74 +3483,26 @@
         ],
         "title": "CertificationFields"
       },
-      "Company": {
+      "ChunkEmbedding": {
         "properties": {
-          "name": {
-            "type": "string",
-            "title": "Name"
+          "chunkId": {
+            "$ref": "#/components/schemas/PydanticObjectId"
           },
-          "industry": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Industry"
-          },
-          "size": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Size"
-          },
-          "founded": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Founded"
-          },
-          "site": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Site"
-          },
-          "blurb": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Blurb"
+          "embedding": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Embedding"
           }
         },
         "type": "object",
         "required": [
-          "name"
+          "chunkId",
+          "embedding"
         ],
-        "title": "Company",
-        "description": "Denormalized onto the job \u2014 the company rail on the job page reads only this."
+        "title": "ChunkEmbedding"
       },
       "ContactStyle": {
         "type": "string",
@@ -2659,6 +3563,16 @@
         "title": "Demographics",
         "description": "US-style EEO questions. Every field is free text and every one is optional \u2014\n\"Prefer not to say\" is a real answer and the default is to answer nothing."
       },
+      "DescriptionStatus": {
+        "type": "string",
+        "enum": [
+          "raw",
+          "parsed",
+          "discarded"
+        ],
+        "title": "DescriptionStatus",
+        "description": "Captured, turned into a posting, or found not to be one."
+      },
       "EducationFields": {
         "properties": {
           "degree": {
@@ -2710,76 +3624,86 @@
         ],
         "title": "EducationFields"
       },
-      "EventAppend": {
+      "EmbeddingBatch": {
         "properties": {
-          "eventType": {
-            "$ref": "#/components/schemas/EventType"
+          "embeddings": {
+            "items": {
+              "$ref": "#/components/schemas/ChunkEmbedding"
+            },
+            "type": "array",
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Embeddings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "embeddings"
+        ],
+        "title": "EmbeddingBatch",
+        "description": "Vectors for many chunks at once. Voyage embeds a whole profile in one call,\nso storing them one HTTP request at a time would be forty round trips for\nnothing."
+      },
+      "EmbeddingWrite": {
+        "properties": {
+          "embedding": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Embedding"
+          }
+        },
+        "type": "object",
+        "required": [
+          "embedding"
+        ],
+        "title": "EmbeddingWrite",
+        "description": "What the AI tier posts once it has a vector. Kept apart from the capture body\nbecause nothing that captures a page is in a position to embed it."
+      },
+      "ErrorReport": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Message"
           },
-          "actor": {
-            "$ref": "#/components/schemas/Actor"
-          },
-          "jobId": {
+          "detail": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/PydanticObjectId"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "applicationId": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/PydanticObjectId"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "notes": {
-            "anyOf": [
-              {
-                "type": "string"
+                "type": "string",
+                "maxLength": 20000
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Notes"
+            "title": "Detail"
           },
-          "payload": {
-            "additionalProperties": true,
+          "context": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
             "type": "object",
-            "title": "Payload"
+            "title": "Context"
           }
         },
         "type": "object",
         "required": [
-          "eventType",
-          "actor"
+          "message"
         ],
-        "title": "EventAppend",
-        "description": "Append-only: there is no update or delete on an event."
-      },
-      "EventType": {
-        "type": "string",
-        "enum": [
-          "job_discovered",
-          "job_shortlisted",
-          "match_scored",
-          "keywords_selected",
-          "keywords_skipped",
-          "resume_tailored",
-          "application_staged",
-          "application_filled",
-          "status_changed",
-          "follow_up_drafted",
-          "follow_up_sent",
-          "sheet_synced"
-        ],
-        "title": "EventType"
+        "title": "ErrorReport"
       },
       "ExperienceFields": {
         "properties": {
@@ -2887,18 +3811,118 @@
         "title": "FieldFill",
         "description": "What the extension put in one field. FR-5.4 \u2014 an unmarked fill is a silent edit."
       },
+      "JobBriefWrite": {
+        "properties": {
+          "requirements": {
+            "items": {
+              "$ref": "#/components/schemas/BriefRequirement"
+            },
+            "type": "array",
+            "maxItems": 40,
+            "title": "Requirements"
+          },
+          "seniority": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seniority"
+          },
+          "minYears": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 50.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minyears"
+          },
+          "locationRule": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locationrule"
+          },
+          "workMode": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkMode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "modelName": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Modelname"
+          },
+          "briefVersion": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Briefversion"
+          }
+        },
+        "type": "object",
+        "required": [
+          "modelName",
+          "briefVersion"
+        ],
+        "title": "JobBriefWrite",
+        "description": "A posting read once into what scoring needs, so a re-score never sends the\nwhole description to the model again."
+      },
       "JobCreate": {
         "properties": {
+          "refId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refid"
+          },
           "title": {
             "type": "string",
             "title": "Title"
           },
           "company": {
-            "$ref": "#/components/schemas/Company"
+            "type": "string",
+            "title": "Company"
           },
           "location": {
             "type": "string",
             "title": "Location"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country"
           },
           "jobType": {
             "anyOf": [
@@ -2942,35 +3966,10 @@
             ],
             "title": "Salarytext"
           },
-          "summary": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Summary"
-          },
-          "responsibilities": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Responsibilities"
-          },
-          "requirements": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Requirements"
-          },
           "source": {
             "$ref": "#/components/schemas/JobSource"
           },
-          "sourceUrl": {
+          "listingUrl": {
             "anyOf": [
               {
                 "type": "string",
@@ -2982,7 +3981,7 @@
                 "type": "null"
               }
             ],
-            "title": "Sourceurl"
+            "title": "Listingurl"
           },
           "postedAt": {
             "anyOf": [
@@ -3019,10 +4018,6 @@
             ],
             "title": "Applicantcount"
           },
-          "jdText": {
-            "type": "string",
-            "title": "Jdtext"
-          },
           "dedupHash": {
             "anyOf": [
               {
@@ -3040,11 +4035,143 @@
           "title",
           "company",
           "location",
-          "source",
-          "jdText"
+          "source"
         ],
         "title": "JobCreate",
-        "description": "The posting as discovery found it."
+        "description": "What discovery posts. The prose goes to `job_descriptions`."
+      },
+      "JobDescriptionCreate": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "pageTitle": {
+            "type": "string",
+            "title": "Pagetitle",
+            "default": ""
+          },
+          "markdown": {
+            "type": "string",
+            "maxLength": 400000,
+            "minLength": 1,
+            "title": "Markdown"
+          },
+          "htmlString": {
+            "type": "string",
+            "title": "Htmlstring",
+            "default": ""
+          },
+          "region": {
+            "$ref": "#/components/schemas/CaptureRegion"
+          },
+          "textLength": {
+            "type": "integer",
+            "title": "Textlength"
+          },
+          "links": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 200,
+            "title": "Links"
+          },
+          "contentHash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contenthash"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url",
+          "markdown",
+          "region",
+          "textLength"
+        ],
+        "title": "JobDescriptionCreate",
+        "description": "One career page, converted to markdown in the browser. Nothing here is parsed\ninto job fields \u2014 that happens later, off the stored text."
+      },
+      "JobSearch": {
+        "properties": {
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 10,
+            "title": "Keywords"
+          },
+          "company": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "postedWithin": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 365.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postedwithin"
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "default": 20
+          },
+          "skip": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Skip",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "JobSearch",
+        "description": "The Search screen's fields. Text fields match case-insensitively anywhere in the\nvalue; every one of `keywords` must appear in the job description text."
       },
       "JobSource": {
         "type": "string",
@@ -3056,18 +4183,6 @@
           "career_page"
         ],
         "title": "JobSource"
-      },
-      "JobStatus": {
-        "type": "string",
-        "enum": [
-          "new",
-          "reviewed",
-          "tailored",
-          "applied",
-          "archived"
-        ],
-        "title": "JobStatus",
-        "description": "Pipeline column on the dashboard board."
       },
       "JobType": {
         "type": "string",
@@ -3081,70 +4196,69 @@
       },
       "JobUpdate": {
         "properties": {
-          "status": {
+          "jobType": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/JobStatus"
+                "$ref": "#/components/schemas/JobType"
               },
               {
                 "type": "null"
               }
             ]
           },
-          "shortlisted": {
+          "workMode": {
             "anyOf": [
               {
-                "type": "boolean"
+                "$ref": "#/components/schemas/WorkMode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "experienceBand": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Shortlisted"
+            "title": "Experienceband"
           },
-          "summary": {
+          "salaryText": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 80
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Summary"
+            "title": "Salarytext"
           },
-          "responsibilities": {
+          "techStack": {
             "anyOf": [
               {
                 "items": {
                   "type": "string"
                 },
-                "type": "array"
+                "type": "array",
+                "maxItems": 30
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Responsibilities"
-          },
-          "requirements": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Requirements"
+            "title": "Techstack"
           }
         },
         "type": "object",
         "title": "JobUpdate",
-        "description": "Every field optional: a PATCH sends only what changed."
+        "description": "Every field optional: a PATCH sends only what changed. The detail fields are\nwhat analysis reads out of the description when the board did not supply them.\nNothing per-user belongs here \u2014 a job is shared by every account."
       },
       "KeywordSelection": {
         "properties": {
@@ -3311,6 +4425,17 @@
           "evidence": {
             "type": "string",
             "title": "Evidence"
+          },
+          "nearMiss": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nearmiss"
           }
         },
         "type": "object",
@@ -3320,6 +4445,80 @@
           "evidence"
         ],
         "title": "MissingKeyword"
+      },
+      "Platform": {
+        "type": "string",
+        "enum": [
+          "workday"
+        ],
+        "title": "Platform",
+        "description": "Which adapter in `ai/sources/` reads this company. A value is added when its\nadapter lands, so nothing can be registered that no code can pull."
+      },
+      "PreferenceFields": {
+        "properties": {
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 30,
+            "minItems": 1,
+            "title": "Roles"
+          },
+          "skills": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 30,
+            "title": "Skills"
+          },
+          "locations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 30,
+            "minItems": 1,
+            "title": "Locations"
+          },
+          "workMode": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "on_site",
+                  "hybrid",
+                  "remote"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workmode"
+          },
+          "minExperience": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 50.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minexperience"
+          }
+        },
+        "type": "object",
+        "required": [
+          "roles",
+          "locations"
+        ],
+        "title": "PreferenceFields",
+        "description": "The whole Search targets form. A full replace: an omitted field means cleared."
       },
       "PresentKeyword": {
         "properties": {
@@ -3508,6 +4707,15 @@
         ],
         "title": "Refresh"
       },
+      "RequirementKind": {
+        "type": "string",
+        "enum": [
+          "tech",
+          "qualification",
+          "practice"
+        ],
+        "title": "RequirementKind"
+      },
       "ResumeStore": {
         "properties": {
           "jobId": {
@@ -3516,6 +4724,11 @@
           "filePath": {
             "type": "string",
             "title": "Filepath"
+          },
+          "tex": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Tex"
           },
           "templatePath": {
             "type": "string",
@@ -3547,7 +4760,8 @@
         "type": "object",
         "required": [
           "jobId",
-          "filePath"
+          "filePath",
+          "tex"
         ],
         "title": "ResumeStore",
         "description": "What the tailoring agent posts once it has written the file."
@@ -3575,6 +4789,54 @@
         ],
         "title": "RiskFlag",
         "description": "FR-2.4 \u2014 surfaced, never selectable. Acting on one would be a misrepresentation."
+      },
+      "RunResult": {
+        "properties": {
+          "fetched": {
+            "type": "integer",
+            "title": "Fetched",
+            "default": 0
+          },
+          "matched": {
+            "type": "integer",
+            "title": "Matched",
+            "default": 0
+          },
+          "new": {
+            "type": "integer",
+            "title": "New",
+            "default": 0
+          },
+          "duplicate": {
+            "type": "integer",
+            "title": "Duplicate",
+            "default": 0
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed",
+            "default": 0
+          },
+          "blocked": {
+            "type": "boolean",
+            "title": "Blocked",
+            "default": false
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "title": "RunResult",
+        "description": "What one scrape of one company did. `blocked` means robots.txt refused the\nhost, which is a standing answer rather than a failure to retry."
       },
       "ScreeningAnswer": {
         "properties": {
@@ -3605,6 +4867,31 @@
         ],
         "title": "ScreeningAnswer"
       },
+      "SearchQuery": {
+        "properties": {
+          "vector": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Vector"
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 200.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "default": 50
+          }
+        },
+        "type": "object",
+        "required": [
+          "vector"
+        ],
+        "title": "SearchQuery",
+        "description": "A query vector, already embedded. The server does not embed anything: the\nmodel and its key live in the AI tier, and the two must agree on the model\nanyway or the search is meaningless."
+      },
       "SignUp": {
         "properties": {
           "name": {
@@ -3631,6 +4918,53 @@
         "title": "SignUp",
         "description": "Three fields and no more. Role and picture are set later from My Details,\nthrough `AccountUpdate` \u2014 asking for them at signup only adds a field nobody\nfills in."
       },
+      "SkillEntry": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 16,
+            "minLength": 1,
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Label"
+          },
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 10,
+            "title": "Aliases"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SkillKind"
+          },
+          "source": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Source",
+            "default": ""
+          },
+          "evidence": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Evidence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "kind",
+          "evidence"
+        ],
+        "title": "SkillEntry"
+      },
       "SkillFields": {
         "properties": {
           "name": {
@@ -3651,6 +4985,46 @@
         ],
         "title": "SkillFields",
         "description": "One group and its items \u2014 `Languages: Python, Go`."
+      },
+      "SkillInventoryWrite": {
+        "properties": {
+          "profileHash": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Profilehash"
+          },
+          "modelName": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Modelname"
+          },
+          "skills": {
+            "items": {
+              "$ref": "#/components/schemas/SkillEntry"
+            },
+            "type": "array",
+            "maxItems": 300,
+            "title": "Skills"
+          }
+        },
+        "type": "object",
+        "required": [
+          "profileHash",
+          "modelName"
+        ],
+        "title": "SkillInventoryWrite",
+        "description": "The profile read once into a list of skills, each tied to the line that shows\nit. Built in the AI tier; this module only stores it."
+      },
+      "SkillKind": {
+        "type": "string",
+        "enum": [
+          "tech",
+          "qualification",
+          "practice"
+        ],
+        "title": "SkillKind"
       },
       "SkillsStyle": {
         "type": "string",

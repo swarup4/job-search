@@ -11,6 +11,7 @@ from httpx import ASGITransport, AsyncClient
 from agents.tailoring import NoBaseResume, NoCurrentRole, SelectionGateNotPassed
 from api import deps
 from api.tailoring import service as tailoring_api
+from config.llm import BudgetExceeded, GenerationError
 from main import create_app
 from mcp_servers.jobpilot_api.client import JobPilotApiError
 
@@ -118,3 +119,22 @@ async def test_a_server_failure_is_a_bad_gateway(
     response = await api.post("/j1", headers=AUTH)
 
     assert response.status_code == 502
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        GenerationError("localhost/qwen would not produce a valid PlacementPlan: ..."),
+        BudgetExceeded("prompt is ~12000 tokens; the budget is 9830"),
+    ],
+    ids=["invalid-reply", "over-budget"],
+)
+async def test_a_model_failure_is_a_bad_gateway_with_its_reason(
+    api: AsyncClient, monkeypatch: pytest.MonkeyPatch, error: Exception
+) -> None:
+    tailor_with(monkeypatch, error)
+
+    response = await api.post("/j1", headers=AUTH)
+
+    assert response.status_code == 502
+    assert response.json()["detail"] == str(error)

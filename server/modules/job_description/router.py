@@ -6,6 +6,7 @@ from modules.job_description import service
 from modules.job_description.models import (
     DescriptionStatus,
     EmbeddingWrite,
+    JobBriefWrite,
     JobDescription,
     JobDescriptionCreate,
     JobDescriptionCreated,
@@ -58,6 +59,13 @@ async def store_embedding(
     description_id: PydanticObjectId, payload: EmbeddingWrite, _: CurrentUser
 ) -> JobDescription:
     return await service.store_embedding(description_id, payload.embedding)
+
+
+@router.put("/storeBrief/{description_id}", response_model=JobDescriptionDetail)
+async def store_brief(
+    description_id: PydanticObjectId, payload: JobBriefWrite, _: CurrentUser
+) -> JobDescription:
+    return await service.store_brief(description_id, payload)
 
 
 @router.get("/{description_id}", response_model=JobDescriptionDetail)

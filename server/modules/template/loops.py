@@ -21,7 +21,7 @@ import re
 from collections.abc import Sequence
 from typing import Any
 
-from modules.profile.models import UserProfile
+from modules.profile import UserProfile
 from modules.template.latex import tex
 from modules.template.models import LocationStyle, TemplateStyle
 

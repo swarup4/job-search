@@ -60,6 +60,10 @@ function kindOf(el: HTMLElement): FieldKind | null {
         return "text";
     }
 
+    // Filling a combobox clicks it. A <button> without an explicit type="button" is a
+    // submit button — `.type` reads "submit" when the attribute is missing — so
+    // clicking it to open a dropdown would send the application. (FR-5.3, NFR-7)
+    if (el instanceof HTMLButtonElement && el.type !== "button") return null;
     if (el.getAttribute("role") === "combobox" || el.getAttribute("aria-haspopup") === "listbox") {
         return "combobox";
     }
