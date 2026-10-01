@@ -7,9 +7,9 @@ per account on the API server and read at the start of each run.
 from __future__ import annotations
 
 from fastapi import APIRouter
-from pydantic import BaseModel
 
-from api.discovery import Caller
+from api.deps import Caller
+from api.settings.models import ModelSettings, ScrapeSettings, TierSettings
 from config.llm import LLM_HOST, LLM_MODEL
 from rag.embeddings import VOYAGE_EMBED_MODEL
 from rag.retrieval import VOYAGE_RERANK_MODEL
@@ -18,30 +18,10 @@ from sources.http import MAX_PER_HOST, USER_AGENT
 router = APIRouter(tags=["settings"])
 
 
-class ScrapeSettings(BaseModel):
-    maxPerHost: int
-    userAgent: str
-
-
-class ModelSettings(BaseModel):
-    generation: str
-    generationHost: str
-    embeddings: str
-    rerank: str
-
-
-class TierSettings(BaseModel):
-    scrape: ScrapeSettings
-    models: ModelSettings
-
-
 @router.get("", response_model=TierSettings)
 async def read_settings(_: Caller) -> TierSettings:
     return TierSettings(
-        scrape=ScrapeSettings(
-            maxPerHost=MAX_PER_HOST,
-            userAgent=USER_AGENT,
-        ),
+        scrape=ScrapeSettings(maxPerHost=MAX_PER_HOST, userAgent=USER_AGENT),
         models=ModelSettings(
             generation=LLM_MODEL,
             generationHost=LLM_HOST,

@@ -11,10 +11,12 @@ from typing import Any
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from api import discovery, settings
-from api.main import create_app
+from api import deps
+from api.discovery import service as discovery
+from main import create_app
 from mcp_servers.jobpilot_api.client import JobPilotApiError
 from sources.base import DEFAULT_WORKDAY_MAX_PAGES
+from sources.http import USER_AGENT
 
 SOURCES = [
     {"id": "s1", "name": "Accenture", "platform": "workday", "config": {}},
@@ -56,9 +58,10 @@ class FakeClient:
 @pytest.fixture
 def fake(monkeypatch: pytest.MonkeyPatch) -> FakeClient:
     client = FakeClient()
+    monkeypatch.setattr(deps, "client", client)
+    monkeypatch.setattr(deps, "_verified", {})
     monkeypatch.setattr(discovery, "client", client)
     monkeypatch.setattr(discovery, "_slot", discovery._Slot())
-    monkeypatch.setattr(discovery, "_verified", {})
     return client
 
 
@@ -196,7 +199,7 @@ async def test_a_token_is_rechecked_once_the_cache_lapses(
     api: AsyncClient, fake: FakeClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     await api.get("/discovery/events", headers={"Authorization": "Bearer good"})
-    monkeypatch.setattr(discovery, "VERIFIED_FOR", 0.0)
+    monkeypatch.setattr(deps, "VERIFIED_FOR", 0.0)
     await api.get("/discovery/events", headers={"Authorization": "Bearer good"})
     assert fake.account_checks == 2
 
@@ -214,7 +217,7 @@ async def test_settings_report_what_is_configured(fake: FakeClient) -> None:
     async with AsyncClient(transport=transport, base_url="http://test/api") as http:
         assert (await http.get("/settings")).status_code == 401
         body = (await http.get("/settings", headers={"Authorization": "Bearer good"})).json()
-    assert body["scrape"]["userAgent"] == settings.USER_AGENT
+    assert body["scrape"]["userAgent"] == USER_AGENT
     assert body["models"]["generation"]
     assert body["models"]["embeddings"]
 

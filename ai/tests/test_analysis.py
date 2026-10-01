@@ -13,9 +13,9 @@ from httpx import ASGITransport, AsyncClient
 
 from agents import analysis, matching
 from agents.analysis import JobDetails, verify_details
-from api import analysis as analysis_api
-from api import discovery
-from api.main import create_app
+from api import deps
+from api.analysis import service as analysis_api
+from main import create_app
 from mcp_servers.jobpilot_api.client import JobPilotApiError
 
 JD = (
@@ -250,8 +250,8 @@ async def api(
     monkeypatch: pytest.MonkeyPatch,
 ) -> AsyncIterator[tuple[AsyncClient, asyncio.Event, list]]:
     fake_api = ApiFake()
-    monkeypatch.setattr(discovery, "client", fake_api)
-    monkeypatch.setattr(discovery, "_verified", {})
+    monkeypatch.setattr(deps, "client", fake_api)
+    monkeypatch.setattr(deps, "_verified", {})
     monkeypatch.setattr(analysis_api, "client", fake_api)
     monkeypatch.setattr(analysis_api, "_slot", analysis_api._Slot())
 

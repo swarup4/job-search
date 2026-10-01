@@ -9,9 +9,9 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from agents.tailoring import NoBaseResume, NoCurrentRole, SelectionGateNotPassed
-from api import discovery
-from api import tailoring as tailoring_api
-from api.main import create_app
+from api import deps
+from api.tailoring import service as tailoring_api
+from main import create_app
 from mcp_servers.jobpilot_api.client import JobPilotApiError
 
 AUTH = {"Authorization": "Bearer good"}
@@ -33,8 +33,8 @@ class FakeClient:
 @pytest.fixture(autouse=True)
 def fake(monkeypatch: pytest.MonkeyPatch) -> FakeClient:
     client = FakeClient()
-    monkeypatch.setattr(discovery, "client", client)
-    monkeypatch.setattr(discovery, "_verified", {})
+    monkeypatch.setattr(deps, "client", client)
+    monkeypatch.setattr(deps, "_verified", {})
     return client
 
 

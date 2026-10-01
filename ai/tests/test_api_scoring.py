@@ -11,9 +11,9 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from agents import matching
-from api import discovery
-from api import scoring as scoring_api
-from api.main import create_app
+from api import deps
+from api.scoring import service as scoring_api
+from main import create_app
 from mcp_servers.jobpilot_api.client import JobPilotApiError
 
 AUTH = {"Authorization": "Bearer good"}
@@ -43,8 +43,8 @@ class FakeClient:
 @pytest.fixture
 def fake(monkeypatch: pytest.MonkeyPatch) -> FakeClient:
     client = FakeClient([f"j{n}" for n in range(1, 4)])
-    monkeypatch.setattr(discovery, "client", client)
-    monkeypatch.setattr(discovery, "_verified", {})
+    monkeypatch.setattr(deps, "client", client)
+    monkeypatch.setattr(deps, "_verified", {})
     monkeypatch.setattr(scoring_api, "client", client)
     monkeypatch.setattr(scoring_api, "_slot", scoring_api._Slot())
 
