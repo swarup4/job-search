@@ -16,6 +16,7 @@ from modules.profile import Certification, Education, Experience, Profile, Skill
 from modules.resume import BaseResume, TailoredResume
 from modules.resume_chunk import VECTOR_INDEX as CHUNK_INDEX
 from modules.resume_chunk import ResumeChunk
+from modules.skill_inventory import SkillInventory
 from modules.template import Template
 
 _client: AsyncMongoClient | None = None
@@ -35,6 +36,7 @@ def document_models() -> list[type]:
         TailoredResume,
         BaseResume,
         ResumeChunk,
+        SkillInventory,
         Application,
         AnswerBank,
         ApplicantProfile,

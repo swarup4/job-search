@@ -8,7 +8,7 @@ style from the template's own `template.json` rather than branching on its name.
 import re
 from collections.abc import Iterable, Sequence
 
-from modules.profile.models import (
+from modules.profile import (
     CertificationRead,
     EducationRead,
     ExperienceRead,

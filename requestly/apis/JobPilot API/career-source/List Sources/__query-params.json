@@ -1,0 +1,16 @@
+[
+  {
+    "id": 0,
+    "key": "enabled",
+    "value": "",
+    "isEnabled": false,
+    "description": ""
+  },
+  {
+    "id": 1,
+    "key": "platform",
+    "value": "",
+    "isEnabled": false,
+    "description": ""
+  }
+]

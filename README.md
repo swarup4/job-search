@@ -52,11 +52,13 @@ JobPilot discovers relevant job openings, analyzes how well they match your resu
 ### What you can run today
 
 ```bash
+# Each tier has its own .venv — run each in its own terminal, and deactivate any
+# active venv first, or uv installs into it
 # REST API — needs a local mongod; start this first
-cd server && uv venv && uv pip install -e . && .venv/bin/python main.py
+cd server && uv sync && source .venv/bin/activate && python main.py
 
 # AI tier — needs ai/.env (copy .env.example, set LLM_API_KEY)
-cd ai && uv venv && uv pip install -e . && .venv/bin/python main.py
+cd ai && uv sync && source .venv/bin/activate && python main.py
 
 # dashboard
 cd app/web && npm install && npm run dev

@@ -8,7 +8,7 @@ the same shape without an LLM; this is the path for pages a human captured.
 
 Every field written has to be findable in the page. A title or a company the model
 composed rather than copied is the same failure as an invented resume keyword, so the
-checks here mirror `matching.extract_requirements`: the model proposes, the text
+checks here mirror `matching.build_brief`: the model proposes, the text
 decides.
 """
 
@@ -22,7 +22,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from agents.analysis import JobDetails, verify_details
-from config.llm import generate
+from config.llm import UNTRUSTED_RULE, as_document, generate
 from mcp_servers.jobpilot_api import client
 
 logger = logging.getLogger(__name__)
@@ -38,7 +38,9 @@ MAX_STACK = 20
 JOB_TYPES = {"full_time", "contract", "part_time", "internship"}
 WORK_MODES = {"on_site", "hybrid", "remote"}
 
-PARSE_SYSTEM = """You read a career page, captured as markdown, and pull out the posting it advertises.
+PARSE_SYSTEM = f"""You read a career page, captured as markdown, and pull out the posting it advertises.
+
+{UNTRUSTED_RULE}
 
 Rules:
 - Copy values from the page. Never translate, expand or tidy them — `title` and `company` must
@@ -96,7 +98,7 @@ async def parse_description(description_id: str) -> ParseOutcome:
 
     posting = await generate(
         ParsedPosting,
-        f"Career page:\n\n{page}",
+        as_document("career_page", page),
         system=PARSE_SYSTEM,
     )
 

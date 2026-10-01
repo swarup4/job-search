@@ -18,6 +18,7 @@ dev = [
     "ruff>=0.7.0",
     "pytest>=8.3.0",
     "pytest-asyncio>=0.24.0",
+    "hypothesis>=6.168.3",
 ]
 
 [tool.ruff]
@@ -30,6 +31,10 @@ ignore = ["B008", "RUF012"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+pythonpath = ["."]
+# The live suite drives the real local model; run it with `pytest -m llm`.
+addopts = "-m 'not llm'"
+markers = ["llm: needs the local Ollama model from ai/.env (slow; run with -m llm)"]
 
 [tool.setuptools.packages.find]
 where = ["."]

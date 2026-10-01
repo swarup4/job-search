@@ -1,0 +1,6 @@
+{
+  "$schema": "https://assets.requestly.com/local/v1.15.0/body.json",
+  "contentType": "json",
+  "raw": "{\n  \"profileHash\": \"string\",\n  \"modelName\": \"string\",\n  \"skills\": [\n    {\n      \"id\": \"string\",\n      \"label\": \"string\",\n      \"aliases\": [\n        \"string\"\n      ],\n      \"kind\": \"tech\",\n      \"source\": \"\",\n      \"evidence\": \"string\"\n    }\n  ]\n}",
+  "rawContentType": "application/json"
+}

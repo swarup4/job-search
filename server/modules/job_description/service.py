@@ -5,6 +5,8 @@ from beanie import PydanticObjectId
 from config.errors import NotFound
 from modules.job_description.models import (
     DescriptionStatus,
+    JobBrief,
+    JobBriefWrite,
     JobDescription,
     JobDescriptionCreate,
     JobDescriptionCreated,
@@ -90,6 +92,14 @@ async def store_embedding(
 ) -> JobDescription:
     description = await get_description(description_id)
     description.embedding = embedding
+    await description.save()
+    return description
+
+
+async def store_brief(description_id: PydanticObjectId, payload: JobBriefWrite) -> JobDescription:
+    """Replaces any earlier brief whole — a brief is one model's reading, not a merge."""
+    description = await get_description(description_id)
+    description.brief = JobBrief(**payload.model_dump())
     await description.save()
     return description
 

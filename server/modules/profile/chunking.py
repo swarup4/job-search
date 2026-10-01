@@ -14,8 +14,7 @@ cosine measured against a chunk still means what it meant then.
 from beanie import PydanticObjectId
 
 from modules.profile.models import UserProfile
-from modules.resume_chunk import ChunkFields, ChunkSection
-from modules.resume_chunk.models import MAX_CHUNK_CHARS, MIN_CHUNK_CHARS
+from modules.resume_chunk import MAX_CHUNK_CHARS, MIN_CHUNK_CHARS, ChunkFields, ChunkSection
 
 
 def chunk_profile(user: UserProfile) -> list[ChunkFields]:
