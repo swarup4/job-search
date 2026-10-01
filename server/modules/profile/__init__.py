@@ -2,10 +2,16 @@
 
 from modules.profile.models import (
     Certification,
+    CertificationRead,
     Education,
+    EducationRead,
     Experience,
+    ExperienceRead,
+    Link,
     Profile,
+    ProfileRead,
     Skill,
+    SkillRead,
     UserProfile,
 )
 from modules.profile.router import router
@@ -16,10 +22,16 @@ NAME = "profile"
 __all__ = [
     "NAME",
     "Certification",
+    "CertificationRead",
     "Education",
+    "EducationRead",
     "Experience",
+    "ExperienceRead",
+    "Link",
     "Profile",
+    "ProfileRead",
     "Skill",
+    "SkillRead",
     "UserProfile",
     "get_profile",
     "get_resume",

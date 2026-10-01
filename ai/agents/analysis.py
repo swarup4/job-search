@@ -8,8 +8,8 @@ page renders the stored markdown itself, so no HTML is produced here:
 | details   | experience, salary, work mode, job type  | the LLM        |
 | embedding | the JD's vector                          | Voyage         |
 | techStack | the job's technologies                   | the LLM        |
-| match     | score, keywords, risks — via `rectify`,  | the LLM, 2×    |
-|           | reusing the techStack step's extraction  |                |
+| match     | score, keywords, risks — via `rectify`,  | the LLM, 1×    |
+|           | reusing the techStack step's brief       |                |
 
 The details step follows the parser's rule: the model proposes, the page decides. An
 experience or salary figure not present in the posting verbatim is dropped, and a
@@ -32,7 +32,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 from agents import matching
-from config.llm import generate
+from config.llm import UNTRUSTED_RULE, as_document, generate
 from mcp_servers.jobpilot_api import client
 from mcp_servers.jobpilot_api.client import JobPilotApiError
 from rag.embeddings import VoyageEmbeddings
@@ -45,11 +45,7 @@ DETAIL_FIELDS = ("experienceBand", "salaryText", "workMode", "jobType")
 MAX_JD_CHARS = 12_000
 
 # Words that have to appear in the posting before a work mode or job type is believed.
-MODE_WORDS = {
-    "remote": r"\bremote\b|work from home|\bwfh\b",
-    "hybrid": r"\bhybrid\b",
-    "on_site": r"\bon[- ]?site\b|\bin[- ]office\b|work from office|\bwfo\b",
-}
+MODE_WORDS = matching.MODE_WORDS
 TYPE_WORDS = {
     "full_time": r"\bfull[- ]time\b|\bpermanent\b",
     "part_time": r"\bpart[- ]time\b",
@@ -57,7 +53,9 @@ TYPE_WORDS = {
     "internship": r"\bintern(ship)?\b",
 }
 
-DETAILS_SYSTEM = """You read one job posting and report four facts about the role, only when the posting states them.
+DETAILS_SYSTEM = f"""You read one job posting and report four facts about the role, only when the posting states them.
+
+{UNTRUSTED_RULE}
 
 Rules:
 - Copy `experience` and `salary` from the posting verbatim — the exact words it uses,
@@ -138,20 +136,19 @@ async def analyze(job_id: str, on_event: OnEvent = _ignore) -> AnalysisOutcome:
             "embedding", _embedding(description["id"], text[:MAX_JD_CHARS])
         )
 
-    # Handed from the techStack step to the match, so the posting is extracted once.
-    extracted: list[matching.Requirement] = []
+    # Handed from the techStack step to the match, so the posting is read once.
+    briefs: list[matching.Brief] = []
     if job.get("techStack") is not None:
         outcome.steps["techStack"] = done("techStack", StepResult(ok=True, note="already read"))
     else:
-        outcome.steps["techStack"] = await step(
-            "techStack", _tech_stack(job, description, extracted)
-        )
+        outcome.steps["techStack"] = await step("techStack", _tech_stack(job, description, briefs))
 
     if existing is not None:
         outcome.steps["match"] = done("match", StepResult(ok=True, note="already matched"))
         return outcome
     match: dict[str, Any] = {}
-    outcome.steps["match"] = await step("match", _match(job_id, extracted or None, match))
+    brief = briefs[0] if briefs else None
+    outcome.steps["match"] = await step("match", _match(job_id, brief, match))
     outcome.score = match.get("score")
     return outcome
 
@@ -162,8 +159,8 @@ async def analyze_many(
     at_once: int = 2,
     on_event: OnEvent = _ignore,
 ) -> list[AnalysisOutcome]:
-    """A few jobs at a time: each match makes three LLM calls, and the hosted model's
-    rate limit is the real ceiling, not this machine."""
+    """A few jobs at a time. A local model serves one request at a time, so more than
+    this only queues at Ollama while holding more jobs half-done."""
     slots = asyncio.Semaphore(at_once)
 
     async def one(job_id: str) -> AnalysisOutcome:
@@ -211,7 +208,9 @@ async def _details(job: dict[str, Any], text: str) -> str:
     # this run's own later step — so a stack already there means the details were read.
     if job.get("techStack") is not None:
         return "already read"
-    proposed = await generate(JobDetails, text, system=DETAILS_SYSTEM, max_tokens=512)
+    proposed = await generate(
+        JobDetails, as_document("job_posting", text), system=DETAILS_SYSTEM, max_tokens=512
+    )
     found = verify_details(proposed, text)
     # The board's own values win: only fields the job does not have yet are written.
     changes = {
@@ -237,19 +236,17 @@ async def _embedding(description_id: str, text: str) -> str:
 
 
 async def _tech_stack(
-    job: dict[str, Any], description: dict[str, Any], into: list[matching.Requirement]
+    job: dict[str, Any], description: dict[str, Any], into: list[matching.Brief]
 ) -> str:
-    requirements = await matching.extract_requirements(matching._jd_text(description))
-    into.extend(requirements)
-    stack = matching.tech_stack(requirements)
+    brief = await matching.ensure_brief(description, job)
+    into.append(brief)
+    stack = matching.tech_stack(brief.requirements)
     await client.update_job(job["id"], {"techStack": stack})
     return f"{len(stack)} technologies" if stack else "names no technology"
 
 
-async def _match(
-    job_id: str, requirements: list[matching.Requirement] | None, into: dict[str, Any]
-) -> str:
-    match = await matching.rectify(job_id, requirements)
+async def _match(job_id: str, brief: matching.Brief | None, into: dict[str, Any]) -> str:
+    match = await matching.rectify(job_id, brief)
     into.update(match)
     return f"score {match.get('score')}"
 

@@ -4,6 +4,7 @@ this file."""
 from modules.job_description.models import (
     CaptureRegion,
     DescriptionStatus,
+    JobBrief,
     JobDescription,
 )
 from modules.job_description.router import router
@@ -20,6 +21,7 @@ __all__ = [
     "NAME",
     "CaptureRegion",
     "DescriptionStatus",
+    "JobBrief",
     "JobDescription",
     "create_description",
     "get_description",

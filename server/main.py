@@ -22,6 +22,7 @@ from modules import (
     profile,
     resume,
     resume_chunk,
+    skill_inventory,
     status,
     template,
 )
@@ -32,6 +33,7 @@ MODULES = (
     match,
     resume,
     resume_chunk,
+    skill_inventory,
     template,
     application,
     profile,

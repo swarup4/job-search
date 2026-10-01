@@ -1,0 +1,10 @@
+{
+  "$schema": "https://assets.requestly.com/local/v1.15.0/metadata.json",
+  "type": "api",
+  "entryType": "http",
+  "id": "3936c200-9654-4896-bbb8-6c122ee87a98",
+  "rank": "a0",
+  "url": "{{base_url}}/api/resume-chunk/stats",
+  "method": "GET",
+  "contentType": "none"
+}
