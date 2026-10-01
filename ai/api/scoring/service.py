@@ -5,8 +5,8 @@
 A background run on the match model (`MATCH_LLM_*` in `.env`, a local one if set),
 one job at a time, until nothing unscored is left — so jobs discovered mid-run are
 picked up too. Jobs you already have a match for are never touched, so keyword
-selections survive. Progress streams from `GET /api/runs/scoring/events`, from `run_started`, which
-carries the run.
+selections survive. Progress streams from `GET /api/runs/scoring/events`, from
+`run_started`, which carries the run.
 
 Starting while your run is going returns that run rather than a second one: Refresh
 clicked twice means "show me the progress". Another account gets a 409.
@@ -18,43 +18,22 @@ import asyncio
 import logging
 import uuid
 from datetime import UTC, datetime
-from typing import Annotated, Literal
 
-from fastapi import APIRouter, Header, HTTPException, Request, Response, status
-from pydantic import BaseModel, Field
+from fastapi import Request, Response, status
 
 from agents import matching
-from api.discovery import Caller
 from api.events import EventLog
+from api.scoring.models import ScoringResult, ScoringRun
+from config.errors import Conflict
 from mcp_servers.jobpilot_api import client
 from mcp_servers.jobpilot_api.client import JobPilotApiError
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["scoring"])
-
 # The server's page size for unscored jobs; the run keeps asking until none are left.
 BATCH = 50
 
 EXPIRED = "Your session expired mid-run. Refresh again — jobs already scored keep their match."
-
-
-class ScoringResult(BaseModel):
-    jobId: str
-    title: str = ""
-    score: int | None = None
-    error: str | None = None
-
-
-class ScoringRun(BaseModel):
-    id: str
-    status: Literal["running", "done", "failed"]
-    scored: int = 0
-    failed: int = 0
-    results: list[ScoringResult] = Field(default_factory=list)
-    error: str | None = None
-    startedAt: datetime
-    finishedAt: datetime | None = None
 
 
 class _Slot:
@@ -71,28 +50,20 @@ class _Slot:
 _slot = _Slot()
 
 
-@router.post("/start", response_model=ScoringRun, status_code=status.HTTP_202_ACCEPTED)
-async def start_scoring(who: Caller, response: Response) -> ScoringRun:
-    token, account_id = who
+def start(token: str, account_id: str) -> tuple[ScoringRun, bool]:
+    """The run, and whether this call started it — False when yours was already going."""
     if _slot.run is not None and _slot.run.status == "running":
         if _slot.owner != account_id:
-            raise HTTPException(status.HTTP_409_CONFLICT, "a scoring run is already in progress")
-        response.status_code = status.HTTP_200_OK
-        return _slot.run
+            raise Conflict("a scoring run is already in progress")
+        return _slot.run, False
 
     run = ScoringRun(id=uuid.uuid4().hex, status="running", startedAt=datetime.now(UTC))
     _slot.run, _slot.owner, _slot.log = run, account_id, EventLog()
     _slot.task = asyncio.create_task(_execute(run, token, _slot.log))
-    return run
+    return run, True
 
 
-@router.get("/events")
-async def scoring_events(
-    request: Request,
-    who: Caller,
-    last_event_id: Annotated[str | None, Header()] = None,
-) -> Response:
-    _, account_id = who
+def events(request: Request, account_id: str, last_event_id: str | None) -> Response:
     if _slot.run is None or _slot.owner != account_id:
         # "You have no run yet" is an answer, not an error: nothing to stream.
         return Response(status_code=status.HTTP_204_NO_CONTENT)

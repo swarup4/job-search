@@ -10,9 +10,10 @@ from httpx import ASGITransport, AsyncClient
 
 from agents import parsing
 from agents.parsing import ParseOutcome
-from api import capture, discovery
-from api.main import create_app
+from api import deps
+from api.capture import service as capture
 from config.llm import GenerationError
+from main import create_app
 from mcp_servers.jobpilot_api.client import JobPilotApiError
 
 AUTH = {"Authorization": "Bearer good"}
@@ -42,8 +43,8 @@ class FakeClient:
 @pytest.fixture
 async def api(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[AsyncClient]:
     fake = FakeClient()
-    monkeypatch.setattr(discovery, "client", fake)
-    monkeypatch.setattr(discovery, "_verified", {})
+    monkeypatch.setattr(deps, "client", fake)
+    monkeypatch.setattr(deps, "_verified", {})
     monkeypatch.setattr(capture, "client", fake)
     transport = ASGITransport(app=create_app())
     async with AsyncClient(transport=transport, base_url="http://test/api") as http:

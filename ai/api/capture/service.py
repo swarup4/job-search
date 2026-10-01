@@ -11,34 +11,18 @@ checked against the page. Analyze then has only the embedding and the match to d
 from __future__ import annotations
 
 import httpx
-from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel
 
 from agents import parsing
-from api.discovery import Caller
+from api.capture.models import CaptureResult
+from config.errors import BadGateway, Unauthorized, Upstream
 from config.llm import GenerationError
 from mcp_servers.jobpilot_api import client
 from mcp_servers.jobpilot_api.client import JobPilotApiError
 
-router = APIRouter(tags=["capture"])
-
 EXPIRED = "Your session expired. Sign in again and capture the page again."
 
 
-class CaptureResult(BaseModel):
-    """What the popup shows: the job made from the page, or why there is none."""
-
-    parsed: bool
-    jobId: str | None = None
-    duplicate: bool = False
-    title: str | None = None
-    company: str | None = None
-    technologies: int = 0
-    reason: str | None = None
-
-
-@router.post("/{description_id}", response_model=CaptureResult)
-async def process_capture(description_id: str, who: Caller) -> CaptureResult:
+async def process_capture(description_id: str) -> CaptureResult:
     try:
         outcome = await parsing.parse_description(description_id)
         if not outcome.parsed or outcome.jobId is None:
@@ -46,15 +30,12 @@ async def process_capture(description_id: str, who: Caller) -> CaptureResult:
         job = await client.get_job(outcome.jobId)
     except JobPilotApiError as error:
         if error.status == 401:
-            raise HTTPException(status.HTTP_401_UNAUTHORIZED, EXPIRED) from error
-        code = error.status if error.status < 500 else status.HTTP_502_BAD_GATEWAY
-        raise HTTPException(code, error.detail) from error
+            raise Unauthorized(EXPIRED) from error
+        raise Upstream(error.status, error.detail) from error
     except GenerationError as error:
-        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(error)) from error
+        raise BadGateway(str(error)) from error
     except httpx.HTTPError as error:
-        raise HTTPException(
-            status.HTTP_502_BAD_GATEWAY, f"could not reach the model or the API server: {error}"
-        ) from error
+        raise BadGateway(f"could not reach the model or the API server: {error}") from error
     return CaptureResult(
         parsed=True,
         jobId=outcome.jobId,

@@ -52,18 +52,23 @@ JobPilot discovers relevant job openings, analyzes how well they match your resu
 ### What you can run today
 
 ```bash
-# REST API — needs a local mongod running. Start this first:
-# My Details calls it, and that page errors if the API is down.
+# REST API — needs a local mongod; start this first
 cd server && uv venv && uv pip install -e . && .venv/bin/python main.py
+
+# AI tier — needs ai/.env (copy .env.example, set LLM_API_KEY)
+cd ai && uv venv && uv pip install -e . && .venv/bin/python main.py
 
 # dashboard
 cd app/web && npm install && npm run dev
 
-# chrome extension — build, then load app/extension/dist unpacked
+# chrome extension — load app/extension/dist unpacked
 cd app/extension && npm install && npm run build
 ```
 
-Open http://localhost:3000 for the dashboard, http://localhost:8000/docs for the API. You will be
+Open http://localhost:3000 for the dashboard, http://localhost:8000/docs for the API and
+http://localhost:8001/docs for the AI tier (`/health` answers `{"status": "ok"}`). The dashboard
+reaches it at `NEXT_PUBLIC_AI_URL`, defaulting to `http://127.0.0.1:8001/api`; without it, Run
+discovery, analysis, scoring and tailoring fail while every other screen still works. You will be
 redirected to `/login` — create an account, and signup signs you straight in. Every screen then
 navigates and the Resume Preview renders a real tailored `.tex` from a fixture. The
 [Getting Started](#getting-started) commands below target the full system and will still fail on the

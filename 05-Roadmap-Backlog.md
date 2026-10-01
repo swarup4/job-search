@@ -237,7 +237,7 @@ the API. The other sources, archiving and the scheduler are still open.
 - ⬜ `P3-24` Playwright fallback: render → markdown → `POST /job-description` as `raw` →
   `parse_description()` from `P3-14`
 - ✅ `P3-25` `POST /api/runs/discovery/start` — every enabled source, answering new / duplicate / failed /
-  blocked per company. Lives on the AI tier's own server (`ai/api/`, `python -m api.main`, port
+  blocked per company. Lives on the AI tier's own server (`ai/api/`, `python main.py` in `ai/`, port
   8001): it takes the dashboard's JWT, checks it against `getAccount`, and runs in the background
   with `GET` for progress. One run at a time; the token is used for that run only. 7 tests
 - ⬜ `P3-26` Archive a job that has disappeared from its board since the last run
