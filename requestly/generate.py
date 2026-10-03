@@ -1,7 +1,10 @@
-"""Generate this Requestly local project from server/main.py.
+"""Generate this Requestly local project from server/main.py and ai/main.py.
 
     python requestly/generate.py            # add endpoints that appeared; leave existing ones alone
     python requestly/generate.py --force    # rewrite every request from the spec
+
+Each tier gets its own folder in the one collection — `server/<tag>/…` and `ai/<tag>/…` —
+so both share the collection's variables, including the token Login fills in.
 
 Requestly's desktop app owns this folder once you open it, so the default run is additive:
 a request you have customised in the app is never overwritten, and entity UUIDs are reused
@@ -14,27 +17,49 @@ __*.json files or the app hides it as corrupted.
 from __future__ import annotations
 
 import json
-import os
+import subprocess
 import sys
 import uuid
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
-SERVER = REPO / "server"
 
 COLLECTION = "JobPilot API"
-BASE_URL = "http://127.0.0.1:8000"  # NFR-4: the API binds loopback only
 SCHEMA = "https://assets.requestly.com/local/v1.15.0"
 METHODS = ("get", "post", "put", "patch", "delete", "head", "options")
 
-# Every route is behind a bearer token except these: the server guards the rest with
-# CurrentUser / Depends(verify_token), which is a plain dependency rather than an
-# OpenAPI security scheme — so the spec cannot tell us and this list must.
-PUBLIC_PATHS = frozenset(
-    {"/health", "/api/account/signup", "/api/account/login", "/api/account/refresh"}
+
+@dataclass(frozen=True)
+class Tier:
+    name: str
+    url_variable: str
+    base_url: str
+    public_paths: frozenset[str]
+
+
+TIERS = (
+    # NFR-4: both tiers bind loopback only.
+    Tier(
+        name="server",
+        url_variable="base_url",
+        base_url="http://127.0.0.1:8000",
+        # Every route is behind a bearer token except these: the server guards the rest
+        # with CurrentUser / Depends(verify_token), which is a plain dependency rather than
+        # an OpenAPI security scheme — so the spec cannot tell us and this list must.
+        public_paths=frozenset(
+            {"/health", "/api/account/signup", "/api/account/login", "/api/account/refresh"}
+        ),
+    ),
+    Tier(
+        name="ai",
+        url_variable="ai_base_url",
+        base_url="http://127.0.0.1:8001",
+        public_paths=frozenset({"/health"}),
+    ),
 )
 
 # Filled in by the login request, then sent by every other one.
@@ -49,26 +74,26 @@ AUTH_HEADER = {
 # ---------------------------------------------------------------- the spec
 
 
-def _reexec_in_server_venv() -> None:
-    """The spec comes from importing the app, so it needs server's dependencies."""
-    interpreter = SERVER / ".venv" / "bin" / "python"
+SPEC_SCRIPT = "import json, main; print(json.dumps(main.create_app().openapi()))"
+
+
+def build_spec(tier: Tier) -> dict[str, Any]:
+    """Both tiers name their app module `main` and need their own dependencies, so each
+    spec is read in a subprocess on that tier's venv rather than imported here."""
+    directory = REPO / tier.name
+    interpreter = directory / ".venv" / "bin" / "python"
     if not interpreter.exists():
-        raise SystemExit(f"server dependencies missing and no venv at {interpreter}")
-    os.execv(
-        str(interpreter),
-        [str(interpreter), str(Path(__file__).resolve()), *sys.argv[1:]],
-    )
+        raise SystemExit(f"{tier.name} dependencies missing and no venv at {interpreter}")
+    output = subprocess.run(
+        [str(interpreter), "-c", SPEC_SCRIPT],
+        cwd=directory,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
 
-
-def build_spec() -> dict[str, Any]:
-    sys.path.insert(0, str(SERVER))
-    try:
-        from main import create_app
-    except ModuleNotFoundError:
-        _reexec_in_server_venv()
-
-    spec = create_app().openapi()
-    spec["servers"] = [{"url": BASE_URL, "description": "local — server/main.py"}]
+    spec = json.loads(output)
+    spec["servers"] = [{"url": tier.base_url, "description": f"local — {tier.name}/main.py"}]
     # FastAPI documents a 200 and a 422 for every route; Requestly turns each into a
     # saved example under the request, which is noise in a client collection.
     for operations in spec["paths"].values():
@@ -138,7 +163,7 @@ def example_for(
     if kind == "array":
         return [example_for(schema.get("items", {}), schemas, seen)]
     if kind == "integer" or kind == "number":
-        return 0
+        return schema.get("minimum", 0)
     if kind == "boolean":
         return False
     return "string"
@@ -312,28 +337,29 @@ def operations_by_tag(
     return grouped
 
 
-def build_project(spec: dict[str, Any], force: bool) -> tuple[int, int]:
+def _add_missing_variables(path: Path, variables: dict[str, Any], *, nested: bool) -> None:
+    """Variables are yours to edit in the app: only ones the file lacks are added, so a
+    value you changed — or the token Login stored — survives every re-run. An environment
+    keeps them under `variables`; a collection's file is the mapping itself."""
+    document = json.loads(path.read_text())
+    existing = document["variables"] if nested else document
+    for name, value in variables.items():
+        if name not in existing:
+            rank = f"a{len([key for key in existing if key != '$schema'])}"
+            existing[name] = _variable(value, rank)
+    _write(path, document)
+
+
+def build_project(spec: dict[str, Any], tier: Tier, rank: str, force: bool) -> tuple[int, int]:
     schemas = spec.get("components", {}).get("schemas", {})
-    collection = ROOT / "apis" / COLLECTION
-
-    write_collection(collection, "a0")
-
-    # Variables are yours to edit in the app — write them once, never on a re-run.
-    variables = collection / "__variables.json"
-    if not variables.exists():
-        _write(
-            variables,
-            {
-                "$schema": f"{SCHEMA}/collection-variables.json",
-                "base_url": _variable(BASE_URL, "a0"),
-            },
-        )
+    tier_folder = ROOT / "apis" / COLLECTION / tier.name
+    write_collection(tier_folder, rank)
 
     created = skipped = 0
     for folder_rank, (tag, operations) in enumerate(
         sorted(operations_by_tag(spec).items())
     ):
-        folder = collection / tag
+        folder = tier_folder / tag
         write_collection(folder, f"a{folder_rank}")
 
         for rank, (path, method, operation) in enumerate(operations):
@@ -377,7 +403,7 @@ def build_project(spec: dict[str, Any], force: bool) -> tuple[int, int]:
                 )
 
             # Requestly resolves path variables with the same {{...}} syntax as any variable.
-            url = "{{base_url}}" + path.replace("{", "{{").replace("}", "}}")
+            url = "{{" + tier.url_variable + "}}" + path.replace("{", "{{").replace("}", "}}")
             write_request(
                 request,
                 f"a{rank}",
@@ -386,7 +412,7 @@ def build_project(spec: dict[str, Any], force: bool) -> tuple[int, int]:
                 query,
                 variables,
                 body,
-                needs_auth=path not in PUBLIC_PATHS,
+                needs_auth=path not in tier.public_paths,
             )
             created += 1
 
@@ -398,6 +424,15 @@ def write_project_config() -> None:
         ROOT / "__requestly.json",
         {"version": "1.2.0", "include": ["**"], "exclude": []},
     )
+
+    collection = ROOT / "apis" / COLLECTION
+    write_collection(collection, "a0")
+    base_urls = {tier.url_variable: tier.base_url for tier in TIERS}
+
+    variables = collection / "__variables.json"
+    if not variables.exists():
+        _write(variables, {"$schema": f"{SCHEMA}/collection-variables.json"})
+    _add_missing_variables(variables, base_urls, nested=False)
 
     environments = ROOT / "environments"
     environments.mkdir(parents=True, exist_ok=True)
@@ -420,22 +455,24 @@ def write_project_config() -> None:
             {
                 "$schema": f"{SCHEMA}/environment.json",
                 "id": str(uuid.uuid4()),
-                "variables": {"base_url": _variable(BASE_URL, "a0")},
+                "variables": {},
             },
         )
+    _add_missing_variables(named_env, base_urls, nested=True)
 
 
 def main() -> None:
     force = "--force" in sys.argv
-    spec = build_spec()
-
-    _write(ROOT / "openapi.json", spec)
     write_project_config()
-    created, skipped = build_project(spec, force)
 
-    print(f"{created} request(s) written, {skipped} left untouched")
-    if skipped and not force:
-        print("run with --force to rewrite them from the spec")
+    for index, tier in enumerate(TIERS):
+        spec = build_spec(tier)
+        _write(ROOT / f"openapi.{tier.name}.json", spec)
+        created, skipped = build_project(spec, tier, f"a{index}", force)
+        print(f"{tier.name}: {created} request(s) written, {skipped} left untouched")
+
+    if not force:
+        print("run with --force to rewrite existing requests from the spec")
 
 
 if __name__ == "__main__":

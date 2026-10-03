@@ -1,0 +1,419 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "JobPilot AI",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/runs/discovery/start": {
+      "post": {
+        "tags": [
+          "discovery"
+        ],
+        "summary": "Start Discovery",
+        "operationId": "start_discovery_api_runs_discovery_start_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/DiscoveryRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/discovery/events": {
+      "get": {
+        "tags": [
+          "discovery"
+        ],
+        "summary": "Discovery Events",
+        "description": "Your latest run: `run_started` (the run itself), `company_done` as each company\nfinishes, then `run_done`. 204 when you have none.",
+        "operationId": "discovery_events_api_runs_discovery_events_get",
+        "parameters": [
+          {
+            "name": "last-event-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Last-Event-Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ]
+      }
+    },
+    "/api/runs/analysis/start": {
+      "post": {
+        "tags": [
+          "analysis"
+        ],
+        "summary": "Start Analysis",
+        "operationId": "start_analysis_api_runs_analysis_start_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalysisRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/analysis/events": {
+      "get": {
+        "tags": [
+          "analysis"
+        ],
+        "summary": "Analysis Events",
+        "description": "The caller's latest run as a stream: every event so far, then each new one,\nclosing after `run_done`. `Last-Event-ID` resumes after a dropped connection.",
+        "operationId": "analysis_events_api_runs_analysis_events_get",
+        "parameters": [
+          {
+            "name": "last-event-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Last-Event-Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ]
+      }
+    },
+    "/api/runs/scoring/start": {
+      "post": {
+        "tags": [
+          "scoring"
+        ],
+        "summary": "Start Scoring",
+        "operationId": "start_scoring_api_runs_scoring_start_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ]
+      }
+    },
+    "/api/runs/scoring/events": {
+      "get": {
+        "tags": [
+          "scoring"
+        ],
+        "summary": "Scoring Events",
+        "operationId": "scoring_events_api_runs_scoring_events_get",
+        "parameters": [
+          {
+            "name": "last-event-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Last-Event-Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ]
+      }
+    },
+    "/api/tailoring/{job_id}": {
+      "post": {
+        "tags": [
+          "tailoring"
+        ],
+        "summary": "Tailor",
+        "operationId": "tailor_api_tailoring__job_id__post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ]
+      }
+    },
+    "/api/capture/{description_id}": {
+      "post": {
+        "tags": [
+          "capture"
+        ],
+        "summary": "Process Capture",
+        "operationId": "process_capture_api_capture__description_id__post",
+        "parameters": [
+          {
+            "name": "description_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Description Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ]
+      }
+    },
+    "/api/settings": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Read Settings",
+        "operationId": "read_settings_api_settings_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_health_get"
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AnalysisRequest": {
+        "properties": {
+          "jobIds": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "maxItems": 50,
+                "minItems": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jobids"
+          },
+          "newest": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 50.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Newest"
+          }
+        },
+        "type": "object",
+        "title": "AnalysisRequest",
+        "description": "Exactly one of the two: specific jobs, or the newest `newest` unscored ones."
+      },
+      "DiscoveryRequest": {
+        "properties": {
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 500.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit"
+          }
+        },
+        "type": "object",
+        "title": "DiscoveryRequest",
+        "description": "`limit` stops the run once that many new jobs are stored. Omitted, every enabled\ncompany is scraped in full, filtered by your Search targets."
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8001",
+      "description": "local \u2014 ai/main.py"
+    }
+  ]
+}
