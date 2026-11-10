@@ -12,6 +12,9 @@ import os
 from collections.abc import AsyncIterator
 from pathlib import Path
 
+# Before the app is imported: `modules.account.security` reads the secret at import.
+os.environ.setdefault("JWT_SECRET", "test-secret-only-for-the-pytest-suite-0123456789")
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 

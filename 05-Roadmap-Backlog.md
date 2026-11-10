@@ -4,8 +4,8 @@
 |---|---|
 | **Product** | JobPilot — Agentic AI Job Search Platform |
 | **Owner** | Swarup Saha |
-| **Status** | v1.10 — eleven phases, application first then agents. Phases 1, 5 and 6 done; Workday scraping live from Settings; the pipeline is per-user in `applications`, and every screen but the per-job Resume Preview reads the API |
-| **Updated** | 2026-09-27 |
+| **Status** | v1.11 — twelve phases, application first then agents. Phases 1, 5 and 6 done; Workday scraping live from Settings; the pipeline is per-user in `applications`, and every screen but the per-job Resume Preview reads the API |
+| **Updated** | 2026-11-10 — career-page scraping moved out of Phase 3 into its own Phase 12 |
 
 ---
 
@@ -24,7 +24,7 @@ anything starts reasoning.
 |---|---|---|
 | [1](#2-phase-1--authentication--profile) | Sign in, and the profile everything hangs off | ✅ done |
 | [2](#3-phase-2--resume-generation--download) | A resume built from that profile, downloadable | 🚧 `.tex` and PDF both download; tailored resume live; two tasks left |
-| [3](#4-phase-3--job-scraping-search--shortlist) | Real jobs in the system, searchable and shortlistable | 🚧 capture, Workday scraping, analysis, Search, Shortlist and Job details live; other sources and the scheduler open |
+| [3](#4-phase-3--job-scraping-search--shortlist) | Real jobs in the system, searchable and shortlistable | 🚧 capture, analysis, Search, Shortlist and Job details live; other sources and the scheduler open |
 | [4](#5-phase-4--applications--settings) | Tracking what you applied to, and the preferences driving it | 🚧 per-user pipeline, board, badges and Applications screen live; follow-ups and sheet sync open |
 | [5](#6-phase-5--llm-integration--resume-rectification) | A resume rectified against a specific job | ✅ done |
 | [6](#7-phase-6--rag--retrieval) | Retrieval over your own resume | ✅ done |
@@ -33,6 +33,7 @@ anything starts reasoning.
 | [9](#10-phase-9--application-agent--chrome-extension) | Form autofill in your own browser session | 🚧 extension fills and captures; the two LLM tasks wait on `ai/` |
 | [10](#11-phase-10--eval-guardrails--observability) | Ragas faithfulness, guardrail tests, tracing | ⬜ not started |
 | [11](#12-phase-11--daily-use--polish) | What only real daily use reveals | ⬜ not started |
+| [12](#13-phase-12--career-page-scraping) | Postings pulled straight from company career pages | 🚧 Workday live; ten more stages planned |
 
 **How to read a phase.** Each is split into **API**, **UI** and, where relevant, infrastructure and
 guardrail tasks — so you can see at a glance that a phase's backend is done while its screens are
@@ -50,7 +51,7 @@ screen exists but still reads a JSON fixture, the wiring is listed as its own un
 
 Each task appears once, under the phase that delivers it, and carries an id: `P1-06` is the sixth
 task of Phase 1, counting through that phase's **API**, **UI** and other sections in order.
-Cross-cutting tasks (§13) use `CC-`. The id is for referring to a task in a commit message or a
+Cross-cutting tasks (§14) use `CC-`. The id is for referring to a task in a commit message or a
 conversation — nothing outside this document generates or validates them.
 
 **Add new tasks at the end of their section** rather than inserting them mid-list. Numbering is
@@ -181,9 +182,9 @@ hint. **Invariant 5 and FR-4.4 still forbid this and need amending.**
 ## 4. Phase 3 — Job scraping, search & shortlist
 🚧 **two sources work end to end, and the screens read them.** Get real jobs into the system so
 the screens that already exist have something to work on. Extension capture with its parse into a
-`Job`, and Workday career-page scraping started from Settings, both land — 41 companies
-registered, 33 enabled, 419 jobs stored. Analyze, Search, Shortlist and Job details all run on
-the API. The other sources, archiving and the scheduler are still open.
+`Job`, and Workday career-page scraping started from Settings
+([Phase 12](#13-phase-12--career-page-scraping)), both land — 419 jobs stored. Analyze, Search,
+Shortlist and Job details all run on the API. The other sources and the scheduler are still open.
 
 **API**
 - ✅ `P3-01` `job` module: create with dedup-hash check, list by status, shortlist toggle.
@@ -194,8 +195,8 @@ the API. The other sources, archiving and the scheduler are still open.
   sha256 over `source` + `refId` where the board gives one, else title + company + location.
   The JD prose left `jobs` in the 2026-09-19 split and can no longer be part of the seed
 - ⬜ `P3-05` Adapt the `linkedin-hiring-scraper` skill as a tool
-- ⬜ `P3-06` Naukri and company career-page sources. *Career pages are broken down as
-  `P3-15`…`P3-27` below; this task is Naukri only from here on*
+- ⬜ `P3-06` Naukri and company career-page sources. *Career pages are [Phase 12](#13-phase-12--career-page-scraping)
+  now; this task is Naukri only*
 - ⬜ `P3-07` Scheduled daily run *(needs Redis + Celery, below)*
 - ✅ `P3-13` **`job_description` module**, renamed from `capture` on 2026-09-19. The
   `job_descriptions` collection holds the page as markdown (`jdText`), the HTML the job page
@@ -210,37 +211,6 @@ the API. The other sources, archiving and the scheduler are still open.
   page decides: a title or company not present verbatim refuses the parse, a technology the page
   never names is dropped from `requirements`, an unfindable requisition id is dropped, and a page
   that is not one posting is marked `discarded` rather than written. 9 tests in `ai/tests/`
-- ✅ `P3-15` **`career_source` module** — the companies to scrape, one flat document each:
-  `name`, `careersUrl`, `platform`, `config` (tenant / site / board id), `enabled`, `notes`,
-  `lastRunAt`, `lastResult`. CRUD plus `PUT /career-source/result/{id}`. **Seeded 2026-09-25**
-  into Atlas from `server/career_sources_seed.json`: the 41 Workday companies, 33 enabled — 5 off
-  for robots.txt, 3 because their jobs sit inside another company's tenant. 6 tests
-- ✅ `P3-16` `create_description`, `description_stored`, `get_account`, `list_career_sources`
-  and `record_source_result` in `mcp_servers/jobpilot_api/client.py`
-- ✅ `P3-17` **Workday adapter**, `ai/sources/workday.py` — `POST /wday/cxs/{tenant}/{site}/jobs`
-  for the list, one detail call per *new* posting for the JD. The country facet is found by name
-  and applied; titles are matched locally, since Workday's search is loose enough to fill the
-  2,000 cap anyway. A posting already stored is recognised by URL and never re-fetched, which
-  took a full re-run from 137s to 32s. Verified over all 35 then-enabled companies
-- ⬜ `P3-18` **Capgemini adapter** — `GET cg-jobstream-api.azurewebsites.net/api/job-search`. The
-  description comes in the list response, so one call per page and no detail fetch
-- ⬜ `P3-19` Greenhouse, Lever, Ashby and SmartRecruiters adapters over their public board feeds
-- ⬜ `P3-20` ATS detection from a pasted careers URL — host first, then the page's embed script;
-  stored on the `career_source` so it runs once per company
-- ✅ `P3-21` Filter on target title and location **before** any write. Reads the account's saved
-  Search targets (`P4-02`) per run; `SCRAPE_*` in `ai/.env` are only fallbacks
-- ✅ `P3-22` robots.txt checked inside every request, one identifying User-Agent, 2 requests per
-  host, backoff on 429 and transient 5xx. Every unclear robots answer reads as "no" — Workday
-  answers a JSON-accepting robots request with a 406, which a first draft read as permission
-- ⬜ `P3-23` JSON-LD `JobPosting` extractor for custom sites, with a sitemap or listing page to
-  find the detail URLs
-- ⬜ `P3-24` Playwright fallback: render → markdown → `POST /job-description` as `raw` →
-  `parse_description()` from `P3-14`
-- ✅ `P3-25` `POST /api/runs/discovery/start` — every enabled source, answering new / duplicate / failed /
-  blocked per company. Lives on the AI tier's own server (`ai/api/`, `python main.py` in `ai/`, port
-  8001): it takes the dashboard's JWT, checks it against `getAccount`, and runs in the background
-  with `GET` for progress. One run at a time; the token is used for that run only. 7 tests
-- ⬜ `P3-26` Archive a job that has disappeared from its board since the last run
 - ✅ `P3-28` **Analyze.** `ai/agents/analysis.py` runs three isolated steps per job (HTML
   conversion was dropped on 2026-09-26 — the job page renders the stored markdown itself):
   experience / salary / work mode / job type
@@ -324,16 +294,6 @@ the API. The other sources, archiving and the scheduler are still open.
   kind-specific service calls are gone. 2 new tests in `ai/tests/test_api_discovery.py`
 
 **UI**
-- ✅ `P3-39` **Run discovery with a limit.** `POST /api/runs/discovery/start` takes an optional
-  `{"limit": N}` (1–500): the run stops once N **new** jobs are stored — duplicates do not
-  count, since a stored posting is recognised before its detail is fetched. The limit is one
-  budget shared by the companies running at once; each adapter is told how many the run can
-  still take, so Workday fetches no more details than that, and a company reached after the
-  budget is spent is reported `skipped` and keeps its last real result. Omitted, the run
-  scrapes everything as before. Settings has an "Up to [ ] new" box beside **Run discovery**
-  (empty = all); the rail, the Last run panel and the finishing toast show the limit. 8 tests.
-  *With four companies at once, a few extra detail requests can be in flight when the limit
-  lands; the number stored is still exact*
 - ✅ `P3-40` **Capture reads the page into a job straight away.** The extension's Capture stores
   the page (`POST /job-description`, as before — so a failed model call loses nothing and a
   repeat capture is caught before anything is paid for), then calls the AI tier's new `POST
@@ -346,17 +306,6 @@ the API. The other sources, archiving and the scheduler are still open.
   scoring run stopped filling the tech stack, so that stays exact. No schema change. The
   extension gained host permission for port 8001 (`JOBPILOT_AI_URL`, default
   `http://127.0.0.1:8001/api`) and the AI tier admits the extension origin. 6 tests
-- ✅ `P3-41` **Skills: search descriptions, not only titles.** Search targets gained an
-  optional **Skills** list next to Target roles, saved as `preferences.skills` (the
-  `preferences` box is now in the ER diagram). A posting is kept when its **title** has a
-  role — as before — **or** its **description** names a skill, both as whole words; the word
-  check now bounds on letters and digits rather than `\b`, so "C++", ".NET" and "Node.js"
-  match standing alone. Workday searches once per skill too, capped at 2 pages
-  (`SCRAPE_SKILL_MAX_PAGES`), fetches the details of skill-only results — title matches first,
-  so a limited run spends its budget on the surest — and keeps one only if its description
-  names a skill. The run report counts `bySkill`, shown in the Last run panel. Found because a
-  run for roles "Node.js, MongoDB" fetched 397 listings and matched none: titles say "Full
-  Stack Developer", the stack is in the description. 5 tests
 - ✅ `P3-08` Job Search screen built (multi-field search + facets)
 - ✅ `P3-09` Shortlist / Match Review screen built
 - ✅ `P3-10` Job Details screen built
@@ -373,10 +322,6 @@ the API. The other sources, archiving and the scheduler are still open.
   skill, job type, work mode, source and minimum match. The designed screen was kept at
   `/design/search` for comparison until the live page matched, then deleted on 2026-09-27.
   12 tests in `server/tests/test_search.py`
-- 🟡 `P3-27` Settings: add a company by pasting its careers URL, showing the detected ATS; a
-  **Run discovery** button showing the last run's report. *The button and the live Sources rail
-  are built (`DiscoverySources`), replacing the fixture list; adding a company by URL waits on
-  `P3-20`*
 - ✅ `P3-29` Analyze on the Pipeline: an **Analyze N new jobs** button (10 per click) with
   progress. The board reloads when a run ends so the scores appear. It follows the run
   through `useRun`, like discovery and scoring (`P3-38`). *The per-card Analyze / Re-analyze / Retry actions went in
@@ -420,38 +365,6 @@ user's match, stored on the description, mixed with qualifications; it is now re
 posting, technologies only, and Search can filter on the job itself. Location and experience are parsed, not generated: the
 text already holds them, and a parser that answers `null` cannot invent a country.
 
-### Company career pages (planned 2026-09-24)
-
-**Read the JSON the page reads, not the HTML.** A branded careers site is usually a front end over
-an ATS or its own search API, and that API returns structured postings. Four tiers, cheapest
-first, and the LLM only in the last:
-
-| Tier | When | How | Tasks |
-|---|---|---|---|
-| 1. Known ATS | Hosted on, or embedding, Workday / Greenhouse / Lever / Ashby / SmartRecruiters | One adapter reused across every company on it | `P3-17`, `P3-19` |
-| 2. Company API | A branded site calling its own endpoint | Find it once in DevTools → Network, write a ~50-line adapter | `P3-18` |
-| 3. JSON-LD | Custom site with a `JobPosting` block | One plain fetch per detail page | `P3-23` |
-| 4. Render + parse | None of the above | Playwright, then the `P3-14` parser | `P3-24` |
-
-**Verified by hand on 2026-09-24; Workday built 2026-09-25** — progress per task is tracked in
-[docs/08](docs/08-Career-Page-Scraping.md).   Accenture's `accenture.com/careers` hands
-off to Workday; a Python search returned real postings with requisition ids (`R00334988`).
-accenture.com's robots.txt disallows `*/careers/jobsearch?`, so the adapter never touches that
-site; the Workday host allows `/AccentureCareers/`. Capgemini's search page reads
-`cg-jobstream-api` — 99 Python jobs in India, each with title, location, experience level, ref id,
-full description and apply URL. That API is undocumented and Capgemini's own, so it can change
-without notice; the fixture tests are how we find out.
-
-**Writes reuse what exists.** Tiers 1–3 know the fields, so each posting is `create_job`
-(`source: career_page`, `refId` from the board) → `create_description` → `link_description`,
-with no LLM. The dedup hash is `career_page|company|refId` — the company is in the seed because
-two Workday tenants can both issue `R0001` — so a daily re-run returns `duplicate: true` for
-anything already stored. Runs are triggered from the dashboard, which forwards the JWT — the AI
-tier holds no credentials, so the scheduled run in `P3-07` needs its own answer.
-
-**Scraping costs nothing.** The feeds are public and keyless, Playwright runs locally, and there
-is no scraping service, proxy or CAPTCHA solver in the plan. `P3-21`'s filter is what keeps the
-downstream cost down: Accenture alone lists thousands of openings.
 
 ---
 
@@ -490,7 +403,7 @@ sync are still open.
   newest jobs you have no match for, from the new `GET /match/unscored`
 - ✅ `P4-14` Remove `status` and `shortlisted` from `Job`, `JobUpdate` and `JobRead`; replace the
   `(status, discoveredAt)` index with `discoveredAt desc`; drop the `status` / `shortlisted`
-  filters from `listJobs`. `P3-26`'s archiving gets its own listing field (`closedAt`) when built
+  filters from `listJobs`. `P12-36`'s archiving gets its own listing field (`closedAt`) when built
 - ✅ `P4-15` Board reads: `GET /application/counts` — per status for the signed-in user, plus
   `new` = jobs with no application of theirs; New lists `jobs` excluding the user's application
   `jobId`s (`GET /application/unstarted`); every other column lists applications by status,
@@ -905,7 +818,7 @@ above is unprovable until this exists.
 **Guardrails**
 - ⬜ `P10-04` No-fabrication test cases
 - ⬜ `P10-05` No-auto-submit test cases
-- ⬜ `P10-06` The API test suite *(also in §13 — it blocks every phase, not just this one)*
+- ⬜ `P10-06` The API test suite *(also in §14 — it blocks every phase, not just this one)*
 
 **Observability**
 - ⬜ `P10-07` Langfuse or Phoenix, self-hosted
@@ -922,7 +835,306 @@ above is unprovable until this exists.
 
 ---
 
-## 13. Cross-cutting — true of every phase
+## 13. Phase 12 — Career-page scraping
+🚧 **Workday pulls end to end; every other platform is planned.** Postings come straight from
+company career pages into `jobs` and `job_descriptions`, through the cheapest tier that works —
+41 Workday companies registered, 33 enabled. The registry of all 119 target companies, by
+platform, is in [docs/08](docs/08-Career-Page-Scraping.md).
+
+**Moved out of Phase 3 on 2026-11-10.** It was built and planned there as `P3-15`…`P3-27`, with
+an eleven-part plan kept in docs/08 under its own "Phase 1–11" and its own colliding ids. It is a
+phase of its own now, numbered 12 so that no existing phase number moves. Every task notes the id
+it had before — *(was `P3-17`)*, and for a task first written in docs/08 also *(08·P3-01)* — so
+commit messages and old notes still trace. Phase 3 keeps capture, analysis, search and the
+shortlist, the other job sources, and the scheduler (`P3-07`, `P3-12`), which every source
+shares.
+
+**Stages are not phases.** The eleven stages below are steps inside Phase 12, ordered by how many
+companies each unlocks.
+
+### The approach (planned 2026-09-24)
+
+**Read the JSON the page reads, not the HTML.** A branded careers site is usually a front end over
+an ATS or its own search API, and that API returns structured postings. Four tiers, cheapest
+first, and the LLM only in the last:
+
+| Tier | When | How | Tasks |
+|---|---|---|---|
+| 1. Known ATS | Hosted on, or embedding, Workday / Greenhouse / Lever / Ashby / SmartRecruiters | One adapter reused across every company on it | `P12-08`, `P12-17` |
+| 2. Company API | A branded site calling its own endpoint | Find it once in DevTools → Network, write a ~50-line adapter | `P12-19` |
+| 3. JSON-LD | Custom site with a `JobPosting` block | One plain fetch per detail page | `P12-21` |
+| 4. Render + parse | None of the above | Playwright, then the `P3-14` parser | `P12-29` |
+
+**Verified by hand on 2026-09-24; Workday built 2026-09-25.** Accenture's `accenture.com/careers` hands
+off to Workday; a Python search returned real postings with requisition ids (`R00334988`).
+accenture.com's robots.txt disallows `*/careers/jobsearch?`, so the adapter never touches that
+site; the Workday host allows `/AccentureCareers/`. Capgemini's search page reads
+`cg-jobstream-api` — 99 Python jobs in India, each with title, location, experience level, ref id,
+full description and apply URL. That API is undocumented and Capgemini's own, so it can change
+without notice; the fixture tests are how we find out.
+
+**Writes reuse what exists.** Tiers 1–3 know the fields, so each posting is `create_job`
+(`source: career_page`, `refId` from the board) → `create_description` → `link_description`,
+with no LLM. The dedup hash is `career_page|company|refId` — the company is in the seed because
+two Workday tenants can both issue `R0001` — so a daily re-run returns `duplicate: true` for
+anything already stored. Runs are triggered from the dashboard, which forwards the JWT — the AI
+tier holds no credentials, so the scheduled run in `P3-07` needs its own answer.
+
+**Scraping costs nothing.** The feeds are public and keyless, Playwright runs locally, and there
+is no scraping service, proxy or CAPTCHA solver in the plan. `P12-05`'s filter is what keeps the
+downstream cost down: Accenture alone lists thousands of openings.
+
+### The eleven stages
+
+Stage 1 is the foundation the rest share. Stages 2–7 are ordered by how many companies each one
+unlocks. Stage 11 goes beyond the sheet: it finds new companies to add.
+
+| Stage | Covers | Companies | State | Tasks |
+|---|---|---|---|---|
+| 1 | Foundation | — | ✅ | `P12-01`…`P12-07` |
+| 2 | Workday | 41 | 🟡 | `P12-08`…`P12-12` |
+| 3 | Oracle Recruiting Cloud | 8 | ⬜ | `P12-13`…`P12-16` |
+| 4 | Greenhouse, Lever, Eightfold | 8 | ⬜ | `P12-17`, `P12-18` |
+| 5 | Company-specific adapters | 7 | ⬜ | `P12-19`…`P12-22` |
+| 6 | Zwayam | 5 | ⬜ | `P12-23`…`P12-25` |
+| 7 | SAP SuccessFactors | 7 | ⬜ | `P12-26`…`P12-28` |
+| 8 | Render + parse fallback | 15 | ⬜ | `P12-29`, `P12-30` |
+| 9 | The remaining platforms | 20 | ⬜ | `P12-31`…`P12-35` |
+| 10 | Running it | — | 🟡 | `P12-36`…`P12-40`, plus `P3-07` / `P3-12` |
+| 11 | Free company discovery | new ones | ⬜ | `P12-41`…`P12-47` |
+
+#### Stage 1 — Foundation
+✅ **done** (2026-09-25). Everything an adapter needs apart from its own platform logic, so the
+adapter stages after it shrink to the part that differs.
+
+**API**
+- ✅ `P12-01` *(was `P3-15`)* **`career_source` module** — the companies to scrape, one flat document each:
+  `name`, `careersUrl`, `platform`, `config` (tenant / site / board id), `enabled`, `notes`,
+  `lastRunAt`, `lastResult`. CRUD plus `PUT /career-source/result/{id}`. **Seeded 2026-09-25**
+  into Atlas from `server/career_sources_seed.json`: the 41 Workday companies, 33 enabled — 5 off
+  for robots.txt, 3 because their jobs sit inside another company's tenant. 6 tests
+- ✅ `P12-02` *(was `P3-16`)* `create_description`, `description_stored`, `get_account`, `list_career_sources`
+  and `record_source_result` in `mcp_servers/jobpilot_api/client.py`
+- ✅ `P12-03` *(was `P3-22`)* robots.txt checked inside every request, one identifying User-Agent, 2 requests per
+  host, backoff on 429 and transient 5xx. Every unclear robots answer reads as "no" — Workday
+  answers a JSON-accepting robots request with a 406, which a first draft read as permission
+- ✅ `P12-04` *(was `P3-42`, 08·P1-04)* `ai/sources/base.py`: the `Posting` and `Harvest` models every adapter
+  returns, and one `ingest()` that runs `create_job` → `create_description` → `link_description`.
+  The JD is converted with `markdownify` and stored with `region: feed`; `htmlString` stays empty,
+  since it is defined as rendered *from* the markdown. A job whose description write never landed
+  is repaired on the next run rather than skipped
+- ✅ `P12-05` *(was `P3-21`)* Filter on target title and location **before** any write. Reads the account's saved
+  Search targets (`P4-02`) per run; `SCRAPE_*` in `ai/.env` are only fallbacks
+- ✅ `P12-06` *(was `P3-25`)* `POST /api/runs/discovery/start` — every enabled source, answering new / duplicate / failed /
+  blocked per company. Lives on the AI tier's own server (`ai/api/`, `python main.py` in `ai/`, port
+  8001): it takes the dashboard's JWT, checks it against `getAccount`, and runs in the background
+  with `GET` for progress. One run at a time; the token is used for that run only. 7 tests
+
+**Guardrail**
+- ✅ `P12-07` *(was `P3-43`, 08·P1-07)* 26 tests in `ai/tests/test_sources_*.py` against recorded
+  response shapes and `httpx.MockTransport`. None reaches the network
+
+#### Stage 2 — Workday
+🟡 **pulls end to end.** **41 companies**, the largest single win. Verified 2026-09-25 over all 35
+then-enabled companies with `SCRAPE_TITLES=LLM`: the first run took 137s and wrote 101 linked
+jobs; the second took **32s** and found all 101 already stored without fetching one detail.
+
+- ✅ `P12-08` *(was `P3-17`)* **Workday adapter**, `ai/sources/workday.py` — `POST /wday/cxs/{tenant}/{site}/jobs`
+  for the list, one detail call per *new* posting for the JD. The country facet is found by name
+  and applied; titles are matched locally, since Workday's search is loose enough to fill the
+  2,000 cap anyway. A posting already stored is recognised by URL and never re-fetched, which
+  took a full re-run from 137s to 32s. Verified over all 35 then-enabled companies
+- 🟡 `P12-09` *(was `P3-44`, 08·P2-03)* The country facet is found by name, nested or not, and applied to every
+  search. It does not keep searches under the cap — "LLM" in India alone still reports 2,000 — so
+  titles are matched locally and paging stops at the first page with none. Job-family facets not
+  used
+- ⬜ `P12-10` *(was `P3-45`, 08·P2-04)* Shared tenants: Splunk inside Cisco, Informatica inside Salesforce and
+  Discover inside Capital One are one tenant with a company-name filter, not three sources
+- ⬜ `P12-11` *(was `P3-46`, 08·P2-07)* `SCRAPE_WORKDAY_MAX_PAGES` (default 5) caps each keyword at 100
+  listings. Accenture's "LLM" filled all five pages, so its tail is cut. Raise it, or narrow with
+  job-family facets
+- ✅ `P12-12` *(was `P3-41`)* **Skills: search descriptions, not only titles.** Search targets gained an
+  optional **Skills** list next to Target roles, saved as `preferences.skills` (the
+  `preferences` box is now in the ER diagram). A posting is kept when its **title** has a
+  role — as before — **or** its **description** names a skill, both as whole words; the word
+  check now bounds on letters and digits rather than `\b`, so "C++", ".NET" and "Node.js"
+  match standing alone. Workday searches once per skill too, capped at 2 pages
+  (`SCRAPE_SKILL_MAX_PAGES`), fetches the details of skill-only results — title matches first,
+  so a limited run spends its budget on the surest — and keeps one only if its description
+  names a skill. The run report counts `bySkill`, shown in the Last run panel. Found because a
+  run for roles "Node.js, MongoDB" fetched 397 listings and matched none: titles say "Full
+  Stack Developer", the stack is in the description. 5 tests
+
+#### Stage 3 — Oracle Recruiting Cloud
+⬜ **not started.** **8 companies**, including JPMC with 7,401 jobs.
+
+- ⬜ `P12-13` *(was `P3-47`, 08·P3-01)* `ai/sources/oracle.py`: `GET {host}/hcmRestApi/resources/latest/recruitingCEJobRequisitions`
+  with `finder=findReqs;siteNumber={site}`, paged by `limit`/`offset`
+- ⬜ `P12-14` *(was `P3-48`, 08·P3-02)* Detail fetch for the JD (`recruitingCEJobRequisitionDetails`)
+- ⬜ `P12-15` *(was `P3-49`, 08·P3-03)* Confirm the `siteNumber` for BNY, Honeywell and Dell, which were
+  verified by host only
+- ⬜ `P12-16` *(was `P3-50`, 08·P3-04)* Check whether American Express's `TotalJobsCount: 500` is a page cap or
+  the real total
+
+#### Stage 4 — Greenhouse, Lever, Eightfold
+⬜ **not started.** **8 companies**, and the simplest feeds on the list.
+
+- ⬜ `P12-17` *(was `P3-19`)* Greenhouse, Lever, Ashby and SmartRecruiters adapters over their public board feeds.
+  Greenhouse is `boards-api.greenhouse.io/v1/boards/{token}/jobs?content=true`, which returns the
+  JD in the list, so no detail fetch; Lever is `api.lever.co/v0/postings/{company}?mode=json`
+- ⬜ `P12-18` *(was `P3-51`, 08·P4-03)* `ai/sources/eightfold.py`: `/api/apply/v2/jobs?domain=…` (HSBC).
+  Qualcomm's tenant refuses unsigned requests, so it goes to Stage 9
+
+#### Stage 5 — Company-specific adapters
+⬜ **not started.** **7 companies** that work today but share no platform.
+
+- ⬜ `P12-19` *(was `P3-18`)* **Capgemini adapter** — `GET cg-jobstream-api.azurewebsites.net/api/job-search`. The
+  description comes in the list response, so one call per page and no detail fetch
+- ⬜ `P12-20` *(was `P3-52`, 08·P5-02)* Mercedes-Benz: `jobs.api.mercedes-benz.com/search`. Find the India /
+  MBRDI filter parameter first, since `country=IN` did not narrow it
+- ⬜ `P12-21` *(was `P3-23`)* JSON-LD `JobPosting` extractor for custom sites, with a sitemap or listing page to
+  find the detail URLs
+- ⬜ `P12-22` *(was `P3-53`, 08·P5-04)* Server-rendered HTML lists: Birlasoft (`jobs.birlasoft.com/search`)
+  and Intuit (`jobs.intuit.com` category pages; `/search-jobs/` is robots-disallowed)
+
+#### Stage 6 — Zwayam
+⬜ **not started.** **5 Indian IT services companies** on one identical Angular app.
+
+- ⬜ `P12-23` *(was `P3-54`, 08·P6-01)* Capture the real request once in a browser (DevTools → Network). The
+  endpoints are known (`public.zwayam.com/jobs-service/v1/jobs/search`), but a hand-built payload
+  returns 400
+- ⬜ `P12-24` *(was `P3-55`, 08·P6-02)* `ai/sources/zwayam.py`, keyed by `companyId`: ITC Infotech `15154`,
+  Happiest Minds `15974`; find the others the same way
+- ⬜ `P12-25` *(was `P3-56`, 08·P6-03)* Seed ITC Infotech, Happiest Minds, Cyient, Persistent and Coforge
+
+#### Stage 7 — SAP SuccessFactors
+⬜ **not started.** **7 companies**, most of them large Indian employers.
+
+- ⬜ `P12-26` *(was `P3-57`, 08·P7-01)* Find the public job-search call the Career Site Builder front end
+  makes. The OData API needs auth and is out of scope
+- ⬜ `P12-27` *(was `P3-58`, 08·P7-02)* `ai/sources/successfactors.py`. Where there's no JSON, fall back to the
+  rendered list (Birlasoft's pattern in `P12-22`)
+- ⬜ `P12-28` *(was `P3-59`, 08·P7-03)* Seed Wipro, HCLTech, EY, Atos, Fujitsu and Standard Chartered. NetApp
+  stays disabled because its host disallows everything
+
+#### Stage 8 — Render + parse fallback
+⬜ **not started.** For the **15 companies** with no feed, plus anything a later stage gives up
+on.
+
+- ⬜ `P12-29` *(was `P3-24`)* Playwright fallback: render → markdown → `POST /job-description` as `raw` →
+  `parse_description()` from `P3-14`. `ai/sources/render.py` opens the listing page, collects the
+  detail links and renders each one; HTML → markdown follows the extension's `features/capture/`
+  rules (region pick, furniture stripped, links resolved) so the parser sees the same shape
+  either way. Capped at N pages per company per run
+- ⬜ `P12-30` *(was `P3-60`, 08·P8-04)* Record the `region` and `textLength` tells. A Cloudflare or Akamai wall
+  renders a near-empty page, and that has to show up in the report as blocked, not as success
+
+**The blocked five stay blocked.** IBM, TCS, Cognizant, Fidelity and Wells Fargo answered with a
+bot challenge. The plan doesn't try to get past one. Those companies are covered by the
+extension's capture button instead, when you open a posting yourself.
+
+#### Stage 9 — The remaining platforms, one at a time
+⬜ **not started.** **20 companies** on platforms each used by only one to three of them. Each task
+is an investigation that ends in one of three outcomes: an adapter, Stage 8, or "extension capture
+only".
+
+- ⬜ `P12-31` *(was `P3-61`, 08·P9-01)* RippleHire: LTIMindtree, Mphasis, UST. Needs a session token, so check
+  whether the career site issues one anonymously
+- ⬜ `P12-32` *(was `P3-62`, 08·P9-02)* Avature: Deloitte, Tesco, Siemens. Check Deloitte's robots.txt first,
+  since it ends in a catch-all `Disallow`
+- ⬜ `P12-33` *(was `P3-63`, 08·P9-03)* Phenom: Virtusa (Akamai-blocked), Snowflake, NatWest (Cloudflare;
+  Workday underneath is unconfirmed)
+- ⬜ `P12-34` *(was `P3-64`, 08·P9-04)* Own apps: Goldman Sachs (only `/roles/` allowed), Walmart (`/api`
+  disallowed), EPAM
+- ⬜ `P12-35` *(was `P3-65`, 08·P9-05)* Single-company platforms: Infosys (SmartDreamers), KPMG
+  (TalentRecruit), UBS (PeopleFluent), Teradata (GR8 People), Schneider (Taleo), CGI (Njoyn, bot
+  manager), Sasken (HireWand), Qualcomm (Eightfold, gated)
+
+#### Stage 10 — Running it
+🟡 **runs by hand.** Turning a set of adapters into something you use every day. The run itself is
+`P12-06`. The daily schedule is Phase 3's `P3-07` on `P3-12` (Redis + Celery), shared with every
+other source.
+
+**API**
+- ⬜ `P12-36` *(was `P3-26`)* Archive a job that has disappeared from its board since the last run
+- ⬜ `P12-37` *(was `P3-66`, 08·P10-03)* Mark a source `failing` after two bad runs in a row, so a changed
+  endpoint is visible rather than silent
+- ⬜ `P12-38` *(was `P3-20`)* ATS detection from a pasted careers URL — host first, then the page's embed script;
+  stored on the `career_source` so it runs once per company
+
+**UI**
+- 🟡 `P12-39` *(was `P3-27`)* Settings: add a company by pasting its careers URL, showing the detected ATS; a
+  **Run discovery** button showing the last run's report. *The button and the live Sources rail
+  are built (`DiscoverySources`), replacing the fixture list; adding a company by URL waits on
+  `P12-38`*
+- ✅ `P12-40` *(was `P3-39`)* **Run discovery with a limit.** `POST /api/runs/discovery/start` takes an optional
+  `{"limit": N}` (1–500): the run stops once N **new** jobs are stored — duplicates do not
+  count, since a stored posting is recognised before its detail is fetched. The limit is one
+  budget shared by the companies running at once; each adapter is told how many the run can
+  still take, so Workday fetches no more details than that, and a company reached after the
+  budget is spent is reported `skipped` and keeps its last real result. Omitted, the run
+  scrapes everything as before. Settings has an "Up to [ ] new" box beside **Run discovery**
+  (empty = all); the rail, the Last run panel and the finishing toast show the limit. 8 tests.
+  *With four companies at once, a few extra detail requests can be in flight when the limit
+  lands; the number stored is still exact*
+
+#### Stage 11 — Free company discovery
+⬜ **not started.** Finds companies that aren't in the sheet but are hiring for your role on a
+shared ATS. It reuses the Workday, Greenhouse and Lever adapters, so it can start once Stages 2
+and 4 land.
+
+**How it works.** ATS feeds are per company, so there is no "search every company" call.
+Common Crawl's public URL index fills that gap: querying it for every URL under an ATS domain
+lists the companies on that ATS, and each URL carries the board id an adapter needs. Pulling
+each board's feed then shows which of those companies are hiring for your role in India right
+now. Nothing in this stage costs money. Paid search (`P3-03`) stays deferred.
+
+**Tested on 2026-09-24.** Half of one crawl (`CC-MAIN-2026-34`) returned 203 distinct Greenhouse
+boards, and the latest crawl 28 Lever boards. Workday and Ashby queries got 502s or truncated
+responses: the free query API can't handle domains that large, which is why `P12-42` exists.
+
+**API**
+- ⬜ `P12-41` *(was `P3-67`, 08·P11-01)* `ai/sources/discovery/commoncrawl.py`: query the index by ATS domain,
+  paged with `showNumPages` / `page`, retrying on 502. One regex per platform extracts the board
+  id: `boards.greenhouse.io/{token}` and `job-boards.greenhouse.io/{token}`,
+  `jobs.lever.co/{company}`, `jobs.ashbyhq.com/{org}`, `{tenant}.wdN.myworkdayjobs.com/{site}`
+- ⬜ `P12-42` *(was `P3-68`, 08·P11-02)* Workday from the raw cc-index files, downloaded and filtered locally
+  rather than through the query API. Slower, but it doesn't depend on an overloaded server
+- ⬜ `P12-43` *(was `P3-69`, 08·P11-03)* A `status` on `career_source`: `suggested`, `approved` or `rejected`.
+  A discovered board is `suggested` and disabled. A rejected one is never suggested again
+- ⬜ `P12-44` *(was `P3-70`, 08·P11-04)* Probe each suggestion once: pull its feed, rate-limited, and count
+  postings that pass the `P12-05` filter. A board with none is dropped. **The probe writes no jobs**
+- ⬜ `P12-45` *(was `P3-71`, 08·P11-05)* Weekly run. Common Crawl publishes about monthly, so more often than
+  weekly finds nothing new
+
+**UI**
+- ⬜ `P12-46` *(was `P3-72`, 08·P11-06)* Suggestions list in Settings: company, platform, matching count and a
+  few sample titles, with **Approve** and **Reject**
+
+**Guardrail**
+- ⬜ `P12-47` *(was `P3-73`, 08·P11-07)* Nothing discovered is scraped until you approve it. A broad crawl would
+  otherwise fill `jobs` with companies you'd never apply to, each costing an embedding and a match
+
+**What it can't find:** companies on a custom site, like Capgemini, or on a platform with no
+public board URL. Those still come in by hand or through the extension's Capture button.
+
+#### Open decisions
+
+1. **The 14 robots-restricted companies**: the 7 SmartRecruiters companies, Palo Alto, Lowe's,
+   Zoom, NetApp, Deloitte, Goldman Sachs and Walmart. Either skip them, or cover them only through
+   the extension's capture button, where a human opens the page. The plan assumes the second.
+2. ~~**How a run is triggered.**~~ **Settled 2026-09-25:** an AI-tier endpoint that receives the
+   forwarded JWT (`P12-06`). Still open for the scheduled run in `P3-07`, which has no browser to
+   forward a token from. A run also inherits the access token's 60-minute life; `P12-08`'s
+   stored-posting skip keeps re-runs short enough that this should not bite.
+3. ~~**Where the title and location filter lives.**~~ **Settled 2026-09-26:** saved per account
+   through `/api/preference` from the Settings screen; each run reads it once at the start.
+4. **Whether the per-platform count justifies Stage 9 at all**, versus sending those 20 companies
+   straight to Stage 8 or to extension capture.
+
+---
+
+## 14. Cross-cutting — true of every phase
 
 - ✅ `CC-01` FastAPI app shell: thin `main.py`, localhost bind, CORS for web + extension
 - ✅ `CC-02` Beanie documents for every local collection, `ObjectId` keys
@@ -945,7 +1157,7 @@ above is unprovable until this exists.
   Certifications}`. The service functions and models only they used went too; tests that
   staged or inspected through them now go through the services. Kept on purpose, though
   nothing calls them yet: the profile deletes (My Details has no delete button), template
-  upload / read / update / download, `POST /career-source` (`P3-27`) and `PUT
+  upload / read / update / download, `POST /career-source` (`P12-39`) and `PUT
   /application/applicant` (its only way in)
 
 **CI is now the one that should not wait.** The suites exist but run only when someone runs
@@ -953,7 +1165,7 @@ them; `CC-05` makes them run on every push before this is used against real job 
 
 ---
 
-## 14. Implementation status
+## 15. Implementation status
 
 The dashboard UI was built ahead of the backend. `server/` now has 11 modules, 83 endpoints and 18
 collections, every endpoint behind a bearer token; the AI tier (`ai/api/`, port 8001) adds
@@ -1021,7 +1233,7 @@ removed all auth overhead; that assumption no longer holds — see deviation 3.
 
 ---
 
-## 15. Definition of Done (per story, general)
+## 16. Definition of Done (per story, general)
 
 - Functionality works end-to-end against real (or realistic test) data — and against the local
   LLM from Phase 5 onward, where one is involved
@@ -1033,7 +1245,7 @@ removed all auth overhead; that assumption no longer holds — see deviation 3.
 
 ---
 
-## 16. Stretch — candidates beyond Phase 11
+## 17. Stretch — candidates beyond Phase 12
 
 - ~~PDF compilation of tailored `.tex` resumes~~ — **promoted into Phase 2 and closed there**
   (`P2-08`, 2026-09-17). Base resume only; tailored `.tex` gets the same treatment when Phase 5

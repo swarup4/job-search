@@ -20,9 +20,23 @@ REFRESH = "refresh"
 
 ALGORITHM = "HS256"
 
+# HS256 needs a key at least as long as its hash (RFC 7518 §3.2). A missing or short
+# secret stops the server at startup rather than signing tokens anyone could forge.
+MIN_SECRET_BYTES = 32
+
+
+def _secret() -> str:
+    secret = os.environ.get("JWT_SECRET", "")
+    if len(secret.encode()) < MIN_SECRET_BYTES:
+        raise RuntimeError(
+            f"JWT_SECRET in server/.env must be at least {MIN_SECRET_BYTES} bytes. Generate "
+            'one with: python -c "import secrets; print(secrets.token_urlsafe(48))"'
+        )
+    return secret
+
+
 # Read once at import; `config/__init__.py` has already loaded server/.env by then.
-# The fallback is a placeholder, not a secret — seeing it means JWT_SECRET is missing.
-SECRET = os.environ.get("JWT_SECRET", "swarupjobs")
+SECRET = _secret()
 ACCESS_TTL = timedelta(minutes=int(os.environ.get("JWT_TTL_MINUTES", "60")))
 REFRESH_TTL = timedelta(days=int(os.environ.get("JWT_REFRESH_TTL_DAYS", "30")))
 

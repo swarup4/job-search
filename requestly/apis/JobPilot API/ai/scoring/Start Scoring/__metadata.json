@@ -1,0 +1,10 @@
+{
+  "$schema": "https://assets.requestly.com/local/v1.15.0/metadata.json",
+  "type": "api",
+  "entryType": "http",
+  "id": "73aa57a0-36e0-46cb-8c53-2edeee9062cc",
+  "rank": "a0",
+  "url": "{{ai_base_url}}/api/runs/scoring/start",
+  "method": "POST",
+  "contentType": "none"
+}
