@@ -50,3 +50,14 @@ export function joinMonthYear(month, year) {
     if (!y) return "";
     return month ? `${month} ${y}` : y;
 }
+
+/** "5m ago", "3h ago", "2d ago", then a date. Null for no timestamp. */
+export function ago(timestamp) {
+    if (!timestamp) return null;
+    const minutes = Math.round((Date.now() - new Date(timestamp).getTime()) / 60000);
+    if (minutes < 1) return "just now";
+    if (minutes < 60) return `${minutes}m ago`;
+    if (minutes < 60 * 24) return `${Math.round(minutes / 60)}h ago`;
+    if (minutes < 60 * 24 * 7) return `${Math.round(minutes / (60 * 24))}d ago`;
+    return new Date(timestamp).toLocaleDateString(undefined, { dateStyle: "medium" });
+}
