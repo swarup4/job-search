@@ -1,0 +1,10 @@
+{
+  "$schema": "https://assets.requestly.com/local/v1.15.0/metadata.json",
+  "type": "api",
+  "entryType": "http",
+  "id": "700703c4-a36c-4431-968b-b2073008d718",
+  "rank": "a0",
+  "url": "{{ai_base_url}}/api/tailoring/{{job_id}}",
+  "method": "POST",
+  "contentType": "none"
+}

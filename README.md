@@ -1,31 +1,29 @@
 # JobPilot
 
-**A personal, agentic AI job-search co-pilot — local-first, single-user, all generation on your own hardware.**
+**A personal, single-user job-search co-pilot. Generation runs on a local model; you approve every
+change to your resume and press every Submit button yourself.**
 
-JobPilot discovers relevant job openings, analyzes how well they match your resume, tailors your resume per job description, and helps you fill out applications — all through a set of coordinated AI agents running entirely on your own machine.
+JobPilot pulls job postings from company career pages and from pages you capture in the browser,
+scores each one against your profile, tailors your resume with only the keywords you approve, and
+fills application forms in your own browser session.
 
-> ⚠️ **Personal project.** Built for single-user use, not intended for public deployment as-is.
-> It does now have real accounts and authentication — see [Phase 1](#phase-1--authentication--profile).
-
-> 🚧 **The dashboard and the API exist; the agents do not.** Eleven Next.js screens run, and
-> `server/` serves 54 REST endpoints across ten modules over local MongoDB. Signing in works end to
-> end; every other screen still reads a JSON fixture. `ai/` is still an empty directory, so there
-> are no agents, no RAG, and no LLM call anywhere in the system. Everything below describes the
-> intended system — see [Current state](#current-state) for what actually runs today.
+> ⚠️ **Personal project.** Built for one person on one machine. Everything binds to `127.0.0.1`;
+> nothing here is meant to be exposed publicly.
 
 ---
 
 ## Table of Contents
 
 - [Current state](#current-state)
-- [Why](#why)
 - [Features](#features)
 - [Architecture](#architecture)
+- [What leaves your machine](#what-leaves-your-machine)
 - [Tech Stack](#tech-stack)
 - [Getting Started](#getting-started)
 - [Configuration](#configuration)
 - [Usage](#usage)
 - [Project Structure](#project-structure)
+- [Tests](#tests)
 - [Documentation](#documentation)
 - [Roadmap](#roadmap)
 - [Design Principles](#design-principles)
@@ -35,544 +33,380 @@ JobPilot discovers relevant job openings, analyzes how well they match your resu
 
 ## Current state
 
-*Updated 2026-09-17.*
+*Updated 2026-11-10.* The application works end to end by hand. The agentic layer (LangGraph
+agents, MCP tool servers, scheduling, evaluation) is not built yet: every AI step today is a plain
+function called from an API endpoint.
 
 | Area | Status |
 |---|---|
-| Dashboard UI — 11 screens | **built**. Login and signup run against the live API; My Details persists `role` only; the other eight screens render JSON fixtures from `app/web/src/data/` |
-| `app/web` → `server` wiring | **started** — one axios instance in `src/lib/`, one service per API module in `src/services/`, `ApiError` as the single failure shape |
-| Form validation | **built** — Formik (`useFormik`) with a Yup schema per form in `src/util/schema.js`; the server's own validation still decides |
-| Resume templates → PDF | **verified 2026-09-17.** Templates render through `modules/template/service.render` and compile with **pdflatex** (BasicTeX / TeX Live 2026): **all six** `templates/Template*/` designs produce a PDF. Setup: [docs/07](docs/07-PDF-Setup-macOS.md). `templates/base_resume.tex` is unused — nothing reads it |
-| `server/` — REST API, local MongoDB | **built** — eight modules, fifteen collections, 57 endpoints over 51 paths, Beanie over local MongoDB. **No tests** (removed on request), so no story is Done per Roadmap §10 |
-| Authentication | **built and enforced server-side** — argon2 hashes, JWT on signup and login, route guard, bearer token on every call. Every endpoint but signup, login and refresh needs a token, and no URL carries a user id: `verify_token` reads it from the token, so there is no way to ask for another user's data |
-| Per-user data | **every collection is keyed by `userId`** — jobs, matches, resumes, applications, the answer bank and events, as well as the five profile collections. Queries filter on the owner, and dedup keys are unique per user rather than globally |
-| `ai/` — agents, RAG, MCP, eval | not started (empty directory) |
-| `app/extension/` — Chrome MV3 | **built** — TypeScript + esbuild, MV3. Generic label/ARIA field engine plus Lever, Greenhouse, Workday and LinkedIn adapters; fills, highlights, attaches the base resume, reports back to `/application/fill`. No LLM fallback — that waits on `ai/` |
-
-### What you can run today
-
-```bash
-# Each tier has its own .venv — run each in its own terminal, and deactivate any
-# active venv first, or uv installs into it
-# REST API — needs a local mongod; start this first
-cd server && uv sync && source .venv/bin/activate && python main.py
-
-# AI tier — needs ai/.env (copy .env.example, set LLM_API_KEY)
-cd ai && uv sync && source .venv/bin/activate && python main.py
-
-# dashboard
-cd app/web && npm install && npm run dev
-
-# chrome extension — load app/extension/dist unpacked
-cd app/extension && npm install && npm run build
-```
-
-Open http://localhost:3000 for the dashboard, http://localhost:8000/docs for the API and
-http://localhost:8001/docs for the AI tier (`/health` answers `{"status": "ok"}`). The dashboard
-reaches it at `NEXT_PUBLIC_AI_URL`, defaulting to `http://127.0.0.1:8001/api`; without it, Run
-discovery, analysis, scoring and tailoring fail while every other screen still works. You will be
-redirected to `/login` — create an account, and signup signs you straight in. Every screen then
-navigates and the Resume Preview renders a real tailored `.tex` from a fixture. The
-[Getting Started](#getting-started) commands below target the full system and will still fail on the
-`ai/` step.
-
-Screens that exist: pipeline board, job search, shortlist, job details, keyword selection, resume
-preview, staged applications, my details, settings, login, signup.
-
-> **Login and signup are real as of 2026-09-11** — argon2-hashed accounts, JWT sessions, and a guard
-> on every dashboard route. This contradicts PRD §4 and SRS §42, which specify no auth on single-user
-> grounds; **those documents now need amending**, the decision having gone the other way. Tracked as
-> reopened as in scope.
+| **Dashboard** (`app/web`) | **Built and wired.** 13 screens on the live API — pipeline board, search, shortlist, job details, keyword selection, tailored resume preview, resume, applications, my details, settings, login, signup. My Details still reads one value (`resumeFile`) from a fixture. The resume chat panel is laid out but inert |
+| **REST API** (`server`) | **Built.** 16 modules, 80 endpoints, 19 collections, Beanie over MongoDB. JWT auth on every route except signup, login and refresh |
+| **AI tier** (`ai`) | **Built, without agents.** Its own FastAPI server on `:8001` runs discovery, capture parsing, analysis, scoring and tailoring as background runs that stream progress over server-sent events |
+| **Job discovery** | **Workday only.** 41 companies registered (33 enabled), scraped from their public Workday feeds with no LLM. Every other platform is planned — roadmap Phase 12 |
+| **Matching** | **Built.** Each posting is read once into a brief, the profile once into a skill inventory, and a score is one comparison between them. Every "you have this" is traced to a line of your profile |
+| **RAG** | **Built.** Profile chunks embedded with Voyage, `$vectorSearch` then Voyage rerank, used for near-miss hints |
+| **Resume** | **Built.** Six LaTeX templates rendered from your profile; `.tex` and PDF download; a tailored `.tex` per job using only the keywords you ticked |
+| **Chrome extension** (`app/extension`) | **Built.** Fills Workday, Greenhouse, Lever and LinkedIn Easy Apply forms, highlights every field it touched, captures any career page into a job. No LLM fallback for unclear fields yet |
+| **Agents, MCP servers, scheduler, Ragas** | **Not started** — roadmap Phases 7, 8 and 10 |
+| **Tests** | 155 in `server/`, 270 in `ai/`. One `ai/` guardrail test fails today: `ai/.env.example` still names a hosted LLM router |
 
 ---
 
-## Why
-
-Manually job hunting at scale is repetitive: searching multiple sources daily, reading every JD to judge fit, tailoring a resume without over- or under-claiming skills, filling near-identical application forms across ATS platforms, and tracking it all in a spreadsheet. JobPilot automates the repetitive parts while keeping a human decision at every step that matters — what gets added to your resume, and whether an application actually gets submitted.
-
 ## Features
 
-The intended capability set. Today only the profile round-trip is real; keyword selection and the
-resume preview are UI against fixtures, and no agent exists — see
-[Current state](#current-state).
+**Working today**
 
-- 🔍 **Automated job discovery** — pulls fresh listings daily from Google/SerpAPI, Indeed (via MCP), LinkedIn, and Naukri
-- 🎯 **JD keyword matching & gap analysis** — extracts technical keywords from a JD, diffs them against your resume, and shows you exactly what's present vs. missing
-- 🧠 **RAG-backed retrieval with reranking** — your resume is chunked and embedded, retrieved by vector search, then reranked so tailoring and scoring work against what your resume actually says
-- 📐 **Measured, not assumed** — a [Ragas](https://docs.ragas.io/) suite scores retrieval quality and, critically, **faithfulness**: the automated check that nothing was fabricated
-- ✅ **Interactive keyword selection** — you choose which missing keywords to incorporate; nothing gets added to your resume without explicit approval
-- 📄 **Resume tailoring** — generates a tailored `.tex` (LaTeX) resume per job, built on your own template
-- 🧩 **Chrome extension autofill** — fills application forms inside your real, already-logged-in browser session; you always review and submit manually
-- 📊 **Pipeline tracking** — status board (Applied → Viewed → Interview → Offer/Rejected) with follow-up reminders, synced to Google Sheets
-- 🤖 **All generation runs locally** — every LLM call that writes, decides, or scores runs on Ollama/vLLM. Embedding and reranking use Voyage's hosted API; see [what leaves your machine](#what-leaves-your-machine)
+- 🔍 **Career-page discovery** — pulls postings straight from Workday career sites, filtered by your
+  saved target roles, skills and locations before anything is written. robots.txt is checked on
+  every request
+- 📥 **One-click capture** — the extension saves the page you are looking at; the AI tier reads it
+  into a job, refusing any title, company or figure that is not on the page
+- 🎯 **Match scoring with evidence** — requirements extracted from the posting, compared against
+  your profile, each "present" backed by a quote from it. Risk flags (seniority, years, location)
+  are shown, never selectable
+- 💡 **Near-miss hints** — when the posting says "agentic orchestration" and your profile says
+  "LangGraph multi-agent pipeline", the keyword stays Missing but you are told you may already have it
+- ✅ **Keyword selection** — nothing is pre-checked. Only what you tick can reach the resume, and the
+  server refuses a resume built on anything else
+- 📄 **Tailored resume** — the model only decides *where* a ticked keyword goes; a rewrite that adds
+  any word beyond the keyword and plain connectives is declined. `.tex` and PDF download
+- 🧩 **Form autofill** — fills known fields from your profile and answer bank, outlines every filled
+  field green and every unanswered one amber, and never submits
+- 📊 **Pipeline** — Kanban board, shortlist and Applications screen, per account
+
+**Planned** — see the [roadmap](05-Roadmap-Backlog.md): more job sources (Indeed, SerpAPI,
+LinkedIn, Naukri and ten more career-page platforms), a daily schedule, LangGraph agents with
+approval interrupts, follow-up drafts, Google Sheets sync, and a Ragas faithfulness suite.
+
+---
 
 ## Architecture
 
-Three independent services and two databases:
+Three processes and one database:
 
 ```
-   app/web (:3000)          app/extension
-          │                       │
-          └────── HTTP ───────────┴──▶  server (:8000)  ──▶  Local MongoDB
-                                            ▲        │            (structural data)
-                                      HTTP  │        │ Redis
-                                            │        ▼
-                                        ai (worker)  ──▶  MongoDB Atlas
-                                                             (RAG / vectors)
+   app/web (:3000)            app/extension
+        │      │                    │      │
+        │      └─────── HTTP ───────┼──────┼──▶  ai (:8001)
+        │                           │      │      discovery · capture · analysis
+        │                           │      │      scoring · tailoring
+        └──────────── HTTP ─────────┴──────┴──▶  server (:8000)  ──▶  MongoDB
+                                                    ▲                (Atlas, with $vectorSearch)
+                                     ai ── HTTP ────┘
 ```
 
-| Service | Responsibility | Owns |
+| Service | Runs | Owns |
 |---|---|---|
-| **`app/web`** | Next.js dashboard — shortlist review, keyword selection, pipeline board | nothing (pure client) |
-| **`server`** | REST APIs, all structural data access | **Local MongoDB** |
-| **`ai`** | LangGraph agents, RAG pipeline, MCP tool servers | **MongoDB Atlas** (vectors) |
+| `app/web` | Next.js dashboard | nothing — a pure client |
+| `server` | FastAPI REST API | **the database** — every collection |
+| `ai` | FastAPI server for background runs; LLM calls, Voyage, scraping | no database and no credentials |
 
-The five agents run as LangGraph nodes inside the `ai` worker, under a supervisor that pauses at two human-approval interrupts:
+- **`server` is the only process with a database connection.** `ai` reads and writes everything
+  through `server`'s REST API (`ai/mcp_servers/jobpilot_api/client.py`), acting with the signed-in
+  user's forwarded token. It holds no URI and no secret of its own beyond its API keys.
+- **One store.** Structural data, job-description text and profile chunks with their vectors all
+  live in one MongoDB database. Pointed at Atlas (`mongodb+srv://`), the server creates the two
+  `$vectorSearch` indexes on startup; pointed at a local `mongod`, everything works except vector
+  search. *This replaced the earlier local-plus-Atlas split on 2026-09-19 — roadmap Phase 6.*
+- **The tiers never import each other.** They talk over HTTP only.
+- **Background runs stream.** `POST /api/runs/{discovery|analysis|scoring}/start` begins one run per
+  account; `GET …/events` streams its progress as server-sent events, replaying from the start so a
+  late page can join.
+
+### How a job flows through it
 
 ```
-                        ┌─────────────────────────┐
-                        │   Orchestrator Agent      │
-                        │   (LangGraph Supervisor)  │
-                        └────────────┬──────────────┘
-             ┌───────────────┬───────┴───────┬────────────────┬───────────────┐
-             ▼               ▼               ▼                ▼               ▼
-   ┌─────────────────┐ ┌───────────┐ ┌───────────────┐ ┌──────────────┐ ┌─────────────┐
-   │ Job Discovery    │ │ JD Match/ │ │ Resume Tailor  │ │ Application  │ │ Tracking &  │
-   │ Agent            │ │ Score     │ │ Agent          │ │ Agent        │ │ Follow-up   │
-   │                  │ │ Agent     │ │                │ │ (Chrome ext) │ │ Agent       │
-   └─────────────────┘ └───────────┘ └───────────────┘ └──────────────┘ └─────────────┘
+discovery (Workday feed) ─┐
+capture (extension)  ─────┴─▶ job + description ─▶ analyze: details · embedding · tech stack
+                                                         │
+                                                         ▼
+                              score: brief × skill inventory ─▶ Present / Missing / risks
+                                                         │
+                                                         ▼
+                              ⚠ you tick keywords ─▶ tailor .tex ─▶ ⚠ you review ─▶ extension fills
+                                                                                    ─▶ ⚠ you submit
 ```
 
-### How the tiers communicate
+---
 
-- **`ai` → `server`**: HTTP, through the `jobpilot_api` MCP server. This is how agents read and write jobs, matches, applications, events, and profile data.
-- **`server` → `ai`**: Redis. `server` enqueues agent runs; the `ai` worker's Celery consumers pick them up.
-- **Never by import.** The two tiers share no Python code, which keeps them independently deployable.
+## What leaves your machine
 
-### Two databases, one connection string each
+| | Where it goes |
+|---|---|
+| Every LLM call — parsing, extraction, scoring, tailoring | **local Ollama** by default (`LLM_BASE_URL`) |
+| Profile chunk text, JD text, keyword labels, when embedded or reranked | **Voyage AI** (hosted) |
+| Your data at rest | **MongoDB Atlas**, when `MONGODB_URI` points there |
+| Career-page requests | the companies' own public job feeds |
 
-| Store | Holds | Owner |
-|---|---|---|
-| Local MongoDB | `accounts`, `profile`, `work_experience`, `education`, `skills`, `certifications`, `jobs`, `matches`, `resumes`, `applications`, `answer_bank`, `events`, `templates` | `server` |
-| MongoDB Atlas | `jd_embedding`, `resume_chunks` — **vectors and ids only** | `ai/rag` |
+Pointing `LLM_BASE_URL` at a hosted provider is possible and sends every JD, profile line and
+resume line in a prompt off the machine. The guardrail suite (`ai/tests/test_guardrails.py`) fails
+if a hosted endpoint appears in code or an env template.
 
-`server/.env` holds the local URI and no Atlas URI; `ai/.env` holds the Atlas URI and no local URI. Neither service can reach the other's store, even by mistake.
-
-**Atlas never receives resume or JD prose.** Vector search returns `chunk_id`s, and the text is fetched from `server` on a second local hop.
-
-### What leaves your machine
-
-Being precise about this matters more than a reassuring one-liner:
-
-| | Stays local | Goes to Voyage |
-|---|---|---|
-| Every LLM call that writes, decides, extracts, or scores | ✅ | |
-| Prompts, tailored resumes, cover letters, keyword decisions | ✅ | |
-| Chunk text and JD text, when embedded | | ⚠️ |
-| Query + candidate chunks, when reranked | | ⚠️ |
-| Ragas judging (contexts + generated output) | ✅ local judge | |
-
-So resume and JD prose **does** reach Voyage's API in flight. What never leaves is generation: no prompt and no generated content touches a hosted provider, and no other cloud AI service is used at all.
-
-Two-stage retrieval: Voyage embed → `$vectorSearch` (top ~50) → fetch text from `server` → Voyage rerank → top ~5.
-
-> **Notes on the design docs.** Five decisions supersede the planning documents. (1) The dashboard is Next.js, not Streamlit/Gradio. (2) Agents reach structural data through `server`'s REST API rather than the MongoDB MCP Server (SRS FR-8.1) — one validation boundary, and no DB credentials in the agent process. (3) **SRS NFR-3 forbids sending any data to third-party inference APIs; using Voyage narrows that to "all generation is local."** If the original absolute guarantee matters more than retrieval quality, swap `ai/rag/embeddings.py` and `reranking.py` for a local embedding model — the rest of the pipeline is unchanged. (4) **Authentication was built**, which PRD §4 and SRS §42 rule out; accounts are argon2-hashed and sessions are JWTs, so those two documents are now wrong and need amending. (5) **`profile.preferences` and `resume_chunk_text` were removed** on 2026-09-11, and the profile became five collections keyed by `userId`; docs 02, 03 and 06 still describe the earlier single-document shape with a RAG chunk store. (6) **PDF compilation was built** on 2026-09-17, which **SRS FR-4.4 and invariant 5 forbid** — they say `.tex` only, and both now need amending. Templating also went to `{{TOKEN}}` substitution rather than Jinja2, so there is no `jinja2` dependency anywhere.
+---
 
 ## Tech Stack
 
 | Layer | Choice |
 |---|---|
-| Agent orchestration | [LangGraph](https://github.com/langchain-ai/langgraph) |
-| Tool protocol | [MCP](https://modelcontextprotocol.io/) (self-hosted servers) |
-| LLM serving | [Ollama](https://ollama.com/) (dev) / [vLLM](https://github.com/vllm-project/vllm) (production-like) |
-| Generation models | Qwen2.5-32B+/Llama 3.3-70B (orchestration, tailoring) · Qwen2.5-7B/14B (discovery, scoring) — all local |
-| Embeddings + reranking | [Voyage AI](https://www.voyageai.com/) (hosted; MongoDB-owned, pairs natively with Atlas) |
-| Database — structural | Local MongoDB (native install) |
-| Database — vector / RAG | [MongoDB Atlas](https://www.mongodb.com/atlas) (free M0 tier, `$vectorSearch`) |
-| Backend | [FastAPI](https://fastapi.tiangolo.com/) (Python, `uv`) |
-| Frontend | [Next.js](https://nextjs.org/) (JavaScript, App Router) |
-| UI | [Tailwind CSS](https://tailwindcss.com/) + [shadcn/ui](https://ui.shadcn.com/) (components copied in, not a dependency) |
-| HTTP client | [axios](https://axios-http.com/) — one instance in `app/web/src/lib/`, with `ApiError` as the single failure shape |
-| Form state + validation | [Formik](https://formik.org/) (`useFormik`) + [Yup](https://github.com/jquense/yup) — one schema per form in `app/web/src/util/schema.js` |
-| Browser automation (discovery only) | [Playwright](https://playwright.dev/) |
-| Application autofill | Custom Chrome Extension (Manifest V3, TypeScript) |
-| Resume templating | `{{TOKEN}}` substitution into an uploaded `.tex` — **not** Jinja2, which the docs below still name; see note 6 |
-| PDF compilation | **pdflatex** (BasicTeX / TeX Live), invoked per download — an external prerequisite, not a dependency |
-| Queue / scheduling | Redis + Celery |
-| RAG evaluation | [Ragas](https://docs.ragas.io/) — faithfulness, context precision/recall, with a **local** judge |
-| Observability | [Langfuse](https://langfuse.com/) or [Phoenix](https://phoenix.arize.com/) (self-hosted) |
+| Generation | [Ollama](https://ollama.com/) over its OpenAI-compatible API; default `qwen3.5:9b`. Every call is schema-constrained (`strict` JSON Schema) and validated with Pydantic |
+| Embeddings + reranking | [Voyage AI](https://www.voyageai.com/) — `voyage-4-lite` (1024 dims), `rerank-2.5-lite` |
+| Database | [MongoDB](https://www.mongodb.com/) via [Beanie](https://beanie-odm.dev/) 2 / pymongo async; Atlas for `$vectorSearch` |
+| Backend | [FastAPI](https://fastapi.tiangolo.com/) ×2 (`server`, `ai`), Python 3.12, [uv](https://docs.astral.sh/uv/) |
+| Auth | argon2 password hashes, JWT access + refresh tokens |
+| Frontend | [Next.js](https://nextjs.org/) App Router (JavaScript), Redux, axios, Formik + Yup |
+| UI | [Tailwind CSS](https://tailwindcss.com/) + [shadcn/ui](https://ui.shadcn.com/), one SCSS stylesheet |
+| Scraping | `httpx` with a robots.txt-checking fetcher; `markdownify` for JDs |
+| Resume | `{{TOKEN}}` substitution into uploaded `.tex` templates; **pdflatex** for PDF |
+| Extension | Chrome Manifest V3, TypeScript, esbuild, `turndown` |
+| Planned | LangGraph, MCP servers, Redis + Celery, Ragas, Langfuse/Phoenix |
+
+---
 
 ## Getting Started
 
-> **These instructions describe the finished system and do not all work yet.** Missing today:
-> no root `pyproject.toml` (so `uv sync` fails), no root `package.json` (so a root `npm install`
-> fails), no `ai/.env.example` to copy, and no `ai/orchestration/worker.py`.
-> `server/`, `app/web/` and `app/extension/` all run today — see
-> [What you can run today](#what-you-can-run-today) for the commands that work.
-
 ### Prerequisites
 
-- Python 3.11+ and [uv](https://docs.astral.sh/uv/)
+- Python 3.12+ and [uv](https://docs.astral.sh/uv/)
 - Node.js 18+ and npm
-- [Ollama](https://ollama.com/download) installed locally, with a chat model pulled:
+- MongoDB — a free [Atlas](https://www.mongodb.com/cloud/atlas/register) M0 cluster for vector
+  search, or a local `mongod` (everything but vector search works)
+- [Ollama](https://ollama.com/download) with the chat model pulled:
   ```bash
-  ollama pull qwen2.5:32b
+  ollama pull qwen3.5:9b
   ```
-  No local embedding model is needed — embeddings come from Voyage.
-- A [Voyage AI](https://www.voyageai.com/) API key, for embeddings and reranking (paid per token)
-- MongoDB installed locally ([macOS via Homebrew](https://www.mongodb.com/docs/manual/tutorial/install-mongodb-on-os-x/))
-- A free [MongoDB Atlas](https://www.mongodb.com/cloud/atlas/register) account (M0 tier) with a `$vectorSearch` index whose **dimension matches your chosen Voyage embedding model**
-- Redis (`brew install redis` on macOS)
-- Google Chrome, for loading the extension in developer mode
-- A TeX engine, **only** if you want PDF downloads — `brew install --cask basictex` plus a few
-  packages. Full steps and troubleshooting: [docs/07 — PDF Setup (macOS)](docs/07-PDF-Setup-macOS.md).
-  Without it every other feature works and the PDF endpoint answers 503 with the install hint
+  Set the model's context window (`num_ctx` in its Modelfile) to match `LLM_NUM_CTX`, default
+  16384 — Ollama ignores a per-request size on its OpenAI endpoint
+- A [Voyage AI](https://www.voyageai.com/) API key
+- Google Chrome, for the extension
+- *Optional:* a TeX engine for PDF downloads — see [docs/07](docs/07-PDF-Setup-macOS.md). Without
+  it the PDF endpoint answers 503 and everything else works
 
-### Installation
+### Install and run
 
-```bash
-git clone https://github.com/<your-username>/jobpilot.git
-cd jobpilot
-
-# Python dependencies for both backend services
-uv sync
-
-# Frontend dependencies
-npm install
-
-# Each service gets its own env file — see Configuration below
-cp server/.env.example server/.env
-cp ai/.env.example ai/.env
-cp app/web/.env.example app/web/.env.local
-
-# Backing services
-brew services start mongodb-community
-brew services start redis
-```
-
-### Running
-
-Three services, each startable independently:
+Each tier has its own virtual environment. Run each in its own terminal, and deactivate any active
+venv first or `uv` installs into it.
 
 ```bash
-# 1. REST API + local MongoDB
-#    Run from server/ — main.py imports `config`, not `server.config`
-cd server && uv run uvicorn main:app --reload --host 127.0.0.1 --port 8000
+# 1. REST API — start this first
+cd server && cp .env.example .env     # set MONGODB_URI and JWT_SECRET
+uv sync && .venv/bin/python main.py   # http://127.0.0.1:8000/docs
 
-# 2. AI worker — agents, RAG, scheduled discovery
-uv run celery -A ai.orchestration.worker worker --beat
+# 2. AI tier
+cd ai && cp .env.example .env         # set VOYAGE_API_KEY; check LLM_BASE_URL is local
+uv sync && .venv/bin/python main.py   # http://127.0.0.1:8001/docs
 
 # 3. Dashboard
-cd app/web && npm run dev
+cd app/web && npm install && npm run dev   # http://localhost:3000
+
+# 4. Chrome extension
+cd app/extension && npm install && npm run build
 ```
 
-Then open http://localhost:3000.
+Then load the extension: `chrome://extensions` → **Developer mode** → **Load unpacked** →
+`app/extension/dist`, and sign in from its popup.
 
-The dashboard works with `server` alone; the `ai` worker is what makes discovery, scoring, and tailoring happen.
+### One-time data setup
 
-### Loading the Chrome Extension
+```bash
+cd server
+.venv/bin/python seed_career_sources.py    # the 41 Workday companies
+.venv/bin/python import_templates.py       # the six resume templates
+```
 
-1. Build it: `cd app/extension && npm install && npm run build`
-   (`npm run watch` rebuilds on save; reload the extension in Chrome to pick it up.)
-2. Open `chrome://extensions`
-3. Enable **Developer mode** (top right)
-4. Click **Load unpacked** and select `app/extension/dist`
-5. Open the popup and sign in with your JobPilot account — the extension talks to
-   `server` on `127.0.0.1:8000`, so start that first.
+Open the dashboard, sign up (signup signs you in), and fill in **My Details** — that profile is
+what every score and every tailored resume is built from.
 
-It fills the four supported boards automatically and any other career page on demand.
-Every field it touches is outlined green, anything it could not answer is outlined
-amber and listed in the popup for you to answer, and **it has no code path that
-submits a form** — the Submit button stays yours.
+---
 
 ## Configuration
 
-Each service reads its own `.env`. The split is deliberate — it makes it impossible for one tier to reach the other's database.
+Values below are the defaults in code; an absent `.env` boots against them.
 
-**`server/.env`** — structural data, no Atlas access:
+**`server/.env`**
 
-```bash
-MONGODB_LOCAL_URI=mongodb://127.0.0.1:27017
-MONGODB_DB_NAME=jobpilot
-HOST=127.0.0.1
-PORT=8000
-WEB_ORIGIN=http://localhost:3000
-```
+| Key | Default | |
+|---|---|---|
+| `MONGODB_URI` | `mongodb://127.0.0.1:27017` | `mongodb+srv://…` for Atlas and vector search |
+| `MONGODB_DB_NAME` | `jobpilot` | |
+| `JWT_SECRET` | — | **required**, at least 32 bytes; the server refuses to start without one. `python -c "import secrets; print(secrets.token_urlsafe(48))"` |
+| `JWT_TTL_MINUTES` / `JWT_REFRESH_TTL_DAYS` | 60 / 30 | |
+| `HOST` / `PORT` | `127.0.0.1` / `8000` | keep loopback |
+| `PDFLATEX_BIN` / `PDFLATEX_TIMEOUT_SECONDS` | `pdflatex` | |
+| `LOG_LEVEL` | | |
 
-Those five are everything `server` reads today, and each has a default in code — an absent `.env`
-still boots against a local mongod. `.env` is loaded once, in `server/config/__init__.py`, anchored
-to `server/.env` rather than the process's working directory. `REDIS_URL` and the Google Sheets
-credentials arrive with Phases 3 and 6; there is no settings class, so a variable nothing reads is
-simply ignored.
+**`ai/.env`**
 
-**`ai/.env`** — vectors and inference, no local DB access:
+| Key | Default | |
+|---|---|---|
+| `JOBPILOT_API_URL` | `http://127.0.0.1:8000/api` | the server |
+| `AI_HOST` / `AI_PORT` | `127.0.0.1` / `8001` | |
+| `LLM_BASE_URL` | `http://localhost:11434/v1` | Ollama's OpenAI-compatible endpoint |
+| `LLM_MODEL` | `qwen3.5:9b` | |
+| `LLM_NUM_CTX` | `16384` | must match the model's `num_ctx` |
+| `LLM_DISABLE_THINKING` | off | turn on for Qwen3-family models |
+| `LLM_TIMEOUT` / `LLM_ATTEMPTS` | `240` / `3` | one try plus two schema-repair retries |
+| `MATCH_LLM_*`, `BRIEF_LLM_*`, `INVENTORY_LLM_*` | fall back to `LLM_*` | give scoring, posting briefs or the skill inventory their own model |
+| `VOYAGE_API_KEY` | — | required |
+| `VOYAGE_EMBED_MODEL` / `VOYAGE_EMBED_DIMS` / `VOYAGE_RERANK_MODEL` | `voyage-4-lite` / `1024` / `rerank-2.5-lite` | dimension must match the Atlas indexes |
+| `NEAR_MISS_THRESHOLD` | `0.35` | calibrated on `voyage-4-lite`; re-measure if the model changes |
+| `SCRAPE_*` | | User-Agent, per-host concurrency, page caps, fallback filters |
+| `TAILORED_DIR` | | where tailored `.tex` files are written |
 
-```bash
-MONGODB_ATLAS_URI=<your-atlas-connection-string>
-REDIS_URL=redis://localhost:6379
-
-# Generation — always local
-OLLAMA_BASE_URL=http://localhost:11434
-LLM_MODEL=qwen2.5:32b
-
-# Embeddings + reranking — Voyage (hosted). Verify model names against Voyage's docs.
-VOYAGE_API_KEY=<your-key>
-VOYAGE_EMBED_MODEL=<embedding-model>
-VOYAGE_EMBED_DIM=<must match the Atlas $vectorSearch index>
-VOYAGE_RERANK_MODEL=<rerank-model>
-
-JOBPILOT_API_BASE_URL=http://localhost:8000
-SERPAPI_KEY=<your-key>
-INDEED_MCP_URL=<your-indeed-mcp-endpoint>
-```
-
-**`app/web/.env.local`**:
+**`app/web/.env.local`**
 
 ```bash
 NEXT_PUBLIC_API_URL=http://127.0.0.1:8000/api
+NEXT_PUBLIC_AI_URL=http://127.0.0.1:8001/api
 ```
 
-The `/api` suffix is part of the value — `src/lib/axiosInstance.js` uses it as the axios `baseURL`
-verbatim and appends no prefix of its own.
+> Changing `VOYAGE_EMBED_MODEL` or `VOYAGE_EMBED_DIMS` invalidates every stored vector. Re-create
+> the Atlas indexes and re-index — it is a migration, not a config tweak. Never put the Voyage key
+> in `server/.env` or anything `NEXT_PUBLIC_`-prefixed.
 
-> The Voyage key belongs to `ai/.env` alone — never `server/.env`, and never anything `NEXT_PUBLIC_` prefixed, which would ship it to every browser.
->
-> Changing `VOYAGE_EMBED_MODEL` or `VOYAGE_EMBED_DIM` invalidates every stored vector and requires re-creating the Atlas index. Treat it as a migration and re-index, not a config tweak.
+---
 
 ## Usage
 
-1. **Set your profile** — add your target roles, locations, and resume data in the dashboard's Profile section. This is also what gets chunked and embedded for retrieval.
-2. **Let discovery run** — the scheduled job pulls new listings daily; check the Dashboard for the "New" column
-3. **Review a match** — click a job card to see the JD match score and Present/Missing keyword lists
-4. **Select keywords** — check which missing keywords to incorporate, then tailor the resume
-5. **Review the `.tex`** — check the tailored resume diff before staging
-6. **Apply** — open the application page in Chrome, let the extension autofill known fields, review, attach your resume, and submit manually
-7. **Track** — monitor pipeline status and follow-up reminders from the Dashboard
+1. **My Details** — enter your experience, skills, education and certifications. Saving re-cuts
+   your profile into retrieval chunks.
+2. **Settings** — save your target roles, skills and locations, switch companies on or off, and
+   **Run discovery** (optionally "up to N new").
+3. **Capture** — on any other career page, open the extension popup and press **Capture**.
+4. **Analyze / Refresh** — scores every unscored job; progress appears as toasts.
+5. **Job details → Keywords** — review Present, Missing and risk flags; tick the Missing keywords
+   you can honestly claim. Nothing is ticked for you.
+6. **Preview** — review the tailored `.tex` diff, download `.tex` or PDF.
+7. **Apply** — open the application in Chrome, press **Fill this form**, answer anything outlined
+   amber, attach the resume, and submit it yourself.
+8. **Pipeline / Applications** — track where each application stands.
+
+---
 
 ## Project Structure
 
-Organized by **capability**, not by technical layer. Each module is a vertical slice.
-
-**This is the target layout.** Today `app/web/`, `app/extension/`, `server/` and `templates/`
-exist; `ai/` is empty. See [Current state](#current-state).
-
 ```
-jobpilot/
+job-search/
 ├── app/
-│   ├── web/                        # Next.js dashboard (JavaScript)
-│   │   ├── public/
-│   │   └── src/
-│   │       ├── app/                #   App Router — routes AND screens
-│   │       │                       #   incl. login/ signup/ and jobs/[id]/{keywords,preview}
-│   │       ├── component/          #   app components + ui/ primitives
-│   │       ├── layout/             #   AppShell · Sidebar · Topbar
-│   │       ├── routes/             #   path constants + sidebar IA
-│   │       ├── lib/                #   axiosInstance.js — the one client + ApiError
-│   │       ├── services/           #   one file per API module; screens import "@/services"
-│   │       ├── data/               #   JSON fixtures, for screens not yet on services/
-│   │       ├── hook/  util/        #   util/schema.js — Yup schemas + their initialValues
-│   │       └── style/              #   globals.scss (SCSS throughout)
-│   └── extension/                  # Chrome extension (MV3, TypeScript)
-│       └── src/
-│           ├── content.ts          #   thin entrypoints
-│           ├── background.ts
-│           ├── popup/
-│           ├── features/           #   fieldFill · ats · jobContext · answerBank
-│           └── shared/
+│   ├── web/src/
+│   │   ├── app/            App Router — routes and screens, incl. login/ signup/ jobs/[id]/{keywords,preview}
+│   │   ├── component/      app components + ui/ primitives
+│   │   ├── layout/         AppShell · Sidebar · Topbar
+│   │   ├── services/       one file per API resource; screens import "@/services"
+│   │   ├── lib/            the axios instances and ApiError
+│   │   ├── hook/ util/ routes/ data/
+│   │   └── style/          globals.scss — the only stylesheet
+│   └── extension/src/
+│       ├── content.ts  background.ts  popup/       thin entrypoints
+│       ├── features/       fieldFill · ats (workday, greenhouse, lever, linkedin) · capture
+│       │                   · jobContext · answerBank · panel
+│       └── shared/
 │
-├── server/                         # REST APIs + local MongoDB
-│   ├── main.py                     #   mounts module routers, nothing else
-│   ├── errors.py                   #   NotFound/Conflict/Invalid → HTTP, in one handler
-│   ├── modules/                    #   job · match · resume · application · event · profile
-│   │   └── <name>/
-│   │       ├── __init__.py         #     public interface
-│   │       ├── router.py
-│   │       ├── service.py          #     domain logic and this module's queries
-│   │       └── models.py
-│   └── config/                     #   __init__.py (loads .env) · database.py
+├── server/                 REST API — the only process with a database connection
+│   ├── main.py             mounts each module's router, CORS, error handler
+│   ├── modules/<name>/     __init__ (public interface) · router · service · models
+│   │                       account · profile · preference · template · resume · resume_chunk
+│   │                       skill_inventory · job · job_description · career_source · match
+│   │                       application · event · status · error_log
+│   ├── config/             settings, database, auth deps
+│   ├── seed_*.py  import_*.py  migrate_*.py  backfill_*.py   one-off scripts
+│   └── tests/
 │
-├── ai/                             # agents, RAG, orchestration, MCP
-│   ├── agents/                     #   discovery · matching · tailoring · application · tracking
-│   ├── rag/                        #   chunking · indexing · two-stage retrieval
-│   │   ├── embeddings.py           #     Voyage embeddings — one of two files that may call Voyage
-│   │   ├── reranking.py            #     Voyage reranker — the other
-│   │   ├── atlas.py                #     the Atlas client
-│   │   └── repository.py           #     the only place Atlas collections are touched
-│   ├── eval/                       #   Ragas: datasets · metrics · judge (local) · run
-│   ├── orchestration/              #   graph.py · state.py · interrupts.py
-│   ├── mcp_servers/                #   jobpilot_api · job_search · indeed · linkedin · latex · browser
-│   └── config/                     #   settings.py · llm.py · mcp.py
+├── ai/                     the AI tier — no database, no credentials
+│   ├── main.py             mounts each api module at /api/{PREFIX}
+│   ├── api/                discovery · capture · analysis · scoring · tailoring · settings
+│   ├── agents/             parsing · analysis · matching · inventory · tailoring · evidence
+│   ├── rag/                embeddings · indexing · retrieval (Voyage)
+│   ├── sources/            career-page scraping: http (robots-checked fetcher) · base · run · workday
+│   ├── mcp_servers/jobpilot_api/   HTTP client for the server's API (not yet an MCP server)
+│   ├── config/             llm (the one LLM client and its roles) · errors · paths · error_log
+│   └── tests/
 │
-├── templates/
-│   ├── base_resume.tex             # unused — comments describe \VAR{}/\BLOCK{}, nothing reads it
-│   └── Template*/                  # the six live designs, {{TOKEN}} placeholders
-└── 01-PRD…05-Roadmap.md            # planning documents (see below)
+├── templates/              six resume designs (Template1…6) with {{TOKEN}} placeholders
+├── docs/                   06 data model · 07 PDF setup · 08 career-page registry
+└── 01-PRD … 05-Roadmap     planning documents
 ```
 
-Server modules are named after the **resource** they expose; agents after the **capability** they perform.
+---
+
+## Tests
+
+```bash
+cd server && .venv/bin/python -m pytest      # 155 tests, against a throwaway jobpilot_test database
+cd ai && .venv/bin/python -m pytest          # 267 tests, model and API faked
+cd ai && .venv/bin/python -m pytest -m llm   # 3 adversarial tests against the real local model
+cd app/extension && npm run typecheck
+```
+
+The server suite needs a running local `mongod`. `ai/tests/test_guardrails.py` scans every tier's
+source for the invariants: no hosted LLM endpoint, secrets server-side only, loopback binds, no
+form submission anywhere in the extension, and no imports across tiers or module internals.
+
+---
 
 ## Documentation
 
 | Doc | Contents |
 |---|---|
-| [01 — Product Requirements Document](01-PRD-Product-Requirements-Document.md) | Vision, problem, goals, scope, success metrics |
-| [02 — Software Requirements Specification](02-SRS-Software-Requirements-Specification.md) | Functional & non-functional requirements |
-| [03 — Architecture & System Design](03-Architecture-System-Design.md) | Component design, data architecture, deployment |
+| [01 — Product Requirements](01-PRD-Product-Requirements-Document.md) | Vision, problem, goals, scope, success metrics |
+| [02 — Software Requirements](02-SRS-Software-Requirements-Specification.md) | Functional and non-functional requirements |
+| [03 — Architecture & System Design](03-Architecture-System-Design.md) | Component design, data architecture, sequence flows |
 | [04 — UI/UX Wireframes & User Flows](04-UIUX-Wireframes-User-Flows.md) | Screens and end-to-end flows |
-| [05 — Roadmap](05-Roadmap-Backlog.md) | Eleven phases, application first then agents — every task checkboxed and split API vs UI |
-| [06 — Data Model / ER](docs/06-Data-Model-ER.md) | ER diagram, every collection's fields and indexes, and where each guardrail is enforced in the schema |
-| [07 — PDF Setup (macOS)](docs/07-PDF-Setup-macOS.md) | Installing pdflatex and the packages the templates need, so the `.pdf` download works |
+| [05 — Roadmap](05-Roadmap-Backlog.md) | Twelve phases — every task, its id and its status |
+| [06 — Data Model / ER](docs/06-Data-Model-ER.md) | ER diagram, every collection's fields and indexes |
+| [07 — PDF Setup (macOS)](docs/07-PDF-Setup-macOS.md) | Installing pdflatex for the `.pdf` download |
+| [08 — Career-page scraping](docs/08-Career-Page-Scraping.md) | How postings are pulled from career pages, and the registry of 119 companies by platform |
+
+> **The planning documents (01–04) predate several decisions** and are wrong on them:
+> authentication was built (PRD §4 and SRS §42 rule it out); PDF compilation was built (SRS FR-4.4
+> says `.tex` only); there is one database rather than a local-plus-Atlas split; agents reach data
+> through `server`'s REST API rather than the MongoDB MCP Server (SRS FR-8.1); templating is
+> `{{TOKEN}}` substitution, not Jinja2; and Voyage is used for embeddings and reranking, which
+> narrows SRS NFR-3 to "all generation is local".
+
+---
 
 ## Roadmap
 
-**Make the whole application work end to end first, then make it intelligent.** Phases 1–4 build a
-product usable by hand. Phase 5 adds the first LLM. Phases 6–11 turn that into the agentic system.
-An agent writing into a half-built app cannot be judged — so the plumbing is finished first.
+**Make the whole application work end to end first, then make it intelligent.** Every task, its id
+and its status live in one place — **[05-Roadmap-Backlog.md](05-Roadmap-Backlog.md)** — and are not
+copied here, because a copy is a second roadmap that goes stale.
 
-Each phase is split by **API** and **UI**, because they rarely land together here: most screens were
-built before the backend and are still waiting to be wired to endpoints that already exist. A checked
-UI box means the screen is built, **not** that it talks to the API — that wiring is its own task.
+| Phase | Delivers | State |
+|---|---|---|
+| 1 | Sign in, and the profile everything hangs off | ✅ |
+| 2 | A resume built from that profile, downloadable | 🚧 |
+| 3 | Real jobs in the system, searchable and shortlistable | 🚧 |
+| 4 | Tracking what you applied to, and the preferences driving it | 🚧 |
+| 5 | A resume rectified against a specific job | ✅ |
+| 6 | Retrieval over your own resume | ✅ |
+| 7 | MCP tool servers | ⬜ |
+| 8 | LangGraph agents under a supervisor, with approval interrupts | ⬜ |
+| 9 | Form autofill in your own browser session | 🚧 |
+| 10 | Ragas faithfulness, guardrail tests, tracing | ⬜ |
+| 11 | What only real daily use reveals | ⬜ |
+| 12 | Postings pulled straight from company career pages, in eleven stages | 🚧 |
 
-#### Phase 1 — Authentication & Profile 🚧 API done, one UI wiring task left
-
-- **API**
-  - ✅ `accounts` with argon2 hashes; signup and login both issue a JWT
-  - ✅ `account` module — signup (name, email, password and nothing else), login,
-    refresh, read, partial update
-  - ✅ Profile as five collections keyed by `userId`, with name and email left on
-    `accounts` rather than copied into `profile`
-  - ✅ Server-side token enforcement; `userId` comes from the token, never the URL
-  - ✅ Access token refreshed by a longer-lived refresh token, so the 60-minute TTL
-    does not mean signing in every hour
-  - ✅ Retired the duplicate `user` module, which held plaintext passwords
-- **UI**
-  - ✅ Login, signup and sign-out, wired to `/api/account`
-  - ✅ Route guard, session in `sessionStorage` mirrored into Redux
-  - ✅ A 401 refreshes once and replays the call before dropping the session
-  - ✅ My Details screen, with Formik/Yup validation
-  - ⬜ Wire My Details to the profile API, only `role` persists today
-
-#### Phase 2 — Resume generation & download 🚧 downloads work, three tasks left
-
-- **API**
-  - ✅ `templates` collection, upload with token validation, style inference
-  - ✅ Render the signed-in user's profile into a template
-  - ✅ `.tex` download — from the browser, and `GET /template/download/{id}` as a file
-  - ✅ **PDF compilation** — `GET /resume/base/pdf` compiles the *stored* `.tex` with pdflatex,
-    so the PDF is the document on screen rather than a fresh render. 503 with an install hint
-    where no TeX engine exists
-- **UI**
-  - ✅ Resume Preview screen — Preview / Diff / Source tabs
-  - ✅ Template picker, and the Resume screen renders your real profile into it
-  - ✅ Preview tab offers `.pdf`, Source tab offers `.tex`
-  - 🟡 Rectification chat panel — laid out, inert until Phase 5
-- ✅ **A rendered `.tex` compiles under a TeX engine** — verified on BasicTeX / TeX Live 2026
-
-#### Phase 3 — Job scraping, search & shortlist ⬜ API only
-
-- **API**
-  - ✅ `job` module — dedup-hash create, list by status, shortlist
-  - ⬜ Indeed and SerpAPI sources
-  - ⬜ Content-hash dedup
-  - ⬜ Scheduled daily run *(needs Redis + Celery)*
-- **UI**
-  - ✅ Job Search, Shortlist and Job Details screens
-  - ⬜ Wire all three off `search.json` and onto the job API
-
-#### Phase 4 — Applications & Settings ⬜ API only
-
-- **API**
-  - ✅ `application` module — stage, record fill, status transitions, answer bank
-  - ⬜ Rebuild a preferences store for Settings
-  - ⬜ Follow-up drafts and Google Sheet sync
-- **UI**
-  - ✅ Pipeline board, Staged Applications, Settings screens
-  - ⬜ Wire them to the application API and real counts
-
-#### Phase 5 — LLM integration & resume rectification ⬜ not started
-
-- **API**
-  - ✅ `match` and `resume` modules
-  - ⬜ JD keyword extraction and Present/Missing diff
-  - ⬜ Tailor using **only** the keywords you ticked
-  - ⬜ Match scoring by embedding *(needs Atlas)*
-- **UI**
-  - ✅ Keyword Selection screen, starting with nothing checked
-  - ⬜ Wire it to real match data
-- ⬜ Validate a local LLM's tool-calling
-
-#### Phase 6 — RAG & retrieval ⬜ not started
-
-- **API**
-  - ⬜ Rebuild the RAG second hop — `resume_chunk_text` and text fetch by `chunk_id`
-  - ⬜ Chunk the profile into retrievable units
-  - ⬜ Re-index on profile edit
-- **AI tier**
-  - ⬜ Embed chunks into Atlas — ids and vectors only, never prose
-  - ⬜ Two-stage retrieval: `$vectorSearch` → fetch text → rerank
-  - ⬜ Atlas free tier + `$vectorSearch` index
-
-#### Phase 7 — MCP tool servers ⬜ not started
-
-- ⬜ `jobpilot_api` — the one way agents touch structural data
-- ⬜ `latex` — render a tailored `.tex`
-- ⬜ `job_search`, `indeed`, `linkedin`, `browser`
-
-#### Phase 8 — Agents & orchestration ⬜ not started
-
-- **AI tier**
-  - ⬜ Discovery, Match/Score, Tailor and Tracking agents
-  - ⬜ LangGraph supervisor with shared state
-  - ⬜ **Human-approval interrupts** at keyword selection and application review
-  - ⬜ Retry and error handling per step
-- **UI**
-  - ⬜ Surface an interrupt in the dashboard — the approval gate needs somewhere to happen
-
-#### Phase 9 — Application agent & Chrome extension 🚧 the extension fills forms
-
-- **Extension**
-  - ✅ MV3 scaffold, field detection by label / ARIA / placeholder
-  - ✅ Highlight every filled field, automatic resume attach
-  - ✅ Lever / Greenhouse / Workday adapters; LinkedIn Easy Apply fills the open step
-  - ✅ Unanswered questions come back to you instead of being guessed
-  - ⬜ LLM fallback for ambiguous fields — blocked on `ai/`
-- **API**
-  - ✅ Serve job context and the Q&A answer bank
-  - ⬜ Application agent coordinating the fill
-
-#### Phase 10 — Eval, guardrails & observability ⬜ not started
-
-- ⬜ Ragas suite — **faithfulness** is the automated no-fabrication check
-- ⬜ Eval datasets from real JDs and profile content, with a **local** judge
-- ⬜ No-fabrication and no-auto-submit test cases
-- ⬜ Langfuse or Phoenix, self-hosted
-
-#### Phase 11 — Daily use & polish ⬜ not started
-
-- ⬜ Bug fixes from actually running the workflow daily
-- ⬜ Q&A answer-bank refinement, local-model cost tuning
-- ⬜ Cover letter generation *(stretch)*
-
-### True of every phase
-
-- ⬜ **No tests**, removed on request, so no story meets the Definition of Done
-- ⬜ **`userId` comes from the URL, not the token**; any signed-in account can reach
-  another's profile
-
-Full detail, every task and its status: [`05-Roadmap-Backlog.md`](05-Roadmap-Backlog.md).
+---
 
 ## Design Principles
 
-- **Human approval at every consequential step.** Resume content and application submission both require explicit user action — nothing is fabricated or auto-submitted. The orchestrator pauses at two interrupts and cannot be configured past them.
-- **No fabrication.** Only keywords you explicitly check reach the tailored resume. Retrieval finds content you already have; it is never permission to claim something new.
-- **Local-first, stated precisely.** All generation runs on your hardware. Embedding and reranking use Voyage; nothing else leaves. See [What leaves your machine](#what-leaves-your-machine) rather than trusting a slogan.
-- **Measured, not assumed.** Ragas faithfulness is the automated proof that the no-fabrication rule holds. A guardrail without a test is a hope — and `server/` currently has none, which is why its guardrail stories are not marked Done.
-- **One tier, one database.** `server` owns the structural store, `ai` owns the vector store, and neither holds the other's connection string. The boundary is enforced by configuration, not by discipline.
-- **Real browser session for applying.** The Chrome extension fills forms inside your actual logged-in session rather than a separate automated browser — more reliable, and it avoids anti-bot detection.
-- **Single-user by design.** No multi-tenancy — kept intentionally simple for personal use.
-  *(Amended 2026-09-11: authentication **was** built. Accounts are argon2-hashed with JWT sessions,
-  and every profile row is keyed by `accounts._id`. The "no auth" half of this principle no longer
-  holds, and PRD §4 / SRS §42 need updating to match.)*
+- **No fabrication.** Only keywords you explicitly tick reach the tailored resume, and the server
+  refuses anything else. Every model answer that quotes a source is checked against that source
+  before it is used; retrieval finds what you already have and is never permission to claim more.
+- **No auto-submit.** The extension fills and highlights. It has no code path that submits a form,
+  clicks a submit control or dispatches a submit event.
+- **A human at every consequential step.** Keyword selection and application review are gates you
+  answer, not steps that run past you.
+- **Generation is local.** Every LLM call goes to Ollama by default; Voyage embedding and reranking
+  are the stated exception — see [What leaves your machine](#what-leaves-your-machine).
+- **Localhost only.** `server` and `ai` bind `127.0.0.1`; CORS admits the dashboard and the
+  extension.
+- **One database, one owner.** Only `server` connects to MongoDB; `ai` holds no URI and works
+  through the API with your forwarded token.
+- **Real browser session for applying.** The extension works inside your own logged-in session
+  rather than an automated browser.
+- **Single user, with real accounts.** Built for one person, but with argon2-hashed accounts and JWT
+  sessions, and every record keyed to its owner.
 
 ## License
 
