@@ -20,10 +20,11 @@ import logging
 import math
 import os
 import re
+import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 from urllib.parse import urlparse
 
@@ -53,6 +54,12 @@ INPUT_BUDGET = 0.60
 # Measured on Qwen3.5: English prose runs ~3.7 characters a token. Markdown, URLs
 # and code run denser, so the estimate leans low to keep the budget conservative.
 CHARS_PER_TOKEN = 3.0
+# A repair turn sends back this much of the reply that failed, not all of it. The model
+# needs the validation error to answer again, not its whole wrong answer — and a long
+# reply resent beside a second one of the same length is what overflowed the window.
+REPAIR_ECHO_CHARS = 1_500
+# What that turn adds to the prompt: the echo, the error and the instruction.
+REPAIR_TOKENS = math.ceil(REPAIR_ECHO_CHARS / CHARS_PER_TOKEN) + 150
 
 
 def _host(base_url: str) -> str:
@@ -127,7 +134,8 @@ def estimate_tokens(text: str) -> int:
 
 def check_budget(endpoint: Endpoint, system: str, prompt: str, max_tokens: int = 0) -> None:
     """The system prompt may take 15% of the window, the whole first turn 60%, and the
-    first turn plus the longest reply allowed must fit in the window at all."""
+    first turn, a repair turn and the longest reply allowed must fit in the window at
+    all — a retry that overflows is truncated by Ollama rather than refused."""
     system_tokens = estimate_tokens(system)
     system_limit = int(endpoint.num_ctx * SYSTEM_BUDGET)
     if system_tokens > system_limit:
@@ -144,10 +152,10 @@ def check_budget(endpoint: Endpoint, system: str, prompt: str, max_tokens: int =
             f"({INPUT_BUDGET:.0%} of {endpoint.num_ctx}) — trim the input before calling"
         )
 
-    if input_tokens + max_tokens > endpoint.num_ctx:
+    if input_tokens + REPAIR_TOKENS + max_tokens > endpoint.num_ctx:
         raise BudgetExceeded(
-            f"prompt (~{input_tokens}) plus a {max_tokens}-token reply does not fit a "
-            f"{endpoint.num_ctx}-token window"
+            f"prompt (~{input_tokens}) plus a {max_tokens}-token reply and a repair turn "
+            f"does not fit a {endpoint.num_ctx}-token window"
         )
 
 
@@ -176,6 +184,34 @@ def as_document(name: str, text: str) -> str:
 # --- usage accounting --------------------------------------------------------
 
 
+@dataclass(frozen=True)
+class Call:
+    """One request to the model, as the usage log stores it. `step` is the shape asked
+    for, which names the pipeline step; `version` is that step's prompt version, so a
+    change in cost can be traced to the prompt that caused it."""
+
+    step: str
+    model: str
+    version: int | None
+    attempt: int
+    prompt_tokens: int
+    cached_tokens: int
+    completion_tokens: int
+    elapsed_ms: int
+
+    def as_payload(self) -> dict[str, Any]:
+        return {
+            "step": self.step,
+            "model": self.model,
+            "promptVersion": self.version,
+            "attempt": self.attempt,
+            "promptTokens": self.prompt_tokens,
+            "cachedTokens": self.cached_tokens,
+            "completionTokens": self.completion_tokens,
+            "elapsedMs": self.elapsed_ms,
+        }
+
+
 @dataclass
 class Usage:
     """Token counts for one run. Prompt and completion counts are the server's own;
@@ -184,20 +220,26 @@ class Usage:
 
     calls: int = 0
     prompt_tokens: int = 0
+    cached_tokens: int = 0
     completion_tokens: int = 0
     system_tokens: int = 0
+    # Every call in order, for the usage log. The totals above are their sums.
+    records: list[Call] = field(default_factory=list)
 
-    def add(self, prompt_tokens: int, completion_tokens: int, system_tokens: int) -> None:
+    def add(self, call: Call, system_tokens: int) -> None:
         self.calls += 1
-        self.prompt_tokens += prompt_tokens
-        self.completion_tokens += completion_tokens
+        self.prompt_tokens += call.prompt_tokens
+        self.cached_tokens += call.cached_tokens
+        self.completion_tokens += call.completion_tokens
         self.system_tokens += system_tokens
+        self.records.append(call)
 
     def summary(self) -> dict[str, int | float]:
         share = self.system_tokens / self.prompt_tokens if self.prompt_tokens else 0.0
         return {
             "calls": self.calls,
             "promptTokens": self.prompt_tokens,
+            "cachedTokens": self.cached_tokens,
             "completionTokens": self.completion_tokens,
             "systemTokens": self.system_tokens,
             "systemShare": round(share, 3),
@@ -220,18 +262,43 @@ def track_usage() -> Iterator[Usage]:
         _usage.reset(reset)
 
 
-def _record(messages: list[dict[str, str]], counts: dict[str, Any]) -> None:
-    prompt_tokens = int(counts.get("prompt_tokens") or 0)
-    completion_tokens = int(counts.get("completion_tokens") or 0)
+def _cached_tokens(counts: dict[str, Any]) -> int:
+    """How much of the prompt the server answered from its cache. OpenAI-compatible
+    servers that report it put it here; one that does not reads as zero."""
+    details = counts.get("prompt_tokens_details") or {}
+    return int(details.get("cached_tokens") or 0)
+
+
+def _record(
+    messages: list[dict[str, str]],
+    counts: dict[str, Any],
+    *,
+    step: str,
+    model: str,
+    version: int | None,
+    attempt: int,
+    elapsed_ms: int,
+) -> None:
+    call = Call(
+        step=step,
+        model=model,
+        version=version,
+        attempt=attempt,
+        prompt_tokens=int(counts.get("prompt_tokens") or 0),
+        cached_tokens=_cached_tokens(counts),
+        completion_tokens=int(counts.get("completion_tokens") or 0),
+        elapsed_ms=elapsed_ms,
+    )
     total_chars = sum(len(message["content"]) for message in messages) or 1
-    system_tokens = round(prompt_tokens * len(messages[0]["content"]) / total_chars)
+    system_tokens = round(call.prompt_tokens * len(messages[0]["content"]) / total_chars)
     logger.debug(
-        "llm call: %d prompt (~%d system) + %d completion tokens",
-        prompt_tokens, system_tokens, completion_tokens,
+        "llm call %s: %d prompt (~%d system, %d cached) + %d completion tokens in %dms",
+        step, call.prompt_tokens, system_tokens, call.cached_tokens, call.completion_tokens,
+        elapsed_ms,
     )  # fmt: skip
     usage = _usage.get()
     if usage is not None:
-        usage.add(prompt_tokens, completion_tokens, system_tokens)
+        usage.add(call, system_tokens)
 
 
 # --- generation --------------------------------------------------------------
@@ -266,8 +333,10 @@ async def generate[T: BaseModel](
     system: str,
     max_tokens: int = 2048,
     endpoint: Endpoint = DEFAULT,
+    version: int | None = None,
 ) -> T:
-    """Ask for one structured answer and hand back a validated model."""
+    """Ask for one structured answer and hand back a validated model. `version` is the
+    calling step's prompt version, recorded with the call's token counts."""
     check_budget(endpoint, system, prompt, max_tokens)
     schema = strict_schema(shape)
     messages: list[dict[str, str]] = [
@@ -276,14 +345,16 @@ async def generate[T: BaseModel](
     ]
 
     failure = ""
-    for _ in range(LLM_ATTEMPTS):
-        raw = await _complete(endpoint, messages, schema, shape.__name__, max_tokens)
+    for attempt in range(1, LLM_ATTEMPTS + 1):
+        raw = await _complete(
+            endpoint, messages, schema, shape.__name__, max_tokens, version, attempt
+        )
         try:
             return shape.model_validate_json(raw)
         except ValidationError as exc:
             failure = _first_errors(exc)
             messages = messages[:2] + [
-                {"role": "assistant", "content": raw},
+                {"role": "assistant", "content": raw[:REPAIR_ECHO_CHARS]},
                 {
                     "role": "user",
                     "content": (
@@ -304,6 +375,8 @@ async def _complete(
     schema: dict[str, Any],
     name: str,
     max_tokens: int,
+    version: int | None = None,
+    attempt: int = 1,
 ) -> str:
     payload: dict[str, Any] = {
         "model": endpoint.model,
@@ -328,6 +401,7 @@ async def _complete(
         payload["chat_template_kwargs"] = {"enable_thinking": False}
         payload["reasoning_effort"] = "none"
 
+    started = time.perf_counter()
     async with httpx.AsyncClient(timeout=LLM_TIMEOUT) as client:
         response = await client.post(
             f"{endpoint.base_url.rstrip('/')}/chat/completions",
@@ -340,7 +414,15 @@ async def _complete(
             )
         body = response.json()
 
-    _record(messages, body.get("usage") or {})
+    _record(
+        messages,
+        body.get("usage") or {},
+        step=name,
+        model=endpoint.provenance,
+        version=version,
+        attempt=attempt,
+        elapsed_ms=round((time.perf_counter() - started) * 1000),
+    )
     try:
         return body["choices"][0]["message"]["content"] or ""
     except (KeyError, IndexError) as exc:

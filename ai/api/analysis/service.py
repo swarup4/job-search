@@ -22,6 +22,7 @@ from agents import analysis
 from agents.analysis import AnalysisOutcome
 from api.analysis.models import AnalysisRequest, AnalysisRun
 from api.events import EventLog
+from api.usage import store_usage
 from config.errors import BadGateway, Conflict, Invalid
 from config.llm import track_usage
 from mcp_servers.jobpilot_api import client
@@ -112,3 +113,4 @@ async def _execute(run: AnalysisRun, token: str) -> None:
                 {"type": "run_done", "status": run.status, "error": run.error,
                  "finishedAt": run.finishedAt.isoformat(), "usage": usage.summary()}
             )  # fmt: skip
+            await store_usage("analysis", run.id, usage)

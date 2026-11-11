@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import sys
+import weakref
 from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field
@@ -81,8 +82,10 @@ class Inventory(BaseModel):
 
 
 # Two jobs scored side by side would otherwise both find no inventory and both pay to
-# build one.
-_building = asyncio.Lock()
+# build one. One lock per profile, not one for the tier: a single lock made every
+# account wait behind whichever was building. Weak, so a lock lasts only as long as
+# something is holding or waiting on it.
+_building: weakref.WeakValueDictionary[str, asyncio.Lock] = weakref.WeakValueDictionary()
 
 
 def profile_hash(corpus: str) -> str:
@@ -96,7 +99,8 @@ async def ensure_inventory(profile: dict[str, Any]) -> Inventory:
     """The stored inventory if it was read from this profile, else a fresh one."""
     corpus = profile_corpus(profile)
     digest = profile_hash(corpus)
-    async with _building:
+    lock = _building.setdefault(digest, asyncio.Lock())
+    async with lock:
         stored = await jobpilot_api.get_skill_inventory()
         if stored is not None and stored.get("profileHash") == digest:
             return Inventory.model_validate(stored)
@@ -112,6 +116,7 @@ async def build_inventory(corpus: str, digest: str) -> Inventory:
         system=INVENTORY_SYSTEM,
         max_tokens=MAX_OUTPUT_TOKENS,
         endpoint=INVENTORY,
+        version=INVENTORY_VERSION,
     )
     flat_profile = flatten(corpus)
     skills: list[Skill] = []

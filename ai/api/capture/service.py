@@ -16,6 +16,7 @@ import httpx
 
 from agents import parsing
 from api.capture.models import CaptureResult
+from api.usage import store_usage
 from config.errors import BadGateway, Unauthorized, Upstream
 from config.llm import GenerationError, track_usage
 from mcp_servers.jobpilot_api import client
@@ -29,7 +30,11 @@ EXPIRED = "Your session expired. Sign in again and capture the page again."
 async def process_capture(description_id: str) -> CaptureResult:
     try:
         with track_usage() as usage:
-            outcome = await parsing.parse_description(description_id)
+            try:
+                outcome = await parsing.parse_description(description_id)
+            finally:
+                # A failed parse still spent its tokens.
+                await store_usage("capture", None, usage)
         logger.info("capture %s: tokens %s", description_id, usage.summary())
         if not outcome.parsed or outcome.jobId is None:
             return CaptureResult(parsed=False, reason=outcome.reason)

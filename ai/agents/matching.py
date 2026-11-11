@@ -54,6 +54,10 @@ MAX_JD_CHARS = 12_000
 # Bumped when BRIEF_SYSTEM or the brief's shape changes, so stored briefs are re-read.
 BRIEF_VERSION = 1
 
+# Bumped when COMPARE_SYSTEM, the comparison prompt's layout or its shape changes. It
+# is stored on every match, so a score can be traced to the prompt that produced it.
+COMPARE_VERSION = 1
+
 # The inventory listing is the bulk of a comparison prompt. A shortened quote is
 # enough for the model to tell skills apart; the full quote stays in the store.
 LISTED_EVIDENCE_CHARS = 100
@@ -225,6 +229,7 @@ async def rectify(job_id: str, brief: Brief | None = None) -> dict[str, Any]:
         ],
         "risks": [{"key": item.key, "title": item.title, "detail": item.detail} for item in risks],
         "modelName": MATCH.provenance,
+        "promptVersion": COMPARE_VERSION,
     }
     return await jobpilot_api.write_match(payload)
 
@@ -253,7 +258,11 @@ async def ensure_brief(description: dict[str, Any] | None, job: dict[str, Any]) 
 async def build_brief(jd_text: str) -> Brief:
     """Read a JD into requirements and constraints, keeping only what it backs up."""
     draft = await generate(
-        BriefDraft, as_document("job_description", jd_text), system=BRIEF_SYSTEM, endpoint=BRIEF
+        BriefDraft,
+        as_document("job_description", jd_text),
+        system=BRIEF_SYSTEM,
+        endpoint=BRIEF,
+        version=BRIEF_VERSION,
     )
 
     haystack = flatten(jd_text)
@@ -337,6 +346,7 @@ async def compare(
         _comparison_prompt(undecided, inventory, brief, job, profile),
         system=COMPARE_SYSTEM,
         endpoint=MATCH,
+        version=COMPARE_VERSION,
     )
 
     known_ids = {skill.id for skill in inventory.skills}
