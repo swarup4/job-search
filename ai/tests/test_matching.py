@@ -93,7 +93,7 @@ def answers(*replies: object, prompts: list[str] | None = None):
     """Stand in for the model, one reply per call, in order — recording each prompt."""
     queue = list(replies)
 
-    async def fake(shape, prompt, *, system, max_tokens=2048, endpoint=None):
+    async def fake(shape, prompt, *, system, max_tokens=2048, endpoint=None, version=None):
         if prompts is not None:
             prompts.append(prompt)
         return queue.pop(0)

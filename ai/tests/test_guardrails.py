@@ -72,7 +72,9 @@ def hits(pattern: str, *roots: str, flags: int = 0, suffixes: set[str] = CODE) -
     for path in files(*roots, suffixes=suffixes):
         for number, line in enumerate(path.read_text(errors="ignore").splitlines(), 1):
             if regex.search(line):
-                found.append(f"{path.relative_to(REPO)}:{number}: {line.strip()[:120]}")
+                # Forward slashes on every platform: the tests compare these paths.
+                where = path.relative_to(REPO).as_posix()
+                found.append(f"{where}:{number}: {line.strip()[:120]}")
     return found
 
 

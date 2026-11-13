@@ -61,6 +61,11 @@ CONNECTIVES = frozenset(
 )
 
 
+# Bumped when TAILOR_SYSTEM, the placement prompt's layout or its shape changes. Stored
+# on every tailored resume.
+TAILOR_VERSION = 1
+
+
 class SelectionGateNotPassed(RuntimeError):
     """Tailoring asked for before the user answered the interrupt."""
 
@@ -138,6 +143,7 @@ async def tailor(job_id: str) -> dict[str, Any]:
             "incorporated": [item.keyword for item in accepted],
             "declined": [item.label for item in declined],
             "changes": changes,
+            "promptVersion": TAILOR_VERSION,
         }
     )
 
@@ -182,6 +188,7 @@ async def plan_placements(
         f"Bullet points:\n{bullets}\n\n"
         f"Skill groups:\n{skills}",
         system=TAILOR_SYSTEM,
+        version=TAILOR_VERSION,
     )
 
 
