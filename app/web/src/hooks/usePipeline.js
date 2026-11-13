@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ApiError, getBoard, getBoardColumn } from "@/services";
+import { ago } from "@/util/helper";
 
 /** Cards loaded per column at a time; "Show more" fetches the next page. */
 const PAGE = 5;
@@ -120,16 +121,6 @@ function patchColumn(state, key, changes) {
 
 function fileName(path) {
     return path ? path.split("/").pop() : null;
-}
-
-function ago(timestamp) {
-    if (!timestamp) return null;
-    const minutes = Math.round((Date.now() - new Date(timestamp).getTime()) / 60000);
-    if (minutes < 1) return "just now";
-    if (minutes < 60) return `${minutes}m ago`;
-    if (minutes < 60 * 24) return `${Math.round(minutes / 60)}h ago`;
-    if (minutes < 60 * 24 * 7) return `${Math.round(minutes / (60 * 24))}d ago`;
-    return new Date(timestamp).toLocaleDateString(undefined, { dateStyle: "medium" });
 }
 
 function messageOf(failure, fallback) {

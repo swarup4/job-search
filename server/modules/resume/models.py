@@ -24,6 +24,8 @@ class ResumeStore(BaseModel):
     incorporated: list[str] = Field(default_factory=list)
     declined: list[str] = Field(default_factory=list)
     changes: list[LineChange] = Field(default_factory=list)
+    # The tailoring prompt's version in the AI tier.
+    promptVersion: int | None = Field(default=None, ge=1)
 
 
 class TailoredResume(Document):
@@ -41,6 +43,7 @@ class TailoredResume(Document):
     declined: list[str] = Field(default_factory=list)
     changes: list[LineChange] = Field(default_factory=list)
     version: int = Field(default=1, ge=1)
+    promptVersion: int | None = None
 
     # The audit trail NFR-8 requires: every changed line traces back to these.
     selectedKeys: list[str] = Field(default_factory=list)
@@ -50,8 +53,16 @@ class TailoredResume(Document):
     class Settings:
         name = "resumes"
         indexes = [
+            # Versions count per user per job. Without `userId` two accounts tailoring
+            # the same shared posting both tried to store version 1. A database created
+            # before this needs `migrate_per_user_indexes.py`.
             pymongo.IndexModel(
-                [("jobId", pymongo.ASCENDING), ("version", pymongo.DESCENDING)], unique=True
+                [
+                    ("userId", pymongo.ASCENDING),
+                    ("jobId", pymongo.ASCENDING),
+                    ("version", pymongo.DESCENDING),
+                ],
+                unique=True,
             ),
         ]
 
@@ -70,6 +81,7 @@ class ResumeRead(BaseModel):
     declined: list[str] = Field(default_factory=list)
     changes: list[LineChange] = Field(default_factory=list)
     version: int
+    promptVersion: int | None = None
     selectedKeys: list[str]
     renderedAt: datetime
 

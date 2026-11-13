@@ -10,6 +10,7 @@ from modules.application import AnswerBank, ApplicantProfile, Application
 from modules.career_source import CareerSource
 from modules.job import Job
 from modules.job_description import JobDescription
+from modules.llm_usage import LlmUsage
 from modules.match import Match
 from modules.preference import Preference
 from modules.profile import Certification, Education, Experience, Profile, Skill
@@ -49,6 +50,7 @@ def document_models() -> list[type]:
         Template,
         CareerSource,
         Preference,
+        LlmUsage,
     ]
 
 

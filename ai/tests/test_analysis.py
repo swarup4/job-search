@@ -75,7 +75,7 @@ def fake(monkeypatch: pytest.MonkeyPatch) -> FakeClient:
     monkeypatch.setattr(analysis, "client", client)
     monkeypatch.setattr(analysis, "VoyageEmbeddings", FakeVoyage)
 
-    async def proposes(shape, prompt, *, system, max_tokens=2048):
+    async def proposes(shape, prompt, *, system, max_tokens=2048, version=None):
         return JobDetails(
             experience="6-10 years", salary="40 LPA", workMode="hybrid", jobType="contract"
         )

@@ -39,7 +39,7 @@ function called from an API endpoint.
 
 | Area | Status |
 |---|---|
-| **Dashboard** (`app/web`) | **Built and wired.** 13 screens on the live API — pipeline board, search, shortlist, job details, keyword selection, tailored resume preview, resume, applications, my details, settings, login, signup. My Details still reads one value (`resumeFile`) from a fixture. The resume chat panel is laid out but inert |
+| **Dashboard** (`app/web`) | **Built and wired.** 13 screens on the live API — pipeline board, search, shortlist, job details, keyword selection, tailored resume preview, resume, applications, my details, settings, login, signup. No screen reads a fixture. The resume chat panel is laid out but inert |
 | **REST API** (`server`) | **Built.** 16 modules, 80 endpoints, 19 collections, Beanie over MongoDB. JWT auth on every route except signup, login and refresh |
 | **AI tier** (`ai`) | **Built, without agents.** Its own FastAPI server on `:8001` runs discovery, capture parsing, analysis, scoring and tailoring as background runs that stream progress over server-sent events |
 | **Job discovery** | **Workday only.** 41 companies registered (33 enabled), scraped from their public Workday feeds with no LLM. Every other platform is planned — roadmap Phase 12 |
@@ -293,7 +293,7 @@ job-search/
 │   │   ├── layout/         AppShell · Sidebar · Topbar
 │   │   ├── services/       one file per API resource; screens import "@/services"
 │   │   ├── lib/            the axios instances and ApiError
-│   │   ├── hook/ util/ routes/ data/
+│   │   ├── hook/ util/ routes/
 │   │   └── style/          globals.scss — the only stylesheet
 │   └── extension/src/
 │       ├── content.ts  background.ts  popup/       thin entrypoints

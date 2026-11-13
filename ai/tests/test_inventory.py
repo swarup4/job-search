@@ -3,6 +3,7 @@ cannot show."""
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 import pytest
@@ -64,7 +65,7 @@ def server(monkeypatch: pytest.MonkeyPatch) -> Server:
 def model(*replies: DraftInventory, prompts: list[str] | None = None):
     queue = list(replies)
 
-    async def fake(shape, prompt, *, system, max_tokens=2048, endpoint=None):
+    async def fake(shape, prompt, *, system, max_tokens=2048, endpoint=None, version=None):
         if prompts is not None:
             prompts.append(prompt)
         return queue.pop(0)
@@ -179,3 +180,46 @@ def test_the_hash_follows_the_profile_text() -> None:
     assert inventory.profile_hash(profile_corpus(PROFILE)) != inventory.profile_hash(
         profile_corpus(edited)
     )
+
+
+async def test_one_profile_being_read_does_not_hold_up_another(
+    monkeypatch: pytest.MonkeyPatch, server: Server
+) -> None:
+    """The build lock is per profile. One lock for the tier made every account wait
+    behind whichever inventory was being built."""
+    other = {**PROFILE, "name": "Another Candidate"}
+    started: list[str] = []
+    release = asyncio.Event()
+
+    async def slow(corpus: str, digest: str) -> inventory.Inventory:
+        started.append(digest)
+        await release.wait()
+        return inventory.Inventory(profileHash=digest, modelName="m", skills=[])
+
+    monkeypatch.setattr(inventory, "build_inventory", slow)
+
+    first = asyncio.create_task(inventory.ensure_inventory(PROFILE))
+    second = asyncio.create_task(inventory.ensure_inventory(other))
+    await asyncio.sleep(0.05)
+
+    # Both builds are under way at once; under a shared lock only one would be.
+    assert len(started) == 2 and started[0] != started[1]
+    release.set()
+    await asyncio.gather(first, second)
+
+
+async def test_the_same_profile_is_still_read_only_once(
+    monkeypatch: pytest.MonkeyPatch, server: Server
+) -> None:
+    builds: list[str] = []
+
+    async def build(corpus: str, digest: str) -> inventory.Inventory:
+        builds.append(digest)
+        await asyncio.sleep(0.01)
+        return inventory.Inventory(profileHash=digest, modelName="m", skills=[])
+
+    monkeypatch.setattr(inventory, "build_inventory", build)
+
+    await asyncio.gather(inventory.ensure_inventory(PROFILE), inventory.ensure_inventory(PROFILE))
+
+    assert len(builds) == 1

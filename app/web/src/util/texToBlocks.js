@@ -3,7 +3,7 @@
  *
  * It parses only the custom commands base_resume.tex actually emits — \section,
  * \skillrow, \jobtitle, \item, \certrow, \degreerow — and treats everything else as
- * text. That is deliberate: parsing the document rather than re-reading profile.json
+ * text. That is deliberate: parsing the document rather than re-reading the profile
  * means the preview shows the SAME lines as the Diff and Source views, including any
  * rewrite the user accepted. Add a command to the template and you add it here too.
  */

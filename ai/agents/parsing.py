@@ -35,6 +35,9 @@ MAX_PAGE_CHARS = 16_000
 # restating the JD, and a filter every job matches is not a filter.
 MAX_STACK = 20
 
+# Bumped when PARSE_SYSTEM or the parsed shape changes. Recorded with the call's usage.
+PARSE_VERSION = 1
+
 JOB_TYPES = {"full_time", "contract", "part_time", "internship"}
 WORK_MODES = {"on_site", "hybrid", "remote"}
 
@@ -100,6 +103,7 @@ async def parse_description(description_id: str) -> ParseOutcome:
         ParsedPosting,
         as_document("career_page", page),
         system=PARSE_SYSTEM,
+        version=PARSE_VERSION,
     )
 
     flat = _flatten(page)

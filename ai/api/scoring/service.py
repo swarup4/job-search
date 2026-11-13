@@ -24,6 +24,7 @@ from fastapi import Request, Response, status
 from agents import matching
 from api.events import EventLog
 from api.scoring.models import ScoringResult, ScoringRun
+from api.usage import store_usage
 from config.errors import Conflict
 from config.llm import track_usage
 from mcp_servers.jobpilot_api import client
@@ -117,6 +118,7 @@ async def _execute(run: ScoringRun, token: str, log: EventLog) -> None:
                  "scored": run.scored, "failed": run.failed,
                  "finishedAt": run.finishedAt.isoformat(), "usage": usage.summary()}
             )  # fmt: skip
+            await store_usage("scoring", run.id, usage)
 
 
 async def _score_one(job: dict[str, str], log: EventLog) -> ScoringResult:

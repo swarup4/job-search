@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JobPilot Database Map</title>
+<style>
+:root{
+  --bg:#f7f7f5;--surface:#ffffff;--surface-2:#f0f0ed;--text:#1c1c1a;--muted:#6b6b66;--border:#e2e2dd;
+  --accent:#2f5bd3;--accent-soft:#e8eefc;--warn:#9a6400;--warn-soft:#fdf3e0;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#141413;--surface:#1d1d1b;--surface-2:#262624;--text:#ecebe6;--muted:#9c9b94;--border:#34342f;
+  --accent:#8aa8ff;--accent-soft:#232c45;--warn:#f0b54a;--warn-soft:#3a2e17;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#141413;--surface:#1d1d1b;--surface-2:#262624;--text:#ecebe6;--muted:#9c9b94;--border:#34342f;
+  --accent:#8aa8ff;--accent-soft:#232c45;--warn:#f0b54a;--warn-soft:#3a2e17;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+a{color:var(--accent)}
+header{padding:16px 16px 0}
+h1{font-size:22px;margin:0 0 4px}
+.sub{color:var(--muted);margin:0 0 16px}
+nav.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);overflow-x:auto}
+nav.tabs button{background:none;border:0;border-bottom:2px solid transparent;color:var(--muted);padding:10px 14px;font:inherit;font-weight:600;cursor:pointer;white-space:nowrap}
+nav.tabs button.on{color:var(--text);border-color:var(--accent)}
+main{padding:12px 16px 16px}
+section{display:none}section.on{display:block}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px}
+.panel h2{font-size:16px;margin:0 0 8px}
+.panel p{margin:4px 0 10px;color:var(--muted)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px}
+.card .n{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums}
+.card .l{color:var(--muted);font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:12px}
+code,.mono{font-family:var(--mono);font-size:12px}
+.tw{overflow-x:auto}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:600;white-space:nowrap}
+.pill.key{background:var(--accent-soft);color:var(--accent)}
+.pill.gate{background:var(--warn-soft);color:var(--warn)}
+.ctl{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin-bottom:10px}
+.ctl select{padding:7px 8px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);color:var(--text);font:inherit}
+.ctl label{color:var(--muted);font-size:13px;display:flex;gap:6px;align-items:center}
+.zoom{display:flex;gap:6px;align-items:center}
+.zoom button,.tool{background:var(--surface-2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:3px 10px;cursor:pointer;font:inherit}
+.zoom output{min-width:48px;text-align:center;font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px}
+.why{color:var(--muted);font-size:12px;margin:0 0 8px}
+.diagram{overflow:auto;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;height:calc(100vh - 230px);min-height:360px;cursor:grab;touch-action:none}
+.diagram.drag{cursor:grabbing;user-select:none}
+.diagram svg{max-width:none!important;display:block}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);margin-bottom:8px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;border:2px solid;vertical-align:-2px;margin-right:4px}
+.legend i.dash{border-style:dashed}
+.layout{display:grid;grid-template-columns:280px minmax(0,1fr);gap:16px}
+@media (max-width:860px){.layout{grid-template-columns:minmax(0,1fr)}.side{position:static}.list{max-height:260px!important}}
+.side{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px;align-self:start;position:sticky;top:10px}
+.side input{width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);color:var(--text);font:inherit;margin-bottom:8px}
+.list{max-height:calc(100vh - 170px);overflow:auto}
+.list .grp{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;padding:10px 6px 4px}
+.list button{display:block;width:100%;text-align:left;background:none;border:0;padding:5px 8px;border-radius:6px;color:var(--text);font:12px var(--mono);cursor:pointer}
+.list button:hover{background:var(--surface-2)}.list button.on{background:var(--accent-soft)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+pre.box{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:12px;overflow:auto;font:12px/1.5 var(--mono);margin:0}
+</style>
+</head>
+<body>
+<header>
+  <h1>JobPilot Database Map</h1>
+  <p class="sub">One MongoDB Atlas database, <code>jobpilot</code>, with 19 collections. The <code>server</code> tier owns it, one module per collection group. The <code>ai</code> tier reaches it only through the server's REST API. Drawn from the Beanie models in <code>server/modules/*/models.py</code> on 13 Nov 2026. <a href="09-System-Design-Diagrams.html">← System design</a></p>
+  <nav class="tabs">
+    <button data-t="er" class="on">ER diagram</button>
+    <button data-t="ov">Overview</button>
+    <button data-t="cl">Collections</button>
+  </nav>
+</header>
+<main>
+<section id="er" class="on">
+  <div class="ctl">
+    <select id="view" aria-label="Diagram view"></select>
+    <label><input type="checkbox" id="acct" checked> show links to accounts</label>
+    <span class="zoom">
+      <button data-z="-" title="Zoom out (−)">−</button>
+      <output id="pct">100%</output>
+      <button data-z="+" title="Zoom in (+)">+</button>
+      <button data-z="fit" title="Fit width (0)">fit</button>
+      <button data-z="1" title="Actual size">1:1</button>
+    </span>
+    <button class="tool" id="dl">Download SVG</button>
+  </div>
+  <div class="legend" id="legend"></div>
+  <p class="why" id="note"></p>
+  <div class="diagram" id="box"></div>
+</section>
+<section id="ov"></section>
+<section id="cl">
+  <div class="layout">
+    <aside class="side">
+      <input id="q" placeholder="Filter collections or fields…" autocomplete="off">
+      <div class="list" id="list"></div>
+    </aside>
+    <div id="detail"></div>
+  </div>
+</section>
+</main>
+
+<script>
+// ---------- Data (mirrors server/modules/*/models.py) ----------
+// Field: [name, type, key ('PK' | 'FK' | 'UK' | ''), ref (target id, list of ids for a soft link, or ''), note, cardinality]
+// cardinality is Mermaid's, read from this collection to the target; default '}o--||' (many here, exactly one there).
+// Array/Object fields are stored INSIDE the document; the note lists their sub-fields.
+const GROUPS = {
+  identity:  { label: 'Account & profile' },
+  retrieval: { label: 'Built for the AI tier' },
+  pipeline:  { label: 'Your pipeline' },
+  shared:    { label: 'Shared by every account' },
+};
+const PAL = {
+  blue:    { light: ['#e3ecff', '#3b6fe0'], dark: ['#1f2c4d', '#7ea2ff'] },
+  orange:  { light: ['#ffe8d9', '#e0702b'], dark: ['#3d2618', '#ff9d5c'] },
+  green:   { light: ['#dcf5e6', '#2e9a5a'], dark: ['#183527', '#5fd394'] },
+  purple:  { light: ['#f3e3ff', '#9147d1'], dark: ['#2f1f42', '#c18bff'] },
+  yellow:  { light: ['#fff4c9', '#c79a00'], dark: ['#3a3216', '#f2c94c'] },
+  pink:    { light: ['#ffe0e9', '#d9446e'], dark: ['#3d1c27', '#ff7a9e'] },
+  teal:    { light: ['#d9f4f6', '#1b9aa6'], dark: ['#14353a', '#4fd0dc'] },
+  indigo:  { light: ['#ece6ff', '#5f4bd6'], dark: ['#26214a', '#9d8cff'] },
+  lime:    { light: ['#e9f7d4', '#6aa121'], dark: ['#24361a', '#a5dd5c'] },
+  magenta: { light: ['#ffe3f6', '#c03aa4'], dark: ['#3b1a34', '#f07dd8'] },
+};
+// Hues follow the groups loosely: account & profile = blues/greens, AI tier = purples, pipeline = warm, shared = cool.
+const HUE = {
+  accounts: 'blue', profile: 'green', work_experience: 'lime', education: 'teal', skills: 'yellow', certifications: 'orange',
+  preferences: 'indigo', applicant_profile: 'pink', answer_bank: 'magenta',
+  resume_chunks: 'purple', skill_inventories: 'indigo',
+  matches: 'orange', resumes: 'yellow', applications: 'pink', base_resumes: 'lime',
+  jobs: 'blue', job_descriptions: 'teal', career_sources: 'green', templates: 'purple',
+};
+const colOf = id => PAL[HUE[id]][dark() ? 'dark' : 'light'];
+const ROWS = {
+  light: { odd: '#ffffff', even: '#f7f7f5', text: '#1c1c1a', stub: ['#ececea', '#a3a29b'] },
+  dark:  { odd: '#1d1d1b', even: '#262624', text: '#ecebe6', stub: ['#2a2a27', '#77766f'] },
+};
+const rows = () => ROWS[dark() ? 'dark' : 'light'];
+const ONE = '|o--||';   // zero or one here, exactly one there (a unique index on the reference)
+const USER = ['userId', 'ObjectId', 'FK', 'accounts', 'the owning account'];
+const USER1 = ['userId', 'ObjectId', 'FK', 'accounts', 'unique: one per account', ONE];
+const STAMPS = [['createdAt', 'Date', '', ''], ['updatedAt', 'Date', '', '']];
+const PROFILE_ROWS = ['profile', 'work_experience', 'education', 'skills', 'certifications'];
+
+const C = [
+  // ----- account & profile -----
+  { id: 'accounts', grp: 'identity', module: 'account', purpose: 'Who can sign in. One document per person; every per-account collection points at its _id.',
+    fields: [['_id','ObjectId','PK','','the account (userId everywhere else)'],['name','String','',''],['email','String','UK','','sign-in name'],['passwordHash','String','','','argon2 (pwdlib); never returned'],['role','String','','','job title shown in My details'],['profilePicture','String','',''],['active','Boolean','',''],['createdAt','Date','','']],
+    idx: ['email unique'] },
+  { id: 'profile', grp: 'identity', module: 'profile', purpose: 'The header of your resume: headline, contact, summary and links. Every edit re-chunks the whole profile into resume_chunks.',
+    fields: [['_id','ObjectId','PK',''], USER1, ['headline','String','',''],['phone','String','',''],['location','String','','','one free-text line'],['summary','String','',''],['links','Array','','','label, value'], ...STAMPS],
+    idx: ['userId unique'] },
+  { id: 'work_experience', grp: 'identity', module: 'profile', purpose: 'One role per document: the bullets and projects tailoring is allowed to reuse.',
+    fields: [['_id','ObjectId','PK',''], USER, ['title','String','',''],['company','String','',''],['location','String','',''],['start','String','','','free text, as written on the resume'],['end','String','',''],['current','Boolean','',''],['bullets','Array','','','strings'],['projects','Array','','','name, bullets[]'], ...STAMPS],
+    idx: ['userId'] },
+  { id: 'education', grp: 'identity', module: 'profile', purpose: 'One degree per document.',
+    fields: [['_id','ObjectId','PK',''], USER, ['degree','String','',''],['institution','String','',''],['location','String','',''],['start','String','',''],['end','String','',''], ...STAMPS],
+    idx: ['userId'] },
+  { id: 'skills', grp: 'identity', module: 'profile', purpose: 'One skill group per document, e.g. "Languages: Python, Go".',
+    fields: [['_id','ObjectId','PK',''], USER, ['name','String','','','the group'],['items','Array','','','strings'], ...STAMPS],
+    idx: ['userId'] },
+  { id: 'certifications', grp: 'identity', module: 'profile', purpose: 'One certification per document.',
+    fields: [['_id','ObjectId','PK',''], USER, ['name','String','',''],['issuer','String','',''],['year','String','',''], ...STAMPS],
+    idx: ['userId'] },
+  { id: 'preferences', grp: 'identity', module: 'preference', purpose: 'Your discovery targets. The ai tier reads them when a discovery run starts. An account with no row reads back defaults (roles AI/GenAI/LLM…, location India).',
+    fields: [['_id','ObjectId','PK',''], USER1, ['roles','Array','','','strings, at least one'],['skills','Array','','','strings'],['locations','Array','','','strings, at least one'],['workMode','String','','','on_site | hybrid | remote'],['minExperience','Number','','','0–50'],['createdAt','Date','',''],['updatedAt','Date','','']],
+    idx: ['userId unique'] },
+  { id: 'applicant_profile', grp: 'identity', module: 'application', purpose: 'What application forms ask and a resume does not carry. The extension reads it to fill forms; every field is optional.',
+    fields: [['_id','ObjectId','PK',''], USER1, ['address','Object','','','line1, line2, city, state, postalCode, country'],['demographics','Object','','','gender, race, veteranStatus, disabilityStatus (US EEO)'],['totalExperienceYears','Number','','','0–70'],['noticePeriod','String','',''],['earliestStartDate','String','',''],['currentSalary','String','',''],['expectedSalary','String','',''],['workAuthorization','String','',''],['requiresSponsorship','Boolean','',''],['willingToRelocate','Boolean','',''],['howHeard','String','',''],['referredBy','String','',''], ...STAMPS],
+    idx: ['userId unique'] },
+  { id: 'answer_bank', grp: 'identity', module: 'application', purpose: 'Reusable screening answers, one per question key, so the same question is never answered twice.',
+    fields: [['_id','ObjectId','PK',''], USER, ['key','String','','','unique together with userId'],['question','String','',''],['answer','String','',''],['tags','Array','','','strings'],['usedCount','Number','','','how often the extension reused it'], ...STAMPS],
+    idx: ['{userId, key} unique'] },
+
+  // ----- built for the AI tier -----
+  { id: 'resume_chunks', grp: 'retrieval', module: 'resume_chunk', purpose: 'Your profile cut into retrievable spans (one per headline, summary, bullet, skill, degree and certification) with their Voyage vectors. A re-index keeps a vector when sha256(section | text) is unchanged.',
+    fields: [['_id','ObjectId','PK',''], USER, ['section','String','','','headline | summary | experience | project | skill | education | certification'],['text','String','','','copy of the profile text, 3–2000 chars'],['sourceRef','String','','','human-readable context, e.g. role and company'],['sourceId','ObjectId','FK', PROFILE_ROWS,'the profile row the span was cut from: one of five collections','}o..o|'],['ordinal','Number','','','order within the profile'],['contentHash','String','','','unique together with userId'],['embedding','Array','','','1024 floats (voyage-4-lite); empty until the ai tier embeds it. Atlas vector index chunk_embedding_index'],['embeddedAt','Date','',''],['chunkedAt','Date','','']],
+    idx: ['{userId, contentHash} unique', '{userId, ordinal}', '{userId, embedding}: the not-yet-embedded queue', 'chunk_embedding_index: Atlas $vectorSearch, cosine, filter userId'] },
+  { id: 'skill_inventories', grp: 'retrieval', module: 'skill_inventory', purpose: 'Your profile read once by the local model into at most 300 skills, each tied to the exact line that proves it. Rebuilt only when profileHash changes.',
+    fields: [['_id','ObjectId','PK',''], USER1, ['profileHash','String','','','sha256 of prompt version, model and profile text'],['modelName','String','','','host/model that built it'],['skills','Array','','','id, label, aliases[], kind (tech | qualification | practice), source, evidence (verbatim)'],['builtAt','Date','','']],
+    idx: ['userId unique'] },
+
+  // ----- your pipeline -----
+  { id: 'matches', grp: 'pipeline', module: 'match', purpose: 'How one job scores against your profile, and the keyword gate that guards tailoring. Re-scoring resets the gate to pending.',
+    warn: 'unique on jobId alone',
+    fields: [['_id','ObjectId','PK',''], USER, ['jobId','ObjectId','FK','jobs','unique on its own today; should be unique with userId', ONE],['score','Number','','','0–100, mention-weighted coverage'],['present','Array','','','label, chunkId'],['missing','Array','','','key, label, mentions, evidence, nearMiss'],['risks','Array','','','key, title, detail; never selectable'],['modelName','String','',''],['review','Object','','','state (pending | selected | skipped), selectedKeys[], reviewedAt'],['scoredAt','Date','','']],
+    idx: ['jobId unique', '{userId, review.state}', '{userId, score}'] },
+  { id: 'resumes', grp: 'pipeline', module: 'resume', purpose: 'Every tailored resume: the .tex, where it was written, which keywords went in or were declined, and the selection that allowed it. Each run inserts a new version.',
+    warn: 'unique index has no userId',
+    fields: [['_id','ObjectId','PK',''], USER, ['jobId','ObjectId','FK','jobs'],['matchId','ObjectId','FK','matches','the match whose gate allowed it'],['filePath','String','','','ai/output/tailored/{job}-{ts}.tex'],['tex','String','','','the whole file'],['templatePath','String','',''],['incorporated','Array','','','keyword labels placed'],['declined','Array','','','keyword labels left out'],['changes','Array','','','lineNo, text, previous'],['version','Number','','','1, 2, 3… per job'],['selectedKeys','Array','','','copy of the gate decision, as an audit trail'],['renderedAt','Date','','']],
+    idx: ['{jobId, version} unique'] },
+  { id: 'applications', grp: 'pipeline', module: 'application', purpose: 'Where you stand with one job, from shortlisted to offer, plus what the extension filled on the form.',
+    fields: [['_id','ObjectId','PK',''], USER, ['jobId','ObjectId','FK','jobs','unique together with userId'],['resumeId','ObjectId','FK','resumes','the newest tailored version','|o--o|'],['texPath','String','','','copy of resumes.filePath'],['ats','String','','','workday | greenhouse | lever | linkedin_easy_apply | other'],['applyUrl','String','',''],['status','String','','','shortlisted | staged | applied | viewed | interview | offer | rejected | withdrawn'],['fieldsFilled','Array','','','selector, label, value, source, highlighted'],['screeningAnswers','Array','','','question, answer, answeredByUser'],['approvedByUser','Boolean','','','set when you confirm the submit'],['shortlistedAt','Date','',''],['stagedAt','Date','',''],['submittedAt','Date','',''],['lastActivityAt','Date','',''],['lastActivityNote','String','',''],['followUpDueAt','Date','','','submittedAt + 5 days'],['followUpSentAt','Date','','','never set yet']],
+    idx: ['{userId, jobId} unique', '{userId, status, stagedAt}', '{userId, followUpDueAt}'] },
+  { id: 'base_resumes', grp: 'pipeline', module: 'resume', purpose: 'Your default resume: a template rendered with your profile and accepted by you. Every tailoring run edits a copy of it.',
+    fields: [['_id','ObjectId','PK',''], USER1, ['templateId','ObjectId','FK','templates'],['templateName','String','','','copy of templates.name'],['tex','String','','','stored verbatim'], ...STAMPS],
+    idx: ['userId unique'] },
+
+  // ----- shared by every account -----
+  { id: 'jobs', grp: 'shared', module: 'job', purpose: 'One job posting, shared across accounts. Discovery, capture and the parser all write here.',
+    fields: [['_id','ObjectId','PK',''],['refId','String','','','the board\'s own requisition id'],['title','String','',''],['company','String','',''],['location','String','',''],['country','String','',''],['cities','Array','','','parsed from location'],['techStack','Array','','','only technologies the page names'],['jobType','String','','','full_time | contract | part_time | internship'],['workMode','String','','','on_site | hybrid | remote'],['experienceBand','String','',''],['salaryText','String','',''],['source','String','','','linkedin | indeed | naukri | serpapi | career_page'],['listingUrl','String','',''],['postedAt','Date','',''],['deadlineAt','Date','',''],['applicantCount','Number','',''],['dedupHash','String','UK','','sha256(source | refId), or of title | company | location'],['discoveredAt','Date','',''],['updatedAt','Date','','']],
+    idx: ['dedupHash unique', 'discoveredAt'] },
+  { id: 'job_descriptions', grp: 'shared', module: 'job_description', purpose: 'The posting\'s page: markdown, raw HTML, links, its Voyage vector and the brief scoring reuses. A capture starts with no jobId; parsing creates the job and links it.',
+    fields: [['_id','ObjectId','PK',''],['jobId','ObjectId','FK','jobs','unique where set (partial index)','|o--o|'],['url','String','',''],['pageTitle','String','',''],['region','String','','','main | article | heuristic | body | feed'],['jdText','String','','','markdown'],['htmlString','String','',''],['links','Array','','','strings'],['embedding','Array','','','1024 floats; Atlas index jd_embedding_index (nothing queries it yet)'],['brief','Object','','','requirements[] (key, label, kind, mentions, evidence; at most 40), seniority, minYears, locationRule, workMode, modelName, briefVersion, builtAt'],['markdownLength','Number','',''],['textLength','Number','',''],['contentHash','String','UK',''],['status','String','','','raw → parsed | discarded'],['capturedAt','Date','','']],
+    idx: ['contentHash unique', 'jobId unique (only where set)', '{status, capturedAt}', 'url', 'jd_embedding_index: Atlas $vectorSearch, cosine'] },
+  { id: 'career_sources', grp: 'shared', module: 'career_source', purpose: 'The companies discovery scrapes, and what the last scrape of each found. Jobs carry no id back to it, only source = career_page and the company name.',
+    fields: [['_id','ObjectId','PK',''],['name','String','UK','','company'],['careersUrl','String','',''],['platform','String','','','workday (the only adapter today)'],['config','Object','','','tenant, wd, site for Workday'],['enabled','Boolean','',''],['notes','String','',''],['lastRunAt','Date','',''],['lastResult','Object','','','fetched, matched, new, duplicate, failed, blocked, error'], ...STAMPS],
+    idx: ['name unique', '{enabled, platform}'] },
+  { id: 'templates', grp: 'shared', module: 'template', purpose: 'Uploaded LaTeX resume designs with {{TOKEN}} placeholders and loop blocks. Preview PNGs stay on disk.',
+    fields: [['_id','ObjectId','PK',''],['name','String','UK',''],['tex','String','','','the unfilled template'],['style','Object','','','contact, skills, experience, location, columns'],['tokens','Array','','','placeholders it uses'],['previewPath','String','','','under templates/previews'],['status','Boolean','','','active'], ...STAMPS],
+    idx: ['name unique', '{status, name}'] },
+];
+const BY = Object.fromEntries(C.map(c => [c.id, c]));
+const refsOf = f => !f[3] ? [] : Array.isArray(f[3]) ? f[3] : [f[3]];
+
+const VIEWS = [
+  ['all', 'All 19 collections'],
+  ['profile', 'Account & profile (what tailoring may use)'],
+  ['pipeline', 'From a job to an application'],
+  ['shared', 'Shared job data'],
+];
+const VIEW_GROUPS = { profile: ['identity', 'retrieval'], pipeline: ['pipeline', 'shared'], shared: ['shared'] };
+const inView = (c, view) => view === 'all' || VIEW_GROUPS[view].includes(c.grp);
+
+// ---------- helpers ----------
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+const dark = () => document.documentElement.dataset.theme === 'dark' || (document.documentElement.dataset.theme !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+const clean = s => s.replace(/"/g, "'");
+
+// ---------- ER source ----------
+let stubs = new Set();
+function erSource(view, acct) {
+  const cs = C.filter(c => inView(c, view)), ids = new Set(cs.map(c => c.id));
+  const rels = [], ext = new Set();
+  for (const c of cs) for (const f of c.fields) {
+    for (const t of refsOf(f)) {
+      if (t === 'accounts' && !acct) continue;
+      if (!ids.has(t)) ext.add(t);
+      rels.push(`  ${c.id} ${f[5] || '}o--||'} ${t} : "${f[0]}"`);
+    }
+  }
+  const lines = ['erDiagram'];
+  for (const c of cs) {
+    lines.push(`  ${c.id}["${c.id}"] {`);
+    for (const f of c.fields) lines.push(`    ${f[1]} ${f[0]}${f[2] ? ' ' + f[2] : ''}${f[4] ? ` "${clean(f[4])}"` : ''}`);
+    lines.push('  }');
+  }
+  for (const id of ext) lines.push(`  ${id}["${id}"] {\n    ObjectId _id PK\n  }`);
+  stubs = ext;
+  return { src: lines.concat(rels).join('\n'), n: cs.length, r: rels.length, ext: ext.size };
+}
+
+// ---------- mermaid ----------
+let mermaidReady = false;
+function initMermaid() {
+  mermaid.initialize({ startOnLoad: false, theme: 'base', securityLevel: 'strict', maxTextSize: 900000, maxEdges: 5000,
+    er: { useMaxWidth: false },
+    // Mermaid 11 reads rowOdd/rowEven for entity rows; the older attributeBackgroundColor* names are kept for older versions.
+    themeVariables: dark()
+      ? { fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", primaryColor: '#1f2c4d', primaryTextColor: '#ecebe6', primaryBorderColor: '#8aa8ff', lineColor: '#8a8a83', textColor: '#ecebe6',
+          mainBkg: '#1f2c4d', background: '#1d1d1b', tertiaryColor: '#262624',
+          rowOdd: '#1d1d1b', rowEven: '#262624', attributeBackgroundColorOdd: '#1d1d1b', attributeBackgroundColorEven: '#262624' }
+      : { fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", primaryColor: '#e3ecff', primaryTextColor: '#1c1c1a', primaryBorderColor: '#2f5bd3', lineColor: '#8b8b85', textColor: '#1c1c1a',
+          mainBkg: '#e3ecff', background: '#ffffff', tertiaryColor: '#f7f7f5',
+          rowOdd: '#ffffff', rowEven: '#f7f7f5', attributeBackgroundColorOdd: '#ffffff', attributeBackgroundColorEven: '#f7f7f5' } });
+  mermaidReady = true;
+}
+let rid = 0;
+async function draw(el, src) {
+  try { const { svg } = await mermaid.render('m' + (++rid), src); el.innerHTML = svg; return true; }
+  catch (e) { el.innerHTML = '<p class="why">Diagram failed to render: ' + esc(e.message || e) + '</p><pre class="box">' + esc(src) + '</pre>'; return false; }
+}
+function colorEr() {
+  const svg = $('#box svg'); if (!svg) return;
+  const strokeOf = {};
+  svg.querySelectorAll('g[id*="entity-"]').forEach(g => {
+    const id = g.id.replace(/^.*?entity-/, '').replace(/-\d+$/, '');
+    const c = BY[id]; if (!c) return;
+    const stub = stubs.has(id);
+    const [fill, stroke] = stub ? rows().stub : colOf(id);
+    strokeOf[id] = stroke;
+    // Mermaid 11: the first child <g> is the box (path 0 = fill incl. header, path 1 = outline); rows follow.
+    const outer = g.firstElementChild && g.firstElementChild.tagName === 'g' ? g.firstElementChild.querySelectorAll('path, rect') : g.querySelectorAll('rect.er.entityBox');
+    outer.forEach((p, j) => {
+      if (j === 0) { p.setAttribute('fill', fill); p.style.fill = fill; }
+      if (j > 0 || p.tagName === 'rect') { p.setAttribute('stroke', stroke); p.style.stroke = stroke; p.style.strokeWidth = '2px'; if (stub) p.style.strokeDasharray = '5 4'; }
+    });
+    // Paint every attribute row ourselves so no Mermaid default (white rows in dark mode) shows through.
+    const r = rows();
+    g.querySelectorAll('g[class*="row-rect"]').forEach(row => {
+      const bg = /odd/.test(row.getAttribute('class')) ? r.odd : r.even;
+      row.querySelectorAll('path, rect').forEach(p => {
+        if (p.getAttribute('fill') !== 'none') { p.setAttribute('fill', bg); p.style.fill = bg; }
+      });
+    });
+    g.querySelectorAll('rect.er.attributeBoxOdd, rect.er.attributeBoxEven').forEach(p => {
+      const bg = p.classList.contains('attributeBoxOdd') ? r.odd : r.even;
+      p.setAttribute('fill', bg); p.style.fill = bg;
+    });
+    g.querySelectorAll('.label:not(.name) span, .label:not(.name) p, .label:not(.name) div, text.er.entityLabel, text').forEach(t => { t.style.color = r.text; t.style.fill = r.text; t.style.opacity = '1'; });
+    g.querySelectorAll('g[class^="row-rect"] path[fill="none"], .divider path, line').forEach(p => { p.style.stroke = stroke; p.style.strokeOpacity = '.35'; });
+    const title = g.querySelector('.label.name, .name') || g.querySelector('.label');
+    if (title) title.querySelectorAll('span, p, div, text, tspan').forEach(t => { t.style.color = stroke; t.style.fill = stroke; });
+  });
+  svg.querySelectorAll('.relationshipLine, path[class*="relationshipLine"]').forEach(p => {
+    const m = (p.id || '').match(/entity-(.+?)-\d+_entity-/) || (p.id || '').match(/id_(.+?)_/);
+    const col = m && strokeOf[m[1]];
+    if (col) { p.style.stroke = col; p.style.strokeWidth = '1.8px'; }
+  });
+}
+
+// ---------- zoom & pan (SVG is vector, so it stays sharp at any size) ----------
+let scale = 1, natural = { w: 0, h: 0 };
+function measure() {
+  const svg = $('#box svg'); if (!svg) return;
+  const vb = svg.viewBox && svg.viewBox.baseVal;
+  natural = vb && vb.width ? { w: vb.width, h: vb.height } : { w: svg.getBBox().width, h: svg.getBBox().height };
+  svg.removeAttribute('height'); svg.removeAttribute('width'); svg.style.maxWidth = 'none';
+}
+function applyScale(s, cx, cy) {
+  const box = $('#box'), svg = $('#box svg'); if (!svg || !natural.w) return;
+  const old = scale; scale = Math.min(8, Math.max(0.1, s));
+  // keep the point under the cursor (or the centre) still while zooming
+  const px = cx ?? box.clientWidth / 2, py = cy ?? box.clientHeight / 2;
+  const ax = (box.scrollLeft + px) / old, ay = (box.scrollTop + py) / old;
+  svg.style.width = natural.w * scale + 'px'; svg.style.height = natural.h * scale + 'px';
+  box.scrollLeft = ax * scale - px; box.scrollTop = ay * scale - py;
+  $('#pct').textContent = Math.round(scale * 100) + '%';
+}
+const fitScale = () => natural.w ? ($('#box').clientWidth - 26) / natural.w : 1;
+document.querySelectorAll('.zoom button').forEach(b => b.onclick = () => {
+  const z = b.dataset.z;
+  applyScale(z === 'fit' ? fitScale() : z === '1' ? 1 : scale * (z === '+' ? 1.25 : 0.8));
+});
+const box = $('#box');
+box.addEventListener('wheel', e => {
+  if (!(e.ctrlKey || e.metaKey)) return; // plain scroll still scrolls
+  e.preventDefault();
+  const r = box.getBoundingClientRect();
+  applyScale(scale * Math.exp(-e.deltaY * 0.0015), e.clientX - r.left, e.clientY - r.top);
+}, { passive: false });
+let drag = null;
+box.addEventListener('pointerdown', e => { if (e.button !== 0) return; drag = { x: e.clientX, y: e.clientY, l: box.scrollLeft, t: box.scrollTop }; box.classList.add('drag'); box.setPointerCapture(e.pointerId); });
+box.addEventListener('pointermove', e => { if (!drag) return; box.scrollLeft = drag.l - (e.clientX - drag.x); box.scrollTop = drag.t - (e.clientY - drag.y); });
+['pointerup', 'pointercancel'].forEach(t => box.addEventListener(t, () => { drag = null; box.classList.remove('drag'); }));
+document.addEventListener('keydown', e => {
+  if (!$('#er').classList.contains('on') || /input|select/i.test(e.target.tagName)) return;
+  if (e.key === '+' || e.key === '=') applyScale(scale * 1.25);
+  else if (e.key === '-') applyScale(scale * 0.8);
+  else if (e.key === '0') applyScale(fitScale());
+});
+$('#dl').onclick = () => {
+  const svg = $('#box svg'); if (!svg) return;
+  const copy = svg.cloneNode(true);
+  copy.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  copy.setAttribute('width', natural.w); copy.setAttribute('height', natural.h); copy.style.width = ''; copy.style.height = '';
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([copy.outerHTML], { type: 'image/svg+xml' }));
+  a.download = 'jobpilot-db-' + $('#view').value + '.svg'; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+
+// ---------- ER tab ----------
+$('#view').innerHTML = VIEWS.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join('');
+try { const v = location.hash.slice(1) || localStorage.getItem('jobpilotdb.view'); if (v && VIEWS.some(x => x[0] === v)) $('#view').value = v; } catch (e) {}
+function legend() {
+  $('#legend').innerHTML = Object.entries(GROUPS).map(([k, g]) => `<span>${C.filter(c => c.grp === k).map(c => `<i title="${esc(c.id)}" style="background:${colOf(c.id)[0]};border-color:${colOf(c.id)[1]}"></i>`).join('')}${esc(g.label)}</span>`).join('')
+    + `<span><i class="dash" style="border-color:${rows().stub[1]}"></i>collection from another view (stub)</span>`
+    + '<span>solid line = reference · dotted line = soft link (sourceId may point at any of five profile collections)</span>';
+}
+legend();
+async function drawEr() {
+  if (typeof mermaid === 'undefined') { $('#box').innerHTML = '<p class="why">The diagram library could not load (offline?). The Collections and Overview tabs still work.</p>'; return; }
+  if (!mermaidReady) initMermaid();
+  const view = $('#view').value, { src, n, r, ext } = erSource(view, $('#acct').checked);
+  try { localStorage.setItem('jobpilotdb.view', view); } catch (e) {}
+  $('#note').textContent = `${n} collections, ${r} relationships${ext ? `, plus ${ext} linked collection(s) from other views shown as stubs` : ''}. PK = _id, FK = reference, UK = unique. Zoom: − / + buttons, Ctrl/⌘ + scroll, or keys + − 0. Drag to pan.`;
+  $('#box').innerHTML = '<p class="why">Rendering…</p>';
+  if (await draw($('#box'), src)) { colorEr(); measure(); scale = 1; applyScale(fitScale()); }
+}
+$('#view').onchange = drawEr; $('#acct').onchange = drawEr;
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { mermaidReady = false; legend(); drawEr(); });
+
+// ---------- Overview ----------
+function overview() {
+  const per = C.filter(c => c.fields.some(f => f[0] === 'userId')), shared = C.filter(c => c.grp === 'shared');
+  const rels = C.reduce((n, c) => n + c.fields.reduce((k, f) => k + refsOf(f).length, 0), 0);
+  const warned = C.filter(c => c.warn);
+  $('#ov').innerHTML = `
+  <div class="cards">
+    <div class="card"><div class="n">${C.length}</div><div class="l">collections in jobpilot</div></div>
+    <div class="card"><div class="n">${per.length}</div><div class="l">per account (carry userId)</div></div>
+    <div class="card"><div class="n">${shared.length}</div><div class="l">shared by every account</div></div>
+    <div class="card"><div class="n">${rels}</div><div class="l">references between collections</div></div>
+    <div class="card"><div class="n">${warned.length}</div><div class="l">indexes that break with a second account</div></div>
+  </div>
+  <div class="panel"><h2>Layout</h2>
+<pre class="box">MongoDB Atlas cluster
+│
+└── jobpilot                                 ← one database, owned by server/
+      per account (userId → accounts._id)
+        accounts
+        profile, work_experience, education, skills, certifications
+        preferences, applicant_profile, answer_bank
+        resume_chunks, skill_inventories      ← built for the ai tier
+        matches, resumes, applications, base_resumes
+      shared by every account
+        jobs, job_descriptions, career_sources, templates
+
+Outside the database
+  logs/errors.jsonl              error log (server + ai + web), a file
+  ai/output/tailored/*.tex       tailored resumes on disk (the text is also in resumes.tex)
+  templates/previews/*.png       template previews</pre>
+  </div>
+  <div class="panel"><h2>How a request reaches the database</h2>
+<pre class="box">Authorization: Bearer &lt;access JWT { sub: accountId, kind: access, exp }&gt;
+  → verify_token: HS256, kind = access          (else 401)
+  → CurrentUser = accountId
+  → router → service of the module that owns the collection
+  → Beanie Document.find({ userId: CurrentUser, … })    // per-account rows
+     shared rows (jobs, job_descriptions, career_sources, templates) need no userId
+
+ai tier: the same JWT is forwarded → server REST → the same path.
+ai holds no connection string; vectors are searched by POST /resume-chunk/search.</pre>
+  </div>
+  <div class="panel"><h2>Rules in the code</h2>
+    <ul>
+      <li>One database, opened once in <code>server/config/database.py</code>. Its URI is <code>MONGODB_URI</code>, and the name defaults to <code>jobpilot</code>. Tests use a throwaway <code>jobpilot_test</code>.</li>
+      <li>Each server module owns its collections and queries them in its own <code>service.py</code>. Other modules read through its <code>__init__.py</code>. Exception: <code>job</code> and <code>application</code> run <code>$lookup</code> straight into other modules' collections.</li>
+      <li>Every per-account row carries <code>userId</code>, and every query filters on it. <code>jobs</code> and <code>job_descriptions</code> are shared and deduplicated by <code>dedupHash</code> and <code>contentHash</code>.</li>
+      <li>MongoDB enforces none of the references. The services keep them consistent, for example <code>storeResume</code> re-checks the match's gate before inserting.</li>
+      <li>Vectors live next to their text: <code>resume_chunks.embedding</code> and <code>job_descriptions.embedding</code>, 1024-d cosine. The Atlas search indexes are created at startup when the URI is <code>mongodb+srv://</code>.</li>
+      <li>Small child data lives <b>inside</b> its parent: keywords and the review in matches, fills and answers in applications, the brief in job_descriptions. <code>Array</code>/<code>Object</code> fields in the diagram are these embedded parts.</li>
+    </ul>
+  </div>
+  <div class="panel"><h2>Copies and which record wins</h2>
+    <p>Some facts are stored twice. Each copy has one owner; the other is written from it.</p>
+    <div class="tw"><table>
+      <tr><th>Fact</th><th>Stored in</th><th>Owner</th><th>How the copy is kept</th></tr>
+      <tr><td>Profile text</td><td><code>profile</code>, <code>work_experience</code>, <code>education</code>, <code>skills</code>, <code>certifications</code> and <code>resume_chunks.text</code></td><td>the profile collections</td><td>Every create, update or delete rebuilds the chunks. Unchanged text keeps its vector.</td></tr>
+      <tr><td>Keyword decision</td><td><code>matches.review.selectedKeys</code> and <code>resumes.selectedKeys</code></td><td><code>matches</code></td><td>Copied when a resume is stored, as an audit trail. A re-score reopens the gate; old resumes keep their copy.</td></tr>
+      <tr><td>Tailored file path</td><td><code>resumes.filePath</code> and <code>applications.texPath</code></td><td><code>resumes</code></td><td>stage_application writes it. It doesn't change after you submit, so the file you sent is the one recorded.</td></tr>
+      <tr><td>Template name</td><td><code>templates.name</code> and <code>base_resumes.templateName</code></td><td><code>templates</code></td><td>Copied when you accept a render. Renaming a template doesn't update it.</td></tr>
+      <tr><td>Skills from the profile</td><td>the profile collections and <code>skill_inventories.skills</code></td><td>the profile collections</td><td>Rebuilt by the ai tier when <code>profileHash</code> no longer matches.</td></tr>
+    </table></div>
+  </div>
+  <div class="panel"><h2>Limits on lists inside documents</h2>
+    <p>A MongoDB document is capped at 16 MB. These lists have a limit in the models; the rest are bounded by what they describe.</p>
+    <div class="tw"><table>
+      <tr><th>List</th><th>Grows with</th><th>Limit</th><th>Where enforced</th></tr>
+      <tr><td><code>job_descriptions.brief.requirements[]</code></td><td>Requirements in one posting</td><td>At most 40</td><td><code>JobBriefWrite</code></td></tr>
+      <tr><td><code>matches.present[]</code>, <code>missing[]</code></td><td>The brief's requirements</td><td>At most 40 together, since they split the brief</td><td>matching agent</td></tr>
+      <tr><td><code>matches.risks[]</code></td><td>Conflicts found</td><td>At most 5</td><td>matching agent</td></tr>
+      <tr><td><code>skill_inventories.skills[]</code></td><td>Skills in the profile</td><td>At most 300 in the model, 100 built today</td><td><code>SkillInventoryWrite</code>, inventory agent</td></tr>
+      <tr><td><code>jobs.techStack[]</code></td><td>Technologies named in the posting</td><td>At most 30 on update, 20 from the parser</td><td><code>JobUpdate</code>, parsing agent</td></tr>
+      <tr><td><code>resume_chunks</code></td><td>Profile size</td><td>One document per span rather than one growing list</td><td>profile chunking</td></tr>
+    </table></div>
+  </div>
+  <div class="panel"><h2>Indexes that need fixing</h2>
+    <p>Jobs are shared, so any index on <code>jobId</code> without <code>userId</code> lets only one account write a row for that job. <span class="pill gate">Open</span></p>
+    <div class="tw"><table>
+      <tr><th>Collection</th><th>Index today</th><th>What happens</th><th>Should be</th></tr>
+      <tr><td><code>matches</code></td><td><code>jobId</code> unique</td><td>A second account scoring the same job gets a duplicate-key error (500)</td><td><code>{userId, jobId}</code> unique</td></tr>
+      <tr><td><code>resumes</code></td><td><code>{jobId, version}</code> unique</td><td>Two accounts tailoring one job collide on version 1</td><td><code>{userId, jobId, version}</code> unique</td></tr>
+    </table></div>
+  </div>`;
+}
+
+// ---------- Collections tab ----------
+let cur = null;
+function renderList() {
+  const q = $('#q').value.trim().toLowerCase();
+  const match = c => !q || c.id.includes(q) || c.fields.some(f => f[0].toLowerCase().includes(q));
+  let html = '';
+  for (const [k, g] of Object.entries(GROUPS)) {
+    const cs = C.filter(c => c.grp === k && match(c)); if (!cs.length) continue;
+    html += `<div class="grp">${esc(g.label)}</div>` + cs.map(c => `<button data-id="${c.id}" class="${c.id === cur ? 'on' : ''}"><span class="dot" style="background:${colOf(c.id)[1]}"></span>${esc(c.id)}</button>`).join('');
+  }
+  $('#list').innerHTML = html || '<p class="why">No match.</p>';
+  $('#list').querySelectorAll('button').forEach(b => b.onclick = () => show(b.dataset.id));
+}
+function show(id) {
+  cur = id; const c = BY[id];
+  const incoming = C.flatMap(o => o.fields.filter(f => refsOf(f).includes(id)).map(f => ({ o, f })));
+  $('#detail').innerHTML = `<div class="panel">
+    <h2><code>jobpilot.${esc(c.id)}</code> <span class="pill key">server/modules/${esc(c.module)}</span> ${c.warn ? `<span class="pill gate">${esc(c.warn)}</span>` : ''}</h2>
+    <p>${esc(c.purpose)}</p>
+    <div class="tw"><table><tr><th>Field</th><th>Type</th><th>Key</th><th>References</th><th>Note</th></tr>
+    ${c.fields.map(f => `<tr><td><code>${esc(f[0])}</code></td><td>${esc(f[1])}</td><td>${f[2] ? `<span class="pill key">${f[2]}</span>` : ''}</td><td>${refsOf(f).map(t => `<a href="#" data-go="${t}"><code>${esc(t)}</code></a>`).join(' · ')}</td><td>${esc(f[4] || '')}</td></tr>`).join('')}
+    </table></div>
+    <h2 style="margin-top:16px">Indexes</h2>
+    ${c.idx.length ? '<ul>' + c.idx.map(i => `<li><code>${esc(i)}</code></li>`).join('') + '</ul>' : '<p>Only the default <code>_id</code> index.</p>'}
+    <h2>Referenced by</h2>
+    ${incoming.length ? '<ul>' + incoming.map(({ o, f }) => `<li><a href="#" data-go="${o.id}"><code>${esc(o.id)}</code></a>.<code>${esc(f[0])}</code>${Array.isArray(f[3]) ? ' <span class="pill gate">soft link</span>' : ''}</li>`).join('') + '</ul>' : '<p>Nothing references this collection.</p>'}
+  </div>`;
+  $('#detail').querySelectorAll('[data-go]').forEach(a => a.onclick = e => { e.preventDefault(); show(a.dataset.go); });
+  renderList();
+}
+$('#q').oninput = renderList;
+
+// ---------- tabs ----------
+document.querySelectorAll('nav.tabs button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('nav.tabs button, main > section').forEach(x => x.classList.remove('on'));
+  b.classList.add('on'); $('#' + b.dataset.t).classList.add('on');
+  if (b.dataset.t === 'er' && !$('#box svg')) drawEr();
+  if (b.dataset.t === 'cl' && !cur) show('accounts');
+});
+overview();
+window.addEventListener('load', drawEr);
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.6.0/dist/mermaid.min.js"></script>
+</body>
+</html>

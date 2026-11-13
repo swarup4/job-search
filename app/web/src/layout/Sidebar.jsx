@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useSelector } from "react-redux";
@@ -9,8 +9,9 @@ import {
 } from "lucide-react";
 import { SidebarIdentity } from "@/component/SidebarIdentity";
 import { NAV, sectionFor } from "@/routes";
+import { getTierSettings } from "@/services";
 import { selectStatus } from "@/store/status/statusSlice";
-import { cn } from "@/util/helper";
+import { ago, cn } from "@/util/helper";
 
 const ICON = {
     board: Columns3,
@@ -34,47 +35,92 @@ export function Sidebar() {
                 </Suspense>
             </div>
 
-            {/* agent health — the template's dot-status idiom, given something real to say */}
-            <div className="panel">
-                <div className="border-b border-border px-5 py-3.5">
-                    <h2 className="text-[13px] font-medium">Agents</h2>
-                </div>
-                <ul className="px-5 py-3.5">
-                    {[
-                        { name: "Discovery", note: "ran 4 min ago", ok: true },
-                        { name: "Match & score", note: "3 queued", ok: true },
-                        { name: "Resume tailor", note: "idle", ok: true },
-                        { name: "Tracking", note: "synced", ok: true },
-                    ].map((a) => (
-                        <li key={a.name} className="flex items-center gap-2.5 py-[7px]">
-                            <span
-                                className={cn(
-                                    "size-2 shrink-0 rounded-full",
-                                    a.ok ? "bg-primary" : "bg-muted-foreground"
-                                )}
-                            />
-                            <span className="text-[13px]">{a.name}</span>
-                            <span className="grow" />
-                            <span className="text-[12px] text-muted-foreground">{a.note}</span>
-                        </li>
-                    ))}
-                </ul>
-                <div className="flex items-center gap-2 border-t border-border px-5 py-3">
-                    <Cpu className="size-[13px] text-muted-foreground" />
-                    <span className="text-[12px] text-muted-foreground">qwen2.5:32b · local</span>
-                </div>
-            </div>
+            <AgentPanel />
 
             <div className="panel">
                 <div className="flex items-center gap-2 px-5 py-3.5">
                     <Database className="size-[13px] text-muted-foreground" />
-                    <span className="text-[12px] text-muted-foreground">
-                        Local Mongo · Atlas vectors
-                    </span>
+                    <span className="text-[12px] text-muted-foreground">MongoDB · one store</span>
                 </div>
             </div>
         </aside>
     );
+}
+
+/** What each capability last did, from the status read every page already makes. */
+function AgentPanel() {
+    const { syncedAt, discovery, jobs, badges } = useSelector(selectStatus);
+    const model = useGenerationModel();
+    const loaded = Boolean(syncedAt);
+
+    const rows = [
+        {
+            name: "Discovery",
+            note: discovery.lastRunAt ? `ran ${ago(discovery.lastRunAt)}` : "never run",
+            ok: Boolean(discovery.lastRunAt) && discovery.failed === 0,
+        },
+        {
+            name: "Match & score",
+            note: jobs.unscored ? `${jobs.unscored} unscored` : "up to date",
+            ok: true,
+        },
+        {
+            name: "Resume tailor",
+            note: badges.keywordSelections ? `${badges.keywordSelections} waiting` : "idle",
+            ok: true,
+        },
+        // Status transitions are manual today; the agent that would make them is Phase 8.
+        { name: "Tracking", note: "not built", ok: false },
+    ];
+
+    return (
+        <div className="panel">
+            <div className="border-b border-border px-5 py-3.5">
+                <h2 className="text-[13px] font-medium">Agents</h2>
+            </div>
+            <ul className="px-5 py-3.5">
+                {rows.map((a) => (
+                    <li key={a.name} className="flex items-center gap-2.5 py-[7px]">
+                        <span
+                            className={cn(
+                                "size-2 shrink-0 rounded-full",
+                                loaded && a.ok ? "bg-primary" : "bg-muted-foreground"
+                            )}
+                        />
+                        <span className="text-[13px]">{a.name}</span>
+                        <span className="grow" />
+                        <span className="text-[12px] text-muted-foreground">
+                            {loaded ? a.note : "—"}
+                        </span>
+                    </li>
+                ))}
+            </ul>
+            <div className="flex items-center gap-2 border-t border-border px-5 py-3">
+                <Cpu className="size-[13px] text-muted-foreground" />
+                <span className="truncate text-[12px] text-muted-foreground">{model}</span>
+            </div>
+        </div>
+    );
+}
+
+/** The model the AI tier is actually configured with, or why it cannot say. */
+function useGenerationModel() {
+    const [label, setLabel] = useState("…");
+
+    useEffect(() => {
+        let live = true;
+        getTierSettings()
+            .then(({ models }) => {
+                const where = models.generationHost === "localhost" ? "local" : models.generationHost;
+                if (live) setLabel(`${models.generation} · ${where}`);
+            })
+            .catch(() => live && setLabel("AI tier offline"));
+        return () => {
+            live = false;
+        };
+    }, []);
+
+    return label;
 }
 
 /** A job page highlights the section it was opened from; every other page, its own. */

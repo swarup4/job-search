@@ -66,6 +66,8 @@ class MatchWrite(BaseModel):
     risks: list[RiskFlag] = Field(default_factory=list)
     # Which local model produced this, so a re-score is comparable.
     modelName: str | None = None
+    # The comparison prompt's version in the AI tier, so a score traces to its prompt.
+    promptVersion: int | None = Field(default=None, ge=1)
 
 
 class Match(Document):
@@ -76,13 +78,19 @@ class Match(Document):
     missing: list[MissingKeyword] = Field(default_factory=list)
     risks: list[RiskFlag] = Field(default_factory=list)
     modelName: str | None = None
+    promptVersion: int | None = None
     review: KeywordReview = Field(default_factory=KeywordReview)
     scoredAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     class Settings:
         name = "matches"
         indexes = [
-            pymongo.IndexModel([("jobId", pymongo.ASCENDING)], unique=True),
+            # One match per user per job. The job is shared by every account, so a
+            # unique index on `jobId` alone let only the first user score a posting.
+            # A database created before this needs `migrate_per_user_indexes.py`.
+            pymongo.IndexModel(
+                [("userId", pymongo.ASCENDING), ("jobId", pymongo.ASCENDING)], unique=True
+            ),
             pymongo.IndexModel(
                 [("userId", pymongo.ASCENDING), ("review.state", pymongo.ASCENDING)]
             ),
@@ -101,6 +109,7 @@ class MatchRead(BaseModel):
     missing: list[MissingKeyword] = Field(default_factory=list)
     risks: list[RiskFlag] = Field(default_factory=list)
     modelName: str | None = None
+    promptVersion: int | None = None
     review: KeywordReview
     scoredAt: datetime
 
