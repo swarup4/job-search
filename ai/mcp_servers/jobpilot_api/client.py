@@ -214,3 +214,12 @@ async def store_resume(payload: dict[str, Any]) -> dict[str, Any]:
     """Rejected with a 422 if it names a keyword the user did not tick, and with a
     409 before the keyword gate has resolved. Both checks live on the server."""
     return await _request("POST", "/resume/storeResume", json=payload)
+
+
+async def record_usage(
+    run_kind: str, run_id: str | None, calls: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """Every model call of one run, appended to the caller's usage log."""
+    return await _request(
+        "POST", "/llm-usage", json={"runKind": run_kind, "runId": run_id, "calls": calls}
+    )

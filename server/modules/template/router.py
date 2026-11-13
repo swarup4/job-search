@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Annotated
 
 from beanie import PydanticObjectId
@@ -71,7 +72,9 @@ async def download_template(template_id: PydanticObjectId, user_id: CurrentUser)
 @router.get("/preview/{template_id}", dependencies=[Depends(verify_token)])
 async def template_preview(template_id: PydanticObjectId) -> FileResponse:
     template = await service.get_template(template_id)
-    if template.previewPath is None:
+    # The image lives on disk and the row in the database, so the two can part: a
+    # database restored or re-imported elsewhere keeps paths this machine never wrote.
+    if template.previewPath is None or not Path(template.previewPath).is_file():
         raise service.TemplateNotFound(f"{template_id} preview")
     return FileResponse(template.previewPath, media_type="image/png")
 

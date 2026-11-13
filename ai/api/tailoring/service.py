@@ -13,6 +13,7 @@ import httpx
 
 from agents import tailoring
 from agents.tailoring import NoBaseResume, NoCurrentRole, SelectionGateNotPassed
+from api.usage import store_usage
 from config.errors import BadGateway, Conflict, Invalid, Unauthorized, Upstream
 from config.llm import GenerationError, track_usage
 from mcp_servers.jobpilot_api.client import JobPilotApiError
@@ -25,7 +26,11 @@ EXPIRED = "Your session expired. Sign in again and retry."
 async def tailor(job_id: str) -> dict[str, Any]:
     try:
         with track_usage() as usage:
-            resume = await tailoring.tailor(job_id)
+            try:
+                resume = await tailoring.tailor(job_id)
+            finally:
+                # A failed tailoring still spent its tokens.
+                await store_usage("tailoring", None, usage)
         logger.info("tailoring %s: tokens %s", job_id, usage.summary())
         return resume
     except (SelectionGateNotPassed, NoBaseResume) as error:

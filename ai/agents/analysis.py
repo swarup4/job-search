@@ -44,6 +44,9 @@ DETAIL_FIELDS = ("experienceBand", "salaryText", "workMode", "jobType")
 # The same ceiling the match step uses. Past this a JD is boilerplate and legal text.
 MAX_JD_CHARS = 12_000
 
+# Bumped when DETAILS_SYSTEM or its shape changes. Recorded with the call's usage.
+DETAILS_VERSION = 1
+
 # Words that have to appear in the posting before a work mode or job type is believed.
 MODE_WORDS = matching.MODE_WORDS
 TYPE_WORDS = {
@@ -209,7 +212,11 @@ async def _details(job: dict[str, Any], text: str) -> str:
     if job.get("techStack") is not None:
         return "already read"
     proposed = await generate(
-        JobDetails, as_document("job_posting", text), system=DETAILS_SYSTEM, max_tokens=512
+        JobDetails,
+        as_document("job_posting", text),
+        system=DETAILS_SYSTEM,
+        max_tokens=512,
+        version=DETAILS_VERSION,
     )
     found = verify_details(proposed, text)
     # The board's own values win: only fields the job does not have yet are written.

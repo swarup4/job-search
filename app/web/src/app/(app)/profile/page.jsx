@@ -1,18 +1,15 @@
-import { Building2, FileText, Mail, MapPin } from "lucide-react";
+import { Building2, Mail, MapPin } from "lucide-react";
 import { PageHeader } from "@/layout/PageHeader";
 import { Panel, PanelBody, PanelHeader, PanelTitle } from "@/component/ui/panel";
-// `resumeFile` below is the only fixture left on this screen.
-import profileData from "@/data/profile.json";
 import { ProfileEditor } from "@/component/ProfileEditor";
 import { IndexedStats } from "@/component/IndexedStats";
+import { BaseResumeSummary } from "@/component/BaseResumeSummary";
 
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
-    // Everything editable is loaded from the API by ProfileEditor, on the client —
-    // the bearer token lives in sessionStorage, which this component cannot read.
-    const profile = profileData;
-
+    // Every panel loads from the API on the client — the bearer token lives in
+    // sessionStorage, which this server component cannot read.
     return (
         <>
             <PageHeader
@@ -36,10 +33,7 @@ export default async function Page() {
                     <Panel>
                         <PanelHeader><PanelTitle>Resume template</PanelTitle></PanelHeader>
                         <PanelBody className="flex flex-col gap-3 py-4">
-                            <div className="flex items-center gap-2.5 rounded-sm bg-well px-3 py-2.5">
-                                <FileText className="size-[14px] shrink-0 text-muted-foreground" />
-                                <span className="truncate font-mono text-[12px]">{profile.resumeFile}</span>
-                            </div>
+                            <BaseResumeSummary />
                             <p className="text-[12.5px] leading-relaxed text-muted-foreground">
                                 Tailored resumes render this template with the sections above. The section names
                                 here match its LaTeX commands, so what you see is what can be placed.

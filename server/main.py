@@ -17,6 +17,7 @@ from modules import (
     error_log,
     job,
     job_description,
+    llm_usage,
     match,
     preference,
     profile,
@@ -42,6 +43,7 @@ MODULES = (
     preference,
     status,
     error_log,
+    llm_usage,
 )
 
 

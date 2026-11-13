@@ -121,7 +121,7 @@ export default function Page() {
                 <Panel className="p-6">
                     <h1 className="text-[20px] font-semibold tracking-tight">Not scored yet</h1>
                     <p className="mt-2 max-w-[70ch] text-[14px] leading-relaxed text-muted-foreground">
-                        <span className="font-medium text-foreground">{job.title}</span> at {job.company.name} has
+                        <span className="font-medium text-foreground">{job.title}</span> at {job.company} has
                         not been matched against your resume. Once it has, the keywords it asks for appear here for
                         you to choose from.
                     </p>
@@ -148,7 +148,7 @@ export default function Page() {
                     Choose what goes into your resume
                 </h1>
                 <p className="mt-2 max-w-[74ch] text-[14px] leading-relaxed text-pretty text-muted-foreground">
-                    <span className="font-medium text-foreground">{job.title}</span> at {job.company.name}. Nothing
+                    <span className="font-medium text-foreground">{job.title}</span> at {job.company}. Nothing
                     below is added unless you check it — the keywords on the left are already in your resume and
                     shown for context only.
                 </p>

@@ -28,7 +28,7 @@ ENDPOINT = llm.Endpoint("http://ollama.test/v1", "", "qwen", True, 16384)
 class FakeServer:
     """An OpenAI-compatible endpoint that replays canned replies and keeps every request."""
 
-    def __init__(self, replies: list[str], usage: dict[str, int] | None = None) -> None:
+    def __init__(self, replies: list[str], usage: dict[str, Any] | None = None) -> None:
         self.replies = list(replies)
         self.usage = usage or {"prompt_tokens": 100, "completion_tokens": 20}
         self.requests: list[dict[str, Any]] = []
@@ -152,3 +152,89 @@ def test_a_document_cannot_close_its_own_fence() -> None:
     assert fenced.startswith('<document name="job_description">')
     assert fenced.count("</document>") == 1
     assert fenced.endswith("</document>")
+
+
+# --- the repair turn -------------------------------------------------------------
+
+
+def serve(monkeypatch: pytest.MonkeyPatch, fake: FakeServer) -> None:
+    real = httpx.AsyncClient
+    monkeypatch.setattr(
+        llm.httpx,
+        "AsyncClient",
+        lambda **kwargs: real(transport=httpx.MockTransport(fake.handle), **kwargs),
+    )
+
+
+async def test_a_repair_turn_echoes_only_the_start_of_the_failed_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A long wrong answer resent whole, beside a second answer of the same length,
+    is what overflowed the window on a retry."""
+    long_wrong = json.dumps({"wrong": "x" * 9_000})
+    fake = FakeServer([long_wrong, '{"skills": ["Go"]}'])
+    serve(monkeypatch, fake)
+
+    answer = await llm.generate(Skills, "text", system="Extract.", endpoint=ENDPOINT)
+
+    assert answer.skills == ["Go"]
+    echoed = fake.requests[1]["messages"][2]
+    assert echoed["role"] == "assistant"
+    assert echoed["content"] == long_wrong[: llm.REPAIR_ECHO_CHARS]
+    assert "did not satisfy the schema" in fake.requests[1]["messages"][3]["content"]
+
+
+def test_the_budget_leaves_room_for_a_repair_turn() -> None:
+    """A prompt that fits with its reply but not with a retry is refused up front."""
+    # Large enough that the window, not the 60% input share, is the limit that binds.
+    max_tokens = 8_000
+    room = ENDPOINT.num_ctx - max_tokens
+    fits = "x" * int((room - llm.REPAIR_TOKENS - 10) * llm.CHARS_PER_TOKEN)
+    overflows_on_retry = "x" * int((room - 10) * llm.CHARS_PER_TOKEN)
+
+    llm.check_budget(ENDPOINT, "", fits, max_tokens)
+    with pytest.raises(llm.BudgetExceeded, match="repair turn"):
+        llm.check_budget(ENDPOINT, "", overflows_on_retry, max_tokens)
+
+
+# --- the usage log ---------------------------------------------------------------
+
+
+async def test_every_call_is_recorded_with_its_step_version_and_attempt(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    serve(monkeypatch, FakeServer(['{"wrong": 1}', '{"skills": ["Go"]}']))
+
+    with llm.track_usage() as usage:
+        await llm.generate(Skills, "text", system="Extract.", endpoint=ENDPOINT, version=3)
+
+    first, second = usage.records
+    assert (first.step, first.version, first.attempt) == ("Skills", 3, 1)
+    assert (second.step, second.version, second.attempt) == ("Skills", 3, 2)
+    assert first.as_payload() == {
+        "step": "Skills",
+        "model": ENDPOINT.provenance,
+        "promptVersion": 3,
+        "attempt": 1,
+        "promptTokens": 100,
+        "cachedTokens": 0,
+        "completionTokens": 20,
+        "elapsedMs": first.elapsed_ms,
+    }
+
+
+async def test_cached_prompt_tokens_are_counted_when_the_server_reports_them(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    reported = {
+        "prompt_tokens": 4000,
+        "completion_tokens": 50,
+        "prompt_tokens_details": {"cached_tokens": 3200},
+    }
+    serve(monkeypatch, FakeServer(['{"skills": []}'], usage=reported))
+
+    with llm.track_usage() as usage:
+        await llm.generate(Skills, "text", system="Extract.", endpoint=ENDPOINT)
+
+    assert usage.records[0].cached_tokens == 3200
+    assert usage.summary()["cachedTokens"] == 3200
