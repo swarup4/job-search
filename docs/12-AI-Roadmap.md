@@ -2,16 +2,74 @@
 
 | | |
 |---|---|
-| **Written** | 2026-11-16 |
-| **Replaces** | Steps `A3`–`A6` of [doc 10](10-Context-Engineering-Launch-Plan.md). Its gap analysis, Stage B (server) and decisions D1–D4 still stand |
-| **Covers** | Roadmap Phases 7, 8 and 10 in [05-Roadmap-Backlog.md](../05-Roadmap-Backlog.md), plus the AI half of Phase 9 |
+| **Written** | 2026-11-16, revised the same day for three decisions (see Decisions below) |
+| **Replaces** | Steps `A3`–`A6` of [doc 10](10-Context-Engineering-Launch-Plan.md). Its gap analysis and Stage B (server) still stand |
+| **Covers** | Roadmap Phases 6, 7, 8 and 10 in [05-Roadmap-Backlog.md](../05-Roadmap-Backlog.md), plus the AI half of Phase 9 |
 | **Also reviewed** | [ai-job-search-dev/ai-job-search](https://github.com/ai-job-search-dev/ai-job-search) at `745e677`, for ideas worth borrowing (§3) |
 
-One goal: **every model call fits a fixed budget, and no step makes a call larger.** Six steps,
-done in order. Each has one outcome and one check.
+One goal: **every model call fits a fixed budget, and no step makes a call larger.** A setup
+step, then six steps in order. Each has one outcome and one check.
 
-Task ids from doc 10 are kept where the task is the same. New ones are `CE-11` to `CE-13`,
-`EV-06` and `QA-01`.
+Task ids from doc 10 are kept where the task is the same. New ones are `OS-01` to `OS-06`,
+`CE-11` to `CE-13`, `EV-06` and `QA-01`.
+
+## Progress
+
+*Updated 2026-11-16. On branch `ai-roadmap-docs`, PR #62.*
+
+Steps 2 and 3 are built, and the parts of step 4 that need no model. **None of it has
+been measured**, so the checks that compare against a baseline are open. The stack also
+changes in step 0, so the first baseline will be taken on the current code with the new
+stack. A before-number for steps 2 and 3 would need step 0 applied on top of commit
+`7504b03`, the last one before these changes; without that, those two steps are judged on
+accuracy alone.
+
+| Step | State | What is true |
+|---|---|---|
+| 0 Open-source stack | not started | Added 2026-11-16. Nothing in it waits on an outside account |
+| 1 Measure | waiting on step 0 | Then needs only a local MongoDB and the two models pulled into Ollama |
+| 2 Send less | built, not measured | All seven tasks. Model calls per scraped posting go from four to two (brief, compare), and to one more for a captured page (parse, which now returns the brief). Token and accuracy checks need step 1 |
+| 3 Arrange for reuse | built, not measured | All three tasks. The hostile-label test passes. Cached tokens can only be seen on a real model server |
+| 4 Lock it in | partly | `EV-06` budget tests and `EV-03` runner built and tested with the model faked. `EV-05` workflow written, never run. `EV-04` tests written, never run: no usable local model on this machine. `CE-10` needs the labelled set |
+| 5, 6 | not started | |
+
+**Tests.** AI tier: 337 pass, 1 fails — the failure is the old one, `ai/.env.example`
+naming a hosted endpoint, which `OS-04` fixes. Seven live-model tests are collected
+and not run. Server: lint passes and the app builds its routes; **the server suite was
+not run** (no MongoDB here), so `server/tests/test_scoring_inputs.py` and the database
+half of `test_experience.py` are unverified.
+
+**Decisions made while building, to confirm:**
+
+- *Minimum experience gate (`CE-12`).* "Min experience" in Search targets is read as
+  the level you are looking for: a posting that states a minimum **below** it fails.
+- *Work mode gate.* A posting that states a mode different from the saved one fails,
+  including a remote posting when you saved hybrid.
+- *Skill-only postings (`CE-07`).* A scoring run matches a saved skill against
+  `techStack`. A posting kept by discovery only for a skill in its description, and
+  not yet analyzed, is not picked up by a scoring run until Analyze reads it.
+- *Captured pages (`CE-03`).* The parse call now returns the brief as well. Doc 10
+  said to keep the two apart if the larger schema lowers accuracy on captured pages;
+  that is unmeasured. `PARSE_VERSION` is 2, so the usage log separates old from new.
+- *Tailoring (`CE-02`).* It is tagged and ordered, but does not use the candidate
+  block: it needs the current role's bullets word for word, which the block does not
+  hold.
+
+## Decisions on 2026-11-16
+
+| # | Decision | Effect on this plan |
+|---|---|---|
+| D5 | **No chat for now** | The resume chat, its router, the tools a model would choose from, and reranking are parked (§5). Nothing else depended on them |
+| D6 | **Open source only**, because this is a community project | The hosted model router and the Voyage API go. Generation and embeddings both run on Ollama with open-weights models. This also settles `LS-03` in doc 10: the model is local |
+| D7 | **No Atlas cluster** | Vector search moves into the server's own code as an exact cosine search, so any MongoDB works |
+
+Two things for the owner to decide, neither blocking:
+
+- **MongoDB's licence.** The Community Server is under the SSPL, which is source-available but
+  not approved by the Open Source Initiative. Staying on it is the practical choice. A strict
+  reading of D6 would mean moving the server's data layer to PostgreSQL, which is a rewrite.
+- **The repository has no `LICENSE` file.** A community project needs one before others can use
+  or contribute to the code (`OS-06`).
 
 ---
 
@@ -38,10 +96,10 @@ new limits, enforced by `EV-06`. They are starting values: step 1 replaces them 
 | System prompt | 2,457 (15% of the window) | 237–533 across the six prompts |
 | All input | 9,830 (60%) | enforced |
 | Reserved for a retry | 650 | enforced |
-| Candidate block (skill inventory and profile digest) | 3,000 | not limited |
-| Posting text, after cleaning | 3,000 | cut at 4,000 (5,333 for a captured page), uncleaned |
-| Tool definitions in any call | 1,600 (10%) | no call has tools yet |
-| One tool result | 1,000, paged beyond that | — |
+| Candidate block (skill inventory and profile digest) | 3,000 | enforced: `inventory.render_candidate` |
+| Posting text, after cleaning | 3,000 | enforced: `cleaning.clean_posting` |
+| Tool definitions in any call | 1,600 (10%) | parked with the chat (§5): no call has tools. Limit pinned in `config/llm.py` |
+| One tool result | 1,000, paged beyond that | parked with the chat |
 
 ---
 
@@ -54,8 +112,8 @@ Already right, and kept: the scoring call compares against the stored brief, not
 posting; word-for-word matches are decided in code; scores are counted, not generated; quotes are
 checked against their source.
 
-Not started: everything below. Step 1 is blocked on the Atlas cluster, Voyage key and model
-choice (doc 10, `LS-02`–`LS-04`).
+Built since: steps 2 and 3 and part of step 4 (see Progress). Nothing waits on
+an outside account any more. Step 0 can start now.
 
 ---
 
@@ -69,12 +127,11 @@ because it assumes a 200,000-token hosted model. JobPilot cannot copy its prompt
 | What it does | Where it lands here |
 |---|---|
 | A deterministic gate (`posting_guard.py`) strips hidden HTML and invisible characters and quotes instruction-shaped lines before any model reads a posting | `CE-11`, step 2 |
-| State is queried, not read: a tool returns a few compact rows from the job list, and results are written back by a tool, so the list never enters the conversation | Rule 5; `MC-01` in step 6 |
+| State is queried, not read: a tool returns a few compact rows from the job list, and results are written back by a tool, so the list never enters the conversation | Rule 5 |
 | A compact rubric is built from the profile once and passed inline to each scoring worker; workers never re-read the profile | Rule 2; `CE-13` in step 3 |
 | Location and language are pass/fail gates checked before any scoring | `CE-12`, step 2 |
 | A run scores a fixed number of postings; the rest are deferred to the next run, not dropped | `CE-07`, step 2 |
 | Cheap triage for every posting, expensive depth only for the one being applied to | Already the shape here: brief and compare for all, tailoring on request |
-| Workers that hold untrusted posting text have no write tools; edits come back as structured changes for the caller to apply | Step 5 chat and step 6 tools |
 | The compiled PDF is checked in code: page count and the text a tracking system would extract | `QA-01`, step 5 |
 | Verification runs once, at the end; nothing already in context is read again | Rule 2 |
 | Recorded outcomes feed back into how fit is judged | `FE-04`, step 5 |
@@ -87,98 +144,123 @@ draft (the code checks here do that job without a call).
 
 ## 4. The road
 
-### Step 1 — Measure (3–4 days, blocked on setup)
+### Step 0 — Open-source stack (about 1 week)
+
+Done before measuring, because a baseline is only useful on the stack that will be kept.
+
+- [ ] `OS-01` **Exact vector search in the server.** `resume_chunk.service.search` loads the
+  user's embedded chunks with an ordinary query and ranks them by cosine similarity in Python. A
+  profile is a few dozen chunks, so this is exact and fast, and needs no new dependency.
+  `search_many` loads the chunks once for all vectors. Remove the Atlas index creation from
+  `config/database.py` and the score rescaling in `cosine_from_score`. Add the tests the Atlas
+  version could never have: ordering, the per-user filter, chunks with no vector.
+- [ ] `OS-02` **Embeddings from Ollama.** Replace the Voyage client in `ai/rag/embeddings.py`
+  with a call to Ollama's OpenAI-compatible embeddings endpoint, using the HTTP client already in
+  the project. Start with `bge-m3`: it returns 1,024-dimension vectors, the size the database
+  already stores, so there is no schema change. Confirm the licence of the model pulled. Remove
+  the `voyageai` dependency and replace the guardrail test that names it.
+- [ ] `OS-03` **Remove reranking and two-stage retrieval** (`rag.retrieve`, `rag.rerank`). They
+  have no caller without the chat. Keep `nearest_spans`, which scoring uses.
+- [ ] `OS-04` **Point `ai/.env.example` at Ollama** and remove the Voyage settings. The guardrail
+  test that forbids a hosted endpoint then passes, and the CI workflow can go green.
+- [ ] `OS-05` **Re-embed and re-measure.** Every stored chunk is embedded again with the new
+  model. `NEAR_MISS_THRESHOLD` (0.35) was measured for Voyage's vectors and must be measured
+  again: with the helper in `rag/embeddings.py` now, and on the labelled set after step 1.
+- [ ] `OS-06` **Add a `LICENSE` file** once the owner has chosen one, and record the MongoDB
+  licence decision in the README.
+
+**Check:** both test suites pass against a local MongoDB with no network access; scoring a
+posting with a missing requirement returns a near-miss hint; no API key appears in any `.env`
+template.
+
+### Step 1 — Measure (3–4 days)
 
 - [ ] `EV-00` Score about 50 real Indian postings against one profile. Save the per-step summary
-  from `GET /api/llm-usage/summary`.
+  from `GET /api/llm-usage/summary`, with the model names and the machine it ran on.
 - [ ] `EV-02` Label 20 of those postings and 3 profiles: requirements, the four details,
-  present/missing verdicts. Grow the set later; 20 is enough to catch a regression.
+  present/missing verdicts, and true near misses. Grow the set later; 20 is enough to catch a regression.
 
 **Check:** a saved table of tokens, calls, retries and time per step.
 
 ### Step 2 — Send less (about 1 week)
 
-- [ ] `CE-04` **Clean postings.** New `ai/agents/cleaning.py`: links become their text, images
+- [x] `CE-04` **Clean postings.** New `ai/agents/cleaning.py`: links become their text, images
   go, blank and repeated lines collapse. If the text is still over budget, keep sections by
   heading (responsibilities, requirements, qualifications, skills) and drop benefits and legal
   text. The evidence checks run on the same cleaned text.
-- [ ] `CE-11` **Guard postings.** In the same module: remove zero-width and other invisible
+- [x] `CE-11` **Guard postings.** In the same module: remove zero-width and other invisible
   characters, and hidden elements where the source is HTML. Lines addressed to an AI are kept
   but recorded on the posting, so the user can be shown that a posting tried it.
-- [ ] `CE-03` **Read each posting once.** The brief also carries experience, salary and job type,
+  *Recorded as `brief.flagged`. No screen shows it yet.*
+- [x] `CE-03` **Read each posting once.** The brief also carries experience, salary and job type,
   so the separate details call goes. For captured pages the parse call returns the brief fields.
-- [ ] `CE-12` **Gates before the model.** Location, work mode and minimum years are compared in
+- [x] `CE-12` **Gates before the model.** Location, work mode and minimum years are compared in
   code against the user's preferences as soon as the brief exists. A posting that fails is marked
   with the reason and is not sent to the compare call.
-- [ ] `CE-07` **Score only relevant postings, in capped runs.** Filter by the user's saved roles
+  *`ai/agents/gates.py`. The match is stored with score 0, the reason as its one risk, and
+  `gate` set. No screen treats a gated match differently yet.*
+- [x] `CE-07` **Score only relevant postings, in capped runs.** Filter by the user's saved roles
   and locations; score a fixed number per run and leave the rest for the next one.
-- [ ] `CE-06` Remove the posting embedding that nothing reads.
-- [ ] `CE-09` Send all near-miss label vectors in one search request.
+  *`GET /match/unscored?relevant=true`; `SCORING_MAX_JOBS`, default 50. The run reports
+  `remaining`.*
+- [x] `CE-06` Remove the posting embedding that nothing reads. *The step is gone; the
+  server endpoint is left for the feature that will read it. Its Atlas index goes with `OS-01`.*
+- [x] `CE-09` Send all near-miss label vectors in one search request.
+  *`POST /resume-chunk/search-many`. `OS-01` turns the searches behind it into one pass.*
 
 **Check:** model calls per posting drop from four to at most three; prompt tokens per posting
 drop by at least a third; accuracy on the labelled set does not fall.
 
 ### Step 3 — Arrange for reuse (3–4 days)
 
-- [ ] `CE-13` **One candidate block.** Skill inventory and profile digest are rendered once per
+- [x] `CE-13` **One candidate block.** Skill inventory and profile digest are rendered once per
   profile version into a single block, identical byte for byte on every call, and stored. Every
   prompt that needs the candidate uses this block and nothing else from the profile.
-- [ ] `CE-01` **Reorder the scoring prompt:** system, candidate block, job, then the requirements
+- [x] `CE-01` **Reorder the scoring prompt:** system, candidate block, job, then the requirements
   to judge, each in its own tag. `COMPARE_SYSTEM` names each tag and says which is the question.
-- [ ] `CE-02` **Same order and tags for tailoring**, with the untrusted-input rule.
+- [x] `CE-02` **Same order and tags for tailoring**, with the untrusted-input rule.
 
-**Check:** from the second posting of a run, cached tokens are above zero where the model server
-reports them; a new test with a hostile requirement label passes.
+**Check:** from the second posting of a run, cached tokens are above zero where Ollama
+reports them, or time per call falls where it does not; a new test with a hostile requirement label passes.
 
 ### Step 4 — Lock it in (about 1 week)
 
-- [ ] `EV-03` **Runner** in `ai/eval/`: requirement precision and recall, verdict accuracy, the
+- [x] `EV-03` **Runner** in `ai/eval/`: requirement precision and recall, verdict accuracy, the
   rate of wrong "present" verdicts, tokens and time per posting, per prompt version and model.
-- [ ] `EV-06` **Budget tests.** One test per prompt builds its largest realistic input and fails
-  if any row of the budget table is exceeded.
-- [ ] `EV-04` One live adversarial test per prompt.
+  *`python -m eval.runner --data … --out … [--baseline …]`. Tested with the model faked.
+  `ai/eval/sample/` is one invented posting to show the label format; it is not `EV-02`.*
+- [x] `EV-06` **Budget tests.** One test per prompt builds its largest realistic input and fails
+  if any row of the budget table is exceeded. *`ai/tests/test_budgets.py`.*
+- [ ] `EV-04` One live adversarial test per prompt. *Written in `ai/tests/test_live_llm.py`,
+  seven tests. Not run: they need a local model pulled into Ollama.*
 - [ ] `EV-05` CI: lint, both suites and the budget tests on every push.
+  *`.github/workflows/ci.yml` written, never run. The AI job will fail until `OS-04`
+  fixes the `ai/.env.example` guardrail failure. After `OS-01` the server job needs only a
+  stock MongoDB container.*
 - [ ] `CE-10` Try embedding each chunk with its role and company in front. Keep it only if the
   labelled set shows related and unrelated scores further apart.
 
 **Check:** a prompt or model change produces a before-and-after report, and an oversized prompt
 fails the build.
 
-### Step 5 — Features, on the same contract (about 3 weeks)
+### Step 5 — Features, on the same contract (about 2 weeks)
 
 - [ ] `FE-01` **Resume import.** PDF or DOCX to markdown, one schema-constrained call per section,
   each value checked against the document, shown for confirmation before saving.
 - [ ] `FE-02` **Answer bank.** Save answers typed in the extension. For a question the word match
   misses, search the bank by embedding with a threshold and give the model only the question and
   the matches. It returns the key of a stored answer or "ask the user", never a new fact.
-- [ ] `FE-03` **Resume chat**, with a fixed layout and a limit on every part:
-
-  | Order | Part | Limit (tokens) | Changes |
-  |---|---|---|---|
-  | 1 | System: role, rules, guide to the tags | 500 | never |
-  | 2 | Candidate block and the user's learned rules | 3,000 | when the profile changes |
-  | 3 | Summary of earlier turns | 600 | when the recent turns overflow |
-  | 4 | Recent turns, word for word | 2,000 | each turn |
-  | 5 | Retrieved chunks and the resume section being edited | 1,500 | each turn |
-  | 6 | The user's message | 500 | each turn |
-  | | Reply, plus the retry reserve | 2,150 | |
-
-  That is 10,250 of 16,384. When part 4 passes its limit, the oldest turns are folded into part 3
-  as a record of decisions, constraints and open items. The model returns edits as structured
-  changes; code checks them for invented words; the user accepts or rejects each. No tools.
-- [ ] `FE-04` **Memory**, two stores only. *Learned rules*: a short keyed list updated in place,
-  shown and editable in Settings, capped so it always fits part 2. *Events*: an append-only log
-  of tailor, apply and status changes, retrieved by relevance into part 5. Both are built from
-  the raw turns, never from a summary.
+- [ ] `FE-04` **Learn from edits.** A short keyed list of rules per user, updated in place when
+  the user accepts or declines a tailoring suggestion, shown and editable in Settings, and capped
+  so it always fits in the tailoring prompt.
 - [ ] `QA-01` **Check the compiled PDF in code:** page count, and that the extracted text contains
   the contact details and every keyword the user selected.
 
-**Check:** a new tester goes from an uploaded resume to a tailored PDF without typing a profile;
-the chat stays inside its budget over a 40-turn conversation.
+**Check:** a new tester goes from an uploaded resume to a tailored PDF without typing a profile.
 
-### Step 6 — Graph and tools (about 2 weeks)
+### Step 6 — Graph (about 1.5 weeks)
 
-LangGraph and MCP stay in (decision D4), kept small.
+LangGraph stays in (doc 10, decision D4), kept small.
 
 - [ ] `AG-01` **Pipeline graph.** The existing functions become nodes with fixed edges and
   unchanged prompts. State holds ids and structured results, never a message list.
@@ -186,45 +268,55 @@ LangGraph and MCP stay in (decision D4), kept small.
   slots.
 - [ ] `AG-03` **Two approval interrupts:** keyword selection after scoring, and confirmation
   before an application is marked applied. The server's own checks stay.
-- [ ] `AG-06` **Chat router.** One small call sorts a message into: question about my data,
-  change my resume, do something (score, tailor, find jobs), or small talk. Small talk gets no
-  retrieval and no tools.
-- [ ] `MC-01` **`jobpilot_api` as an MCP server**, read-only, about seven task-shaped tools
-  (`job_search`, `job_get`, `match_get`, `resume_get`, `application_list`, `profile_get`,
-  `status_get`). Lists are paged and return only the columns asked for. Totals come from the
-  server, not from the model adding rows.
-- [ ] `MC-02` **`latex` MCP server:** render and compile. A failed compile returns the first
-  error line only.
-- [ ] `MC-05` **Tool allow-list per node.** The model sees only the tools for the route it is on,
-  and only the chat's "question about my data" route has any. `EV-06` covers the tool budgets.
+- [ ] `MC-02` **`latex` MCP server:** render and compile, called from the graph's code. A
+  failed compile returns the first error line only.
 
 **Check:** the pipeline runs as a graph with both interrupts and survives a restart; tokens per
-posting are no higher than after step 3; the chat picks the right tool on the labelled set.
+posting are no higher than after step 3.
 
 ---
 
-## 5. Left out, and why
+## 5. Parked with the chat
+
+These return together when the chat does. The design is kept here so it is not lost.
+
+| Task | What it is |
+|---|---|
+| `FE-03` Resume chat | A fixed prompt layout with a limit on every part: system 500, candidate block and learned rules 3,000, summary of earlier turns 600, recent turns 2,000, retrieved chunks and the section being edited 1,500, the message 500, reply and retry 2,150. That is 10,250 of 16,384 tokens. Older turns fold into the summary; edits come back as structured changes the user accepts or rejects |
+| `AG-06` Chat router | One small call that sorts a message into a question, a resume change, an action, or small talk |
+| `MC-01` `jobpilot_api` as an MCP server | About seven read-only, task-shaped tools with paged results. It has no purpose until a model chooses tools |
+| `MC-05` Tool allow-list per node | With the two tool budgets in §1 |
+| Reranking, and an events log for retrieval | Needed only for retrieval inside a conversation |
+
+---
+
+## 6. Left out, and why
 
 | Item | Why |
 |---|---|
+| Hosted models and paid APIs of any kind | Decision D6 |
 | Discovery sources as MCP servers (`P7-03`–`P7-05`) | The model never chooses a discovery tool; code calls the scrapers directly. Wrapping them adds tool definitions and no ability. Revisit if another client needs them |
-| A follow-up drafting agent (`P8-04`) | Needs the events log from `FE-04` and real usage first. Phase 11 |
-| A model-driven supervisor for the pipeline | The pipeline is a fixed sequence. Only the chat needs a model to route |
+| A follow-up drafting agent (`P8-04`) | Needs real usage first. Phase 11 |
+| A model-driven supervisor for the pipeline | The pipeline is a fixed sequence |
 | A second model reviewing each draft | Code already checks for invented words and missing keywords, at no token cost |
-| Ragas, Langfuse or Phoenix (`P10-01`, `P10-07`) | The usage log and the runner in step 4 answer the same questions for this release. Add a tracing tool when there are more users than one team can read logs for |
+| Ragas, Langfuse or Phoenix (`P10-01`, `P10-07`) | The usage log and the runner in step 4 answer the same questions for this release. Both tools are open source, so they fit D6 if wanted later |
 
 ---
 
-## 6. Order
+## 7. Order
 
-| Step | Outcome | Estimate |
-|---|---|---|
-| 1 | Baseline numbers and a labelled set | 3–4 days |
-| 2 | Fewer and smaller calls | 1 week |
-| 3 | Prompts ordered for reuse | 3–4 days |
-| 4 | Budgets and accuracy enforced in CI | 1 week |
-| 5 | Import, answer bank, chat, memory | 3 weeks |
-| 6 | Graph, approvals, two MCP servers | 2 weeks |
+| Step | Outcome | Estimate | State |
+|---|---|---|---|
+| 0 | Runs with no outside service | 1 week | not started |
+| 1 | Baseline numbers and a labelled set | 3–4 days | waiting on step 0 |
+| 2 | Fewer and smaller calls | 1 week | built, not measured |
+| 3 | Prompts ordered for reuse | 3–4 days | built, not measured |
+| 4 | Budgets and accuracy enforced in CI | 1 week | partly built |
+| 5 | Import, answer bank, learning from edits | 2 weeks | not started |
+| 6 | Graph, approvals, LaTeX server | 1.5 weeks | not started |
 
-About 8 weeks for one or two developers. Steps 5 and 6 can run side by side, except the chat
-router, which needs the chat.
+About 5 weeks of work remain for one or two developers.
+
+For Stage B (doc 10, section 5): a local model needs a server with enough memory, ideally a GPU.
+Size it from the times recorded in step 1. The task that corrected the "all generation is local"
+wording (`SV-12`) is no longer needed, because the statement is now true.

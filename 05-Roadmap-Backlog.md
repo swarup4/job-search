@@ -20,8 +20,9 @@ The order is deliberate. An agent writing into a half-built app cannot be judged
 pipeline is far harder to debug with an LLM in the middle of it — so the plumbing is finished before
 anything starts reasoning.
 
-**The AI work in Phases 7, 8 and 10 follows [docs/12-AI-Roadmap.md](docs/12-AI-Roadmap.md):** six
-steps in order, with a token budget for every model call. Where it narrows a phase below, it says why.
+**The AI work in Phases 7, 8 and 10 follows [docs/12-AI-Roadmap.md](docs/12-AI-Roadmap.md):** a
+setup step and six steps in order, with a token budget for every model call, open-source parts
+only, and no chat for now. Where it narrows a phase below, it says why.
 
 | Phase | Delivers | State |
 |---|---|---|
@@ -157,9 +158,11 @@ this phase — it is templating, not intelligence.
 - ✅ `P2-14` **Resume screen** (`/resume`): pick a template, see your own details rendered into
   it, submit it as the default resume. The preview parses the rendered `.tex` in the browser
   (`util/texResume.js`), so the page and the stored document are the same string
-- ⬜ `P2-15` **`Template2_BoldHeaderBand` has two contact links hardcoded in its `.tex`**
+- 🟡 `P2-15` **`Template2_BoldHeaderBand` has two contact links hardcoded in its `.tex`**
   (`linkedin.com/in/swarup-saha-d7`, `github.com/swarup4`), printed after `{{CONTACT}}`. Every
-  user rendering that template gets them
+  user rendering that template gets them. *2026-11-16: removed from the file in `templates/`.
+  The copy already imported into the `templates` collection still has them until
+  `import_templates.py` is run again, and the result has not been compiled*
 - ✅ `P2-16` **Resume review screen** (`/resume/preview`): where submitting lands. Shows the
   stored resume, and **Regenerate** re-renders the same template from My Details and saves it —
   the stored `.tex` is a snapshot and does not follow later profile edits
@@ -250,9 +253,12 @@ Shortlist and Job details all run on the API. The other sources and the schedule
   `server/migrate_drop_description_requirements.py`, dry-run by default. 4 new tests in
   `ai/tests/`. *Corrected: this does not save a call for a second account — its match still
   extracts, because it needs each requirement's evidence, not only the tech labels*
-- ⬜ `P3-33` **Experience as numbers.** `experienceMin` / `experienceMax` parsed from the verbatim
+- 🟡 `P3-33` **Experience as numbers.** `experienceMin` / `experienceMax` parsed from the verbatim
   `experienceBand` ("11-15 years" → 11 / 15, "5+ years" → 5 / null), no LLM — so the saved
-  `minExperience` preference can filter on it
+  `minExperience` preference can filter on it. *2026-11-16: `modules/job/experience.py`, written
+  whenever the band is; `server/backfill_job_experience.py`, dry-run by default. 30 parser
+  tests pass. The two tests that write a job were not run (no MongoDB), and nothing filters on
+  the numbers yet — that is `P3-34`*
 - ✅ `P3-35` **Analysis progress over SSE, not polling.** `GET /api/runs/analysis/events` on the
   AI tier streams `job_started`, `step_started`, `step`, `job_done` and `run_done` as they
   happen, replays the run's earlier events to a late stream, resumes from `Last-Event-ID`, and
@@ -1147,10 +1153,14 @@ public board URL. Those still come in by hand or through the extension's Capture
   against a throwaway local MongoDB (`jobpilot_test`), never Atlas — including
   `test_no_fabrication.py` for the keyword gate. 136 in `ai/tests/`, with the model and the API
   faked. Counted 2026-09-27
-- ⬜ `CC-05` CI/CD via GitHub Actions (lint and test on push)
-- ⬜ `CC-06` **The AI tier's API token is one global.** `client.set_token` is module state, so a
+- 🟡 `CC-05` CI/CD via GitHub Actions (lint and test on push). *2026-11-16:
+  `.github/workflows/ci.yml` — AI tier, API server against a MongoDB service container, and
+  the extension's type check. Written, never run*
+- ✅ `CC-06` **The AI tier's API token is one global.** `client.set_token` is module state, so a
   second account calling tailoring while another's analysis or discovery run is going would switch
-  that run onto its token. Harmless with one user; the fix is a client per request or per run
+  that run onto its token. *Already fixed in the code: the token is a `ContextVar`
+  (`mcp_servers/jobpilot_api/client.py`), so each request and each background run keeps its
+  own. Found on 2026-11-16 still marked open here*
 - ✅ `CC-07` **Dead endpoints removed (2026-09-29).** Fifteen API server routes no caller used —
   checked against the dashboard, the extension and the AI tier's client, tests excluded:
   `GET /job`, `GET /match/summaries`, `GET /application/counts`, `/unstarted`,

@@ -3,6 +3,10 @@
 The README and [doc 07](07-PDF-Setup-macOS.md) assume macOS. This is the same setup on Windows,
 as worked through on 2026-11-10 (plan task `LS-06`). Commands are for Git Bash or PowerShell.
 
+> **This describes the code as it is today.** [Doc 12](12-AI-Roadmap.md), step 0, removes the
+> need for an Atlas cluster, a Voyage key and any hosted model. Update this page when that step
+> lands.
+
 ## 1. Tools
 
 | Tool | Needed for | Install |

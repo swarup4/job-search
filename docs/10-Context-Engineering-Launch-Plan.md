@@ -16,6 +16,11 @@ Task ids (`LS-`, `CE-`, `EV-`, `MA-`, `FE-`, `SV-`) are new and do not clash wit
 
 > **Steps `A3`–`A6` are replaced by [doc 12 — AI Roadmap](12-AI-Roadmap.md)**, which is shorter
 > and sets a token budget for every call. Sections 1–3, steps `A0`–`A2` and Stage B below still apply.
+>
+> **Three later decisions (2026-11-16) are recorded in doc 12, section 2:** no chat for now, open
+> source only, and no Atlas cluster. They overrule this document where it mentions Atlas, Voyage,
+> a hosted model or the chat. In particular `LS-02` is no longer needed and `LS-03` is settled:
+> the model is local, on Ollama.
 
 | Task | State | Evidence |
 |---|---|---|
@@ -29,6 +34,9 @@ Task ids (`LS-`, `CE-`, `EV-`, `MA-`, `FE-`, `SV-`) are new and do not clash wit
 | `CE-05` Budget the repair turn | done | a retry echoes at most 1,500 characters of the failed reply, and the budget check reserves room for it |
 | `CE-08` Version every prompt | done | versions for compare, tailor, parse and details; stored on each match and tailored resume and in the usage log |
 | Test fix | done | `test_voyage_is_imported_only_by_the_rag_clients` failed on Windows because of path separators |
+| `CE-01`–`CE-04`, `CE-06`, `CE-07`, `CE-09`, `CE-11`–`CE-13` | built, not measured | 2026-11-16, uncommitted. See the Progress section of [doc 12](12-AI-Roadmap.md) |
+| `EV-03`, `EV-06` | done | Runner in `ai/eval/`, budget tests in `ai/tests/test_budgets.py` |
+| `EV-04`, `EV-05` | written, not run | Live tests need the model; the workflow has never run |
 
 **Next, and blocked on setup only you can do:** an Atlas cluster, a Voyage key and the model
 choice (`LS-02`–`LS-04`), then the baseline run (`EV-00`). The prompt changes in `A3` are held
