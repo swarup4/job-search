@@ -42,3 +42,6 @@ templates/previews/
 backup/
 # Shared error log, written by the server and the AI tier
 logs/
+
+# Personal Claude Code skill guide, not part of the project
+git-sync.md
