@@ -38,4 +38,4 @@ markers = ["llm: needs the local Ollama model from ai/.env (slow; run with -m ll
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["config*", "agents*", "mcp_servers*", "rag*", "sources*", "api*"]
+include = ["config*", "agents*", "mcp_servers*", "rag*", "sources*", "api*", "eval*"]

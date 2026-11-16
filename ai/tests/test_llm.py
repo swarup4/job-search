@@ -10,7 +10,6 @@ import httpx
 import pytest
 from pydantic import BaseModel
 
-from agents.analysis import DETAILS_SYSTEM
 from agents.inventory import INVENTORY_SYSTEM
 from agents.matching import BRIEF_SYSTEM, COMPARE_SYSTEM
 from agents.parsing import PARSE_SYSTEM
@@ -131,8 +130,8 @@ async def test_calls_outside_a_run_are_not_counted(server: FakeServer) -> None:
 
 @pytest.mark.parametrize(
     "system",
-    [PARSE_SYSTEM, DETAILS_SYSTEM, BRIEF_SYSTEM, COMPARE_SYSTEM, INVENTORY_SYSTEM, TAILOR_SYSTEM],
-    ids=["parse", "details", "brief", "compare", "inventory", "tailor"],
+    [PARSE_SYSTEM, BRIEF_SYSTEM, COMPARE_SYSTEM, INVENTORY_SYSTEM, TAILOR_SYSTEM],
+    ids=["parse", "brief", "compare", "inventory", "tailor"],
 )
 def test_every_system_prompt_fits_its_budget(system: str) -> None:
     assert llm.estimate_tokens(system) <= int(llm.LLM_NUM_CTX * llm.SYSTEM_BUDGET)

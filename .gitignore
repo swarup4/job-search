@@ -45,3 +45,6 @@ logs/
 
 # Personal Claude Code skill guide, not part of the project
 git-sync.md
+
+# Evaluation reports are output, written per run by `python -m eval.runner`
+ai/eval/reports/
