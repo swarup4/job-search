@@ -12,7 +12,10 @@ Task ids (`LS-`, `CE-`, `EV-`, `MA-`, `FE-`, `SV-`) are new and do not clash wit
 
 ## Progress
 
-*Updated 2026-11-10. Nothing is committed; the changes are in the working tree on branch `ai`.*
+*Updated 2026-11-16. The work below was merged into `ai` in PR #58.*
+
+> **Steps `A3`–`A6` are replaced by [doc 12 — AI Roadmap](12-AI-Roadmap.md)**, which is shorter
+> and sets a token budget for every call. Sections 1–3, steps `A0`–`A2` and Stage B below still apply.
 
 | Task | State | Evidence |
 |---|---|---|
@@ -171,6 +174,8 @@ Do this before a second tester joins.
 **Exit:** two accounts on one database can each score and tailor the same job.
 
 ### A3 — Fix the context in the existing pipelines (about 1.5 weeks)
+
+> Replaced by [doc 12](12-AI-Roadmap.md), steps 2–6. Kept here for the reasoning behind each task.
 
 - [ ] `CE-01` **Reorder and tag the scoring prompt.** Send blocks in this order: skill inventory,
   candidate digest, job, requirements. Put requirement labels in their own tag. Add three lines to
