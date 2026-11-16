@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from beanie import PydanticObjectId
 
 from config.errors import Invalid, NotFound
-from modules.job import JobRead, count_jobs, get_job, list_jobs
+from modules.job import JobRead, SearchTargets, count_jobs, get_job, list_jobs
 from modules.match.models import (
     KeywordReview,
     KeywordSelection,
@@ -13,6 +13,7 @@ from modules.match.models import (
     ReviewState,
     UnscoredJobs,
 )
+from modules.preference import get_preference
 
 
 class MatchNotFound(NotFound):
@@ -81,10 +82,18 @@ async def pending_counts(user_id: PydanticObjectId) -> PendingCounts:
     )
 
 
-async def unscored(user_id: PydanticObjectId, limit: int) -> UnscoredJobs:
+async def unscored(user_id: PydanticObjectId, limit: int, relevant: bool = False) -> UnscoredJobs:
+    """`relevant` narrows the jobs to the user's saved search targets. The catalogue
+    is shared, so without it a scoring run pays for every posting anyone discovered."""
     scored = [match.jobId for match in await Match.find(Match.userId == user_id).to_list()]
-    jobs = await list_jobs(limit=limit, exclude=scored) if limit else []
+    targets = None
+    if relevant:
+        preference = await get_preference(user_id)
+        targets = SearchTargets(
+            roles=preference.roles, skills=preference.skills, locations=preference.locations
+        )
+    jobs = await list_jobs(limit=limit, exclude=scored, targets=targets) if limit else []
     return UnscoredJobs(
-        total=await count_jobs(exclude=scored),
+        total=await count_jobs(exclude=scored, targets=targets),
         jobs=[JobRead.model_validate(job, from_attributes=True) for job in jobs],
     )

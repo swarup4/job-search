@@ -69,10 +69,16 @@ async def get_job(job_id: str) -> dict[str, Any]:
     return await _request("GET", f"/job/getJob/{job_id}")
 
 
-async def list_unscored_jobs(limit: int) -> list[dict[str, Any]]:
-    """The caller's newest jobs with no match yet — what "Analyze new jobs" takes."""
-    body = await _request("GET", "/match/unscored", params={"limit": limit})
-    return body["jobs"]
+async def list_unscored_jobs(limit: int, relevant: bool = False) -> list[dict[str, Any]]:
+    """The caller's newest jobs with no match yet — what "Analyze new jobs" takes.
+    `relevant` narrows them to the caller's saved roles, skills and locations."""
+    return (await unscored_jobs(limit, relevant))["jobs"]
+
+
+async def unscored_jobs(limit: int, relevant: bool = False) -> dict[str, Any]:
+    """`{total, jobs}` — the jobs as above, and how many there are in all."""
+    params = {"limit": limit, "relevant": str(relevant).lower()}
+    return await _request("GET", "/match/unscored", params=params)
 
 
 async def update_job(job_id: str, payload: dict[str, Any]) -> dict[str, Any]:
@@ -192,6 +198,19 @@ async def search_chunks(vector: list[float], limit: int = 50) -> list[dict[str, 
     """`$vectorSearch` over the caller's own chunks. The vector is embedded here; the
     server runs the query, because this tier has no database URI."""
     return await _request("POST", "/resume-chunk/search", json={"vector": vector, "limit": limit})
+
+
+async def search_chunks_many(
+    vectors: list[list[float]], limit: int = 1
+) -> list[list[dict[str, Any]]]:
+    """`search_chunks` for several vectors in one request: one list of hits per vector,
+    in the order sent."""
+    if not vectors:
+        return []
+    body = await _request(
+        "POST", "/resume-chunk/search-many", json={"vectors": vectors, "limit": limit}
+    )
+    return body["results"]
 
 
 async def chunk_stats() -> dict[str, Any]:

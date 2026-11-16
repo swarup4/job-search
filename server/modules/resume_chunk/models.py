@@ -125,6 +125,20 @@ class SearchQuery(BaseModel):
     limit: int = Field(default=50, ge=1, le=200)
 
 
+class SearchManyQuery(BaseModel):
+    """Several query vectors in one request. The near-miss check has one per missing
+    requirement, and a round trip each was most of its time."""
+
+    vectors: list[list[float]] = Field(min_length=1, max_length=50)
+    limit: int = Field(default=1, ge=1, le=50)
+
+
+class SearchManyResult(BaseModel):
+    """One list of hits per vector, in the order the vectors were sent."""
+
+    results: list[list[ChunkMatch]]
+
+
 class ChunkEmbedding(BaseModel):
     chunkId: PydanticObjectId
     embedding: list[float] = Field(min_length=1)

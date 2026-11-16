@@ -18,6 +18,8 @@ class ScoringRun(BaseModel):
     status: Literal["running", "done", "failed"]
     scored: int = 0
     failed: int = 0
+    # Relevant jobs still unscored when the run ended: past the cap, or failed.
+    remaining: int = 0
     results: list[ScoringResult] = Field(default_factory=list)
     error: str | None = None
     startedAt: datetime

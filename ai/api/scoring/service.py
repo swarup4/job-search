@@ -3,9 +3,11 @@
     curl -X POST http://127.0.0.1:8001/api/runs/scoring/start -H "Authorization: Bearer <token>"
 
 A background run on the match model (`MATCH_LLM_*` in `.env`, a local one if set),
-one job at a time, until nothing unscored is left — so jobs discovered mid-run are
-picked up too. Jobs you already have a match for are never touched, so keyword
-selections survive. Progress streams from `GET /api/runs/scoring/events`, from
+one job at a time. It scores only jobs inside your saved Search targets — the catalogue
+is shared, and a posting for someone else's role is not yours to pay for — and at most
+`SCORING_MAX_JOBS` of them, newest first. The rest are left for the next run, not
+dropped: the run reports how many remain. Jobs you already have a match for are never
+touched, so keyword selections survive. Progress streams from `GET /api/runs/scoring/events`, from
 `run_started`, which carries the run.
 
 Starting while your run is going returns that run rather than a second one: Refresh
@@ -16,6 +18,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import uuid
 from datetime import UTC, datetime
 
@@ -32,8 +35,11 @@ from mcp_servers.jobpilot_api.client import JobPilotApiError
 
 logger = logging.getLogger(__name__)
 
-# The server's page size for unscored jobs; the run keeps asking until none are left.
+# The server's page size for unscored jobs.
 BATCH = 50
+# How many jobs one run scores. A run is a bounded spend: the catalogue grows with
+# every discovery, and "until none are left" grew with it.
+MAX_JOBS = int(os.environ.get("SCORING_MAX_JOBS", "50"))
 
 EXPIRED = "Your session expired mid-run. Refresh again — jobs already scored keep their match."
 
@@ -80,15 +86,15 @@ async def _execute(run: ScoringRun, token: str, log: EventLog) -> None:
     attempted: set[str] = set()
     with track_usage() as usage:
         try:
-            while True:
+            while len(attempted) < MAX_JOBS:
                 batch = [
                     job
-                    for job in await client.list_unscored_jobs(limit=BATCH)
+                    for job in await client.list_unscored_jobs(limit=BATCH, relevant=True)
                     if job["id"] not in attempted
                 ]
                 if not batch:
                     break
-                for job in batch:
+                for job in batch[: MAX_JOBS - len(attempted)]:
                     attempted.add(job["id"])
                     result = await _score_one(job, log)
                     if result.error is None:
@@ -100,6 +106,9 @@ async def _execute(run: ScoringRun, token: str, log: EventLog) -> None:
                         {"type": "job_done", **result.model_dump(), "scored": run.scored,
                          "failed": run.failed}
                     )  # fmt: skip
+            # What the cap left for next time — and anything that failed, which is
+            # still unscored and will be tried again then.
+            run.remaining = (await client.unscored_jobs(limit=0, relevant=True))["total"]
             run.status = "done"
         except JobPilotApiError as error:
             run.status = "failed"
@@ -115,7 +124,7 @@ async def _execute(run: ScoringRun, token: str, log: EventLog) -> None:
             logger.info("scoring run %s: %d jobs, tokens %s", run.id, run.scored, usage.summary())
             log.emit(
                 {"type": "run_done", "status": run.status, "error": run.error,
-                 "scored": run.scored, "failed": run.failed,
+                 "scored": run.scored, "failed": run.failed, "remaining": run.remaining,
                  "finishedAt": run.finishedAt.isoformat(), "usage": usage.summary()}
             )  # fmt: skip
             await store_usage("scoring", run.id, usage)

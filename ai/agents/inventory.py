@@ -17,12 +17,26 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field
 
-from agents.evidence import flatten, profile_corpus, slug, verified_span
-from config.llm import INVENTORY, UNTRUSTED_RULE, as_document, generate
+from agents.evidence import flatten, profile_corpus, profile_digest, slug, verified_span
+from config.llm import (
+    CANDIDATE_TOKENS,
+    CHARS_PER_TOKEN,
+    INVENTORY,
+    UNTRUSTED_RULE,
+    as_document,
+    generate,
+)
 from mcp_servers import jobpilot_api
 
 # Bumped when the prompt changes, so an inventory read under the old one is rebuilt.
 INVENTORY_VERSION = 1
+
+# The candidate block's share of any prompt — the budget table in docs/12.
+CANDIDATE_CHARS = int(CANDIDATE_TOKENS * CHARS_PER_TOKEN)
+# How much of each skill's quote the block lists, widest first. A shortened quote is
+# enough for a model to tell skills apart; the full quote stays in the store. A long
+# inventory steps down until the block fits.
+LISTED_EVIDENCE_CHARS = (100, 60, 30, 0)
 
 MAX_SKILLS = 100
 # A skill list is long output: about fifty tokens an entry.
@@ -79,6 +93,9 @@ class Inventory(BaseModel):
     profileHash: str
     modelName: str
     skills: list[Skill]
+    # The candidate as every prompt sees them: the skills above and a short profile,
+    # rendered once per profile version. See `render_candidate`.
+    candidateBlock: str = ""
 
 
 # Two jobs scored side by side would otherwise both find no inventory and both pay to
@@ -103,10 +120,47 @@ async def ensure_inventory(profile: dict[str, Any]) -> Inventory:
     async with lock:
         stored = await jobpilot_api.get_skill_inventory()
         if stored is not None and stored.get("profileHash") == digest:
-            return Inventory.model_validate(stored)
-        inventory = await build_inventory(corpus, digest)
+            inventory = Inventory.model_validate(stored)
+            block = render_candidate(inventory.skills, profile)
+            if inventory.candidateBlock == block:
+                return inventory
+            # An inventory stored before the block existed, or a profile detail the
+            # block shows and the hash does not cover. Re-rendered in code: no model call.
+            inventory.candidateBlock = block
+        else:
+            inventory = await build_inventory(corpus, digest)
+            inventory.candidateBlock = render_candidate(inventory.skills, profile)
         await jobpilot_api.replace_skill_inventory(inventory.model_dump())
         return inventory
+
+
+def render_candidate(skills: list[Skill], profile: dict[str, Any]) -> str:
+    """The one block every prompt uses for the candidate: the skill inventory, then a
+    short profile. (CE-13)
+
+    A pure function of the stored inventory and the profile, so it is the same bytes
+    on every call until one of them changes — which is what lets a model server reuse
+    the start of a prompt across a scoring run. Held to `CANDIDATE_CHARS`: a long
+    inventory lists shorter quotes rather than fewer skills, because a skill left out
+    is a requirement wrongly reported Missing."""
+    digest = profile_digest(profile)
+    block = ""
+    for evidence_chars in LISTED_EVIDENCE_CHARS:
+        listing = "\n".join(_listed(skill, evidence_chars) for skill in skills) or "(empty)"
+        block = f"Skill inventory:\n{listing}\n\nProfile:\n{digest}"
+        if len(block) <= CANDIDATE_CHARS:
+            return block
+    # Still over with no quotes at all: the profile digest gives way, never the skills.
+    return block[:CANDIDATE_CHARS]
+
+
+def _listed(skill: Skill, evidence_chars: int) -> str:
+    line = f"{skill.id}: {skill.label}"
+    if skill.aliases:
+        line += f" (also: {', '.join(skill.aliases)})"
+    if evidence_chars:
+        line += f" — {skill.evidence[:evidence_chars]}"
+    return line
 
 
 async def build_inventory(corpus: str, digest: str) -> Inventory:

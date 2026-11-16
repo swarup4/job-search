@@ -165,7 +165,9 @@ async def test_nearest_spans_never_reranks(
     """`NEAR_MISS_THRESHOLD` is a cosine measured against `voyage-4-lite`. A relevance
     score from the cross-encoder sits on a different scale, so handing one to that
     comparison would invalidate the calibration without failing anything."""
-    monkeypatch.setattr(retrieval.jobpilot_api, "search_chunks", _returns([hit("LangGraph", 0.52)]))
+    monkeypatch.setattr(
+        retrieval.jobpilot_api, "search_chunks_many", _returns([[hit("LangGraph", 0.52)]])
+    )
     reranked = _fake_reranker(monkeypatch, [FakeResult(0, 0.99)])
 
     spans = await retrieval.nearest_spans(["agentic orchestration"])
@@ -174,29 +176,31 @@ async def test_nearest_spans_never_reranks(
     assert reranked == []
 
 
-async def test_nearest_spans_asks_once_per_label(
+async def test_nearest_spans_sends_every_label_in_one_request(
     monkeypatch: pytest.MonkeyPatch, encoder: type[FakeEncoder]
 ) -> None:
-    """One embedding call for every label, then one search each: Atlas has no batched
-    form of a vector search."""
-    searches: list[int] = []
+    """One embedding call for every label and one request for every vector (CE-09).
+    It used to be a round trip per label."""
+    searches: list[tuple[int, int]] = []
 
-    async def search(vector: list[float], limit: int = 50) -> list[dict[str, Any]]:
-        searches.append(limit)
-        return [hit("LangGraph")]
+    async def search(vectors: list[list[float]], limit: int = 1) -> list[list[dict[str, Any]]]:
+        searches.append((len(vectors), limit))
+        return [[hit("LangGraph")] for _ in vectors]
 
-    monkeypatch.setattr(retrieval.jobpilot_api, "search_chunks", search)
+    monkeypatch.setattr(retrieval.jobpilot_api, "search_chunks_many", search)
 
-    await retrieval.nearest_spans(["one", "two", "three"])
+    spans = await retrieval.nearest_spans(["one", "two", "three"])
 
     assert encoder.calls == [{"input_type": "query", "texts": ["one", "two", "three"]}]
-    assert searches == [1, 1, 1]
+    # One request carrying all three vectors, and a span back for each label in order.
+    assert searches == [(3, 1)]
+    assert len(spans) == 3
 
 
 async def test_an_empty_index_returns_no_span(
     monkeypatch: pytest.MonkeyPatch, encoder: type[FakeEncoder]
 ) -> None:
-    monkeypatch.setattr(retrieval.jobpilot_api, "search_chunks", _returns([]))
+    monkeypatch.setattr(retrieval.jobpilot_api, "search_chunks_many", _returns([[]]))
 
     assert await retrieval.nearest_spans(["agentic orchestration"]) == [None]
 

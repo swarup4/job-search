@@ -34,6 +34,10 @@ class SkillInventoryWrite(BaseModel):
     profileHash: str = Field(min_length=8, max_length=128)
     modelName: str = Field(min_length=1, max_length=200)
     skills: list[SkillEntry] = Field(default_factory=list, max_length=300)
+    # The candidate as every prompt sees them: the skills above and a short profile,
+    # rendered by the AI tier once per profile version so it is the same bytes on
+    # every call. Empty on an inventory stored before it existed.
+    candidateBlock: str = Field(default="", max_length=12_000)
 
     @model_validator(mode="after")
     def _ids_are_unique(self) -> "SkillInventoryWrite":
@@ -48,6 +52,7 @@ class SkillInventory(Document):
     profileHash: str
     modelName: str
     skills: list[SkillEntry] = Field(default_factory=list)
+    candidateBlock: str = ""
     builtAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     class Settings:
@@ -61,4 +66,5 @@ class SkillInventoryRead(BaseModel):
     profileHash: str
     modelName: str
     skills: list[SkillEntry]
+    candidateBlock: str = ""
     builtAt: datetime

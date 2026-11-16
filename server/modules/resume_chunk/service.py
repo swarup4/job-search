@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 from datetime import UTC, datetime
 
@@ -151,6 +152,14 @@ async def search(
         )
         for row in await cursor.to_list(limit)
     ]
+
+
+async def search_many(
+    user_id: PydanticObjectId, vectors: list[list[float]], limit: int = 1
+) -> list[list[ChunkMatch]]:
+    """`search` once per vector, side by side. `$vectorSearch` takes one query vector,
+    so this saves the round trips, not the searches."""
+    return list(await asyncio.gather(*(search(user_id, vector, limit) for vector in vectors)))
 
 
 async def stats(user_id: PydanticObjectId) -> IndexStats:

@@ -4,8 +4,8 @@
 
 The page is stored first (`POST /job-description` on the API server), so a model that
 fails or times out here loses nothing — the capture stays `raw` and can be read again.
-One model call: title, company, location, the four details and the tech stack, each
-checked against the page. Analyze then has only the embedding and the match to do.
+One model call: title, company, location, the four details and the posting's brief,
+each checked against the page. Analyze then has only the match to do.
 """
 
 from __future__ import annotations

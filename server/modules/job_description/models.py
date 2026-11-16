@@ -47,6 +47,13 @@ class WorkMode(StrEnum):
     REMOTE = "remote"
 
 
+class JobType(StrEnum):
+    FULL_TIME = "full_time"
+    CONTRACT = "contract"
+    PART_TIME = "part_time"
+    INTERNSHIP = "internship"
+
+
 class BriefRequirement(BaseModel):
     key: str = Field(min_length=1, max_length=80)
     label: str = Field(min_length=1, max_length=60)
@@ -65,6 +72,14 @@ class JobBriefWrite(BaseModel):
     minYears: int | None = Field(default=None, ge=0, le=50)
     locationRule: str | None = Field(default=None, max_length=200)
     workMode: WorkMode | None = None
+    # The listing's details in the posting's own words, read in the same call so no
+    # second one is needed. Optional: a brief stored before these existed has none.
+    experience: str | None = Field(default=None, max_length=120)
+    salary: str | None = Field(default=None, max_length=120)
+    jobType: JobType | None = None
+    # Lines of the posting that read as instructions to a model. Kept in the text and
+    # recorded here, so the user can be shown that a posting tried it.
+    flagged: list[str] = Field(default_factory=list, max_length=10)
     modelName: str = Field(min_length=1, max_length=200)
     # Bumped by the AI tier when the brief prompt changes, so older briefs are rebuilt
     # rather than compared against a newer one's idea of a requirement.

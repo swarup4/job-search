@@ -9,6 +9,8 @@ from modules.resume_chunk.models import (
     IndexStats,
     ResumeChunk,
     ResumeChunkRead,
+    SearchManyQuery,
+    SearchManyResult,
     SearchQuery,
 )
 
@@ -38,3 +40,11 @@ async def store_embeddings(payload: EmbeddingBatch, user_id: CurrentUser) -> Emb
 async def search(payload: SearchQuery, user_id: CurrentUser) -> list[ChunkMatch]:
     """Nearest chunks to an already-embedded query. Atlas only — see `service.search`."""
     return await service.search(user_id, payload.vector, payload.limit)
+
+
+@router.post("/search-many", response_model=SearchManyResult)
+async def search_many(payload: SearchManyQuery, user_id: CurrentUser) -> SearchManyResult:
+    """`search` for several vectors at once. Atlas only, like `search`."""
+    return SearchManyResult(
+        results=await service.search_many(user_id, payload.vectors, payload.limit)
+    )

@@ -16,9 +16,14 @@ router = APIRouter(tags=["match"])
 
 @router.get("/unscored", response_model=UnscoredJobs)
 async def unscored(
-    user_id: CurrentUser, limit: int = Query(default=10, ge=0, le=50)
+    user_id: CurrentUser,
+    limit: int = Query(default=10, ge=0, le=50),
+    relevant: bool = False,
 ) -> UnscoredJobs:
-    return await service.unscored(user_id, limit)
+    """`relevant` keeps only jobs inside the caller's saved roles, skills and
+    locations: what a scoring run takes, so nobody pays to score the whole shared
+    catalogue."""
+    return await service.unscored(user_id, limit, relevant)
 
 
 @router.post("/selection/{job_id}", response_model=MatchRead)

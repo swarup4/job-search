@@ -13,11 +13,14 @@ Two things are read once and stored, so a score costs one model call:
 
 What each step is allowed to see is a guardrail, not only an economy:
 
-| step        | sees                                              |
-|-------------|---------------------------------------------------|
-| brief       | the JD, fenced as untrusted                       |
-| compare     | the brief's requirements, the inventory, a digest |
-| near misses | the indexed profile chunks, via Voyage            |
+| step        | sees                                                                 |
+|-------------|----------------------------------------------------------------------|
+| brief       | the JD, cleaned (cleaning.py) and fenced as untrusted                |
+| gates       | nothing — the brief against your search targets, in code (gates.py)  |
+| compare     | the candidate block, the job's constraints, the brief's requirements |
+| near misses | the indexed profile chunks, via Voyage                               |
+
+A posting that fails a gate never reaches the compare call.
 
 Nothing reaches Present unless it traces to the profile: a literal match against the
 profile text, an inventory label or alias, or a verdict citing an inventory id — and
@@ -33,44 +36,36 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field
 
+from agents.cleaning import POSTING_CHARS, clean_posting
+from agents.details import JobDetails, JobType, WorkMode, verify_details
 from agents.evidence import (
     flatten,
     occurrences,
     profile_corpus,
-    profile_digest,
     sentence_with,
     slug,
     verified_span,
 )
-from agents.inventory import KIND_RULE, Inventory, ensure_inventory
+from agents.gates import Gate, check_gates
+from agents.inventory import KIND_RULE, Inventory, ensure_inventory, render_candidate
 from config.llm import BRIEF, MATCH, UNTRUSTED_RULE, as_document, generate
 from mcp_servers import jobpilot_api
 from rag import NEAR_MISS_THRESHOLD, embed_pending, nearest_spans
 
-# An unbounded prompt is a cost problem on a hosted model and a context problem on a
-# local one. A JD longer than this is padding — boilerplate, benefits, legal text.
-MAX_JD_CHARS = 12_000
+# What a posting may take of a prompt, after cleaning — the budget table in docs/12.
+# A longer one loses whole sections, benefits and legal text first (cleaning.py).
+MAX_JD_CHARS = POSTING_CHARS
 
 # Bumped when BRIEF_SYSTEM or the brief's shape changes, so stored briefs are re-read.
-BRIEF_VERSION = 1
+# 2: the brief also carries experience, salary and job type, read from cleaned text.
+BRIEF_VERSION = 2
 
 # Bumped when COMPARE_SYSTEM, the comparison prompt's layout or its shape changes. It
 # is stored on every match, so a score can be traced to the prompt that produced it.
-COMPARE_VERSION = 1
-
-# The inventory listing is the bulk of a comparison prompt. A shortened quote is
-# enough for the model to tell skills apart; the full quote stays in the store.
-LISTED_EVIDENCE_CHARS = 100
+# 2: candidate block first, then the job, then the requirements, each in its own tag.
+COMPARE_VERSION = 2
 
 Kind = Literal["tech", "qualification", "practice"]
-WorkMode = Literal["on_site", "hybrid", "remote"]
-
-# Words that have to appear in the posting before a work mode is believed.
-MODE_WORDS = {
-    "remote": r"\bremote\b|work from home|\bwfh\b",
-    "hybrid": r"\bhybrid\b",
-    "on_site": r"\bon[- ]?site\b|\bin[- ]office\b|work from office|\bwfo\b",
-}
 
 
 # Length caps on everything the model writes. Ollama compiles the schema into a
@@ -93,6 +88,9 @@ class BriefDraft(BaseModel):
     minYears: int | None
     locationRule: str | None = Field(max_length=200)
     workMode: WorkMode | None
+    experience: str | None = Field(max_length=SHORT)
+    salary: str | None = Field(max_length=SHORT)
+    jobType: JobType | None
 
 
 class Requirement(BaseModel):
@@ -116,6 +114,20 @@ class Brief(BaseModel):
     minYears: int | None = None
     locationRule: str | None = None
     workMode: WorkMode | None = None
+    # The listing's details, as the posting words them. Copied onto the job row.
+    experience: str | None = None
+    salary: str | None = None
+    jobType: JobType | None = None
+    # Lines of the posting that read as instructions to a model — see cleaning.py.
+    flagged: list[str] = Field(default_factory=list)
+
+    def details(self) -> JobDetails:
+        return JobDetails(
+            experience=self.experience,
+            salary=self.salary,
+            workMode=self.workMode,
+            jobType=self.jobType,
+        )
 
 
 class Verdict(BaseModel):
@@ -163,11 +175,18 @@ Constraints — null unless the description states it outright:
 - `seniority`: the level word it uses, e.g. "Senior", "Lead", "Staff".
 - `minYears`: the minimum years of experience, as a number.
 - `locationRule`: its location or relocation requirement, copied verbatim.
-- `workMode`: on_site, hybrid or remote."""
+- `workMode`: on_site, hybrid or remote.
+- `experience` and `salary`: copied verbatim, the exact words it uses, e.g. "6-10 years", "Minimum 8 years of experience", "₹40–55 LPA". Never compute, convert, round or combine figures.
+- `jobType`: full_time, contract, part_time or internship. Never inferred from seniority."""
 
 COMPARE_SYSTEM = f"""You compare a job's requirements with a candidate's skill inventory, and flag mismatches a human should see before applying.
 
 {UNTRUSTED_RULE}
+
+You are given three documents, in this order:
+- `candidate` — the evidence: the candidate's skill inventory, one skill per line as `id: skill`, then a short profile.
+- `job` — the job's stated constraints.
+- `requirements` — the question: one requirement per line. Judge each line and nothing else.
 
 Verdicts:
 - Exactly one verdict per requirement, with the requirement's label unchanged.
@@ -206,6 +225,13 @@ async def rectify(job_id: str, brief: Brief | None = None) -> dict[str, Any]:
 
     if brief is None:
         brief = await ensure_brief(description, job)
+
+    # Decided in code, before anything more is paid for: a posting outside the user's
+    # own search targets gets a match that says so, and the compare call is never made.
+    gate = check_gates(brief, job, await jobpilot_api.get_preferences())
+    if gate is not None:
+        return await jobpilot_api.write_match(_gated(job_id, gate))
+
     inventory = await ensure_inventory(profile)
     present, missing, risks = await compare(brief, inventory, profile, job)
     # Chunks the user edited since the last run have no vector yet, so the near-miss
@@ -234,6 +260,21 @@ async def rectify(job_id: str, brief: Brief | None = None) -> dict[str, Any]:
     return await jobpilot_api.write_match(payload)
 
 
+def _gated(job_id: str, gate: Gate) -> dict[str, Any]:
+    """The match a gated posting gets: nothing scored, and the reason where the user
+    already looks for mismatches. No model produced it, so it names none."""
+    return {
+        "jobId": job_id,
+        "score": 0,
+        "present": [],
+        "missing": [],
+        "risks": [{"key": gate.key, "title": gate.title, "detail": gate.detail}],
+        "modelName": None,
+        "promptVersion": COMPARE_VERSION,
+        "gate": gate.key,
+    }
+
+
 # --- the brief: the posting, read once ---------------------------------------
 
 
@@ -248,23 +289,37 @@ async def ensure_brief(description: dict[str, Any] | None, job: dict[str, Any]) 
         return Brief.model_validate(stored)
 
     brief = await build_brief(text)
-    await jobpilot_api.store_brief(
-        description["id"],
-        {**brief.model_dump(), "modelName": BRIEF.provenance, "briefVersion": BRIEF_VERSION},
-    )
+    await store_brief(description["id"], brief, BRIEF.provenance)
     return brief
+
+
+async def store_brief(description_id: str, brief: Brief, model_name: str) -> None:
+    await jobpilot_api.store_brief(description_id, brief_payload(brief, model_name))
+
+
+def brief_payload(brief: Brief, model_name: str) -> dict[str, Any]:
+    """A brief as the server stores it: with the model that read it and the prompt
+    version, which is how an out-of-date one is recognised and re-read."""
+    return {**brief.model_dump(), "modelName": model_name, "briefVersion": BRIEF_VERSION}
 
 
 async def build_brief(jd_text: str) -> Brief:
     """Read a JD into requirements and constraints, keeping only what it backs up."""
+    posting = clean_posting(jd_text, MAX_JD_CHARS)
     draft = await generate(
         BriefDraft,
-        as_document("job_description", jd_text),
+        as_document("job_description", posting.text),
         system=BRIEF_SYSTEM,
         endpoint=BRIEF,
         version=BRIEF_VERSION,
     )
+    return verified_brief(draft, posting.text, posting.flagged)
 
+
+def verified_brief(draft: BriefDraft, jd_text: str, flagged: list[str] | None = None) -> Brief:
+    """A model's reading of a posting, with everything the posting does not back up
+    removed. `jd_text` is the text the model was shown, so a quote is checked against
+    what it was copied from. Shared by the brief call and the capture parser."""
     haystack = flatten(jd_text)
     requirements: list[Requirement] = []
     seen: set[str] = set()
@@ -300,12 +355,25 @@ async def build_brief(jd_text: str) -> Brief:
     # dropped rather than passed on as the model's guess.
     seniority = (draft.seniority or "").strip()
     location = verified_span(draft.locationRule or "", haystack)
+    details = verify_details(
+        JobDetails(
+            experience=draft.experience,
+            salary=draft.salary,
+            workMode=draft.workMode,
+            jobType=draft.jobType,
+        ),
+        jd_text,
+    )
     return Brief(
         requirements=requirements,
         seniority=seniority if seniority and occurrences(seniority, haystack) else None,
         minYears=draft.minYears if _states_years(draft.minYears, jd_text) else None,
         locationRule=location[:200] if location else None,
-        workMode=draft.workMode if _states_mode(draft.workMode, jd_text) else None,
+        workMode=details.workMode,
+        experience=details.experience,
+        salary=details.salary,
+        jobType=details.jobType,
+        flagged=list(flagged or []),
     )
 
 
@@ -314,10 +382,6 @@ def _states_years(years: int | None, text: str) -> bool:
         return False
     pattern = rf"(?<!\d){years}(?!\d)[^.\n]{{0,25}}\b(?:years?|yrs?)\b"
     return re.search(pattern, text, re.IGNORECASE) is not None
-
-
-def _states_mode(mode: str | None, text: str) -> bool:
-    return mode is not None and re.search(MODE_WORDS[mode], text, re.IGNORECASE) is not None
 
 
 # --- compare: requirements against the inventory -----------------------------
@@ -373,13 +437,13 @@ def _comparison_prompt(
     job: dict[str, Any],
     profile: dict[str, Any],
 ) -> str:
+    """Stable first, changing last. The candidate block is the same bytes for every job
+    in a run, so a model server can reuse it; the job follows; the question comes last,
+    nearest the answer. Requirement labels are a posting's words, so they are fenced
+    like the rest of it."""
     requirements = "\n".join(f"- {item.label}" for item in undecided) or "(none to judge)"
-    skills = "\n".join(
-        f"{skill.id}: {skill.label}"
-        + (f" (also: {', '.join(skill.aliases)})" if skill.aliases else "")
-        + f" — {skill.evidence[:LISTED_EVIDENCE_CHARS]}"
-        for skill in inventory.skills
-    )
+    # `ensure_inventory` stores the block; an inventory built by hand may not carry one.
+    candidate = inventory.candidateBlock or render_candidate(inventory.skills, profile)
     constraints = "\n".join(
         [
             f"Title: {job.get('title', '')} at {job.get('company', '')}",
@@ -392,10 +456,9 @@ def _comparison_prompt(
         ]
     )
     return (
-        f"Requirements to judge:\n{requirements}\n\n"
-        f"{as_document('skill_inventory', skills or '(empty)')}\n\n"
+        f"{as_document('candidate', candidate)}\n\n"
         f"{as_document('job', constraints)}\n\n"
-        f"{as_document('candidate', profile_digest(profile))}"
+        f"{as_document('requirements', requirements)}"
     )
 
 
@@ -478,13 +541,16 @@ def tech_stack(requirements: list[Requirement]) -> list[str]:
 
 def _jd_text(description: dict[str, Any] | None, stack: list[str] | None = None) -> str:
     """The posting's prose, with its stored stack appended as a hint. Empty when the
-    job has no description yet — nothing to score rather than an error."""
+    job has no description yet — nothing to score rather than an error.
+
+    Not trimmed here: `build_brief` cleans the text and trims it by section, and a cut
+    at a character count before that is what used to lose the requirements."""
     if not description:
         return ""
-    parts = [description.get("jdText", "")]
-    if stack:
-        parts.append("Tech stack named in the posting: " + ", ".join(stack))
-    return "\n\n".join(part for part in parts if part)[:MAX_JD_CHARS]
+    # The hint leads, so it sits in the page's opening, which trimming drops last.
+    parts = ["Tech stack named in the posting: " + ", ".join(stack)] if stack else []
+    parts.append(description.get("jdText", ""))
+    return "\n\n".join(part for part in parts if part)
 
 
 if __name__ == "__main__":

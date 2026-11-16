@@ -68,6 +68,10 @@ class MatchWrite(BaseModel):
     modelName: str | None = None
     # The comparison prompt's version in the AI tier, so a score traces to its prompt.
     promptVersion: int | None = Field(default=None, ge=1)
+    # Set when the posting failed a pass/fail check against the user's search targets
+    # and was never compared: "gate-location", "gate-work-mode", "gate-experience".
+    # The reason is the match's one risk. Null on a scored match.
+    gate: str | None = Field(default=None, max_length=40)
 
 
 class Match(Document):
@@ -79,6 +83,7 @@ class Match(Document):
     risks: list[RiskFlag] = Field(default_factory=list)
     modelName: str | None = None
     promptVersion: int | None = None
+    gate: str | None = None
     review: KeywordReview = Field(default_factory=KeywordReview)
     scoredAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
@@ -110,6 +115,7 @@ class MatchRead(BaseModel):
     risks: list[RiskFlag] = Field(default_factory=list)
     modelName: str | None = None
     promptVersion: int | None = None
+    gate: str | None = None
     review: KeywordReview
     scoredAt: datetime
 
@@ -131,7 +137,8 @@ class PendingCounts(BaseModel):
 
 class UnscoredJobs(BaseModel):
     """Jobs this user has no match for, newest first — what "Analyze new jobs" takes.
-    `total` counts all of them; `jobs` is the first `limit`."""
+    `total` counts all of them; `jobs` is the first `limit`. With `relevant`, both are
+    narrowed to the user's saved search targets."""
 
     total: int
     jobs: list[JobRead]

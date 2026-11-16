@@ -100,14 +100,12 @@ async def nearest_spans(labels: list[str]) -> list[Span | None]:
     if not labels:
         return []
 
-    # One embedding call for every label, then one search each — the search is what
-    # Atlas has to do per query vector, and there is no batched form of it.
+    # One embedding call for every label, then one request carrying every vector. Atlas
+    # still searches once per vector — it has no batched form — but the server runs
+    # those side by side, where this used to be a round trip per label.
     vectors = await VoyageEmbeddings().embed_queries(labels)
-    spans: list[Span | None] = []
-    for vector in vectors:
-        hits = await jobpilot_api.search_chunks(vector, limit=1)
-        spans.append(_span(hits[0]) if hits else None)
-    return spans
+    results = await jobpilot_api.search_chunks_many(vectors, limit=1)
+    return [_span(hits[0]) if hits else None for hits in results]
 
 
 async def _search(query: str, limit: int) -> list[Span]:
