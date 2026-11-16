@@ -10,8 +10,8 @@
 One goal: **every model call fits a fixed budget, and no step makes a call larger.** A setup
 step, then six steps in order. Each has one outcome and one check.
 
-Task ids from doc 10 are kept where the task is the same. New ones are `OS-01` to `OS-06`,
-`CE-11` to `CE-13`, `EV-06` and `QA-01`.
+Task ids from doc 10 are kept where the task is the same. New ones are `OS-01` to `OS-08`,
+`CE-11` to `CE-13`, `EV-06`, `EV-07`, `FE-05` and `QA-01`.
 
 ## Progress
 
@@ -26,18 +26,28 @@ accuracy alone.
 
 | Step | State | What is true |
 |---|---|---|
-| 0 Open-source stack | not started | Added 2026-11-16. Nothing in it waits on an outside account |
-| 1 Measure | waiting on step 0 | Then needs only a local MongoDB and the two models pulled into Ollama |
+| 0 Open-source stack | not started | Added 2026-11-16. Nothing in it waits on an outside account. It starts with `OS-07`: a local MongoDB and two models pulled into Ollama, which only the machine's owner can install |
+| 1 Measure | waiting on step 0 | Needs nothing more than step 0 leaves behind |
 | 2 Send less | built, not measured | All seven tasks. Model calls per scraped posting go from four to two (brief, compare), and to one more for a captured page (parse, which now returns the brief). Token and accuracy checks need step 1 |
 | 3 Arrange for reuse | built, not measured | All three tasks. The hostile-label test passes. Cached tokens can only be seen on a real model server |
-| 4 Lock it in | partly | `EV-06` budget tests and `EV-03` runner built and tested with the model faked. `EV-05` workflow written, never run. `EV-04` tests written, never run: no usable local model on this machine. `CE-10` needs the labelled set |
+| 4 Lock it in | partly | `EV-06` budget tests and `EV-03` runner built and tested with the model faked. `EV-05` workflow written, never run. `EV-04` tests written, never run: no usable local model on this machine. `EV-07` and `CE-10` need the labelled set |
 | 5, 6 | not started | |
 
-**Tests.** AI tier: 337 pass, 1 fails — the failure is the old one, `ai/.env.example`
-naming a hosted endpoint, which `OS-04` fixes. Seven live-model tests are collected
-and not run. Server: lint passes and the app builds its routes; **the server suite was
-not run** (no MongoDB here), so `server/tests/test_scoring_inputs.py` and the database
-half of `test_experience.py` are unverified.
+**Tests**, run again on 2026-11-16 after the plan changed. AI tier: 337 pass, 1 fails — the
+failure is the old one, `ai/.env.example` naming a hosted endpoint, which `OS-04` fixes. Seven
+live-model tests are collected and not run. Lint passes in both tiers. **The server suite has
+never been run** (no MongoDB here), so these are unverified: `test_multi_account.py` and
+`test_llm_usage.py` from PR #58, `test_scoring_inputs.py`, and the database half of
+`test_experience.py`. `OS-07` is where they first run.
+
+**What the three decisions do to work already built.** Nothing built in steps 2 to 4 has to be
+undone. Three pieces are touched again by step 0:
+
+| Built | Touched by | How |
+|---|---|---|
+| `POST /resume-chunk/search-many` (`CE-09`) | `OS-01` | Keeps its shape; the searches behind it become one pass over the user's chunks |
+| The two tool budgets in `config/llm.py` and their test (`EV-06`) | D5 | Stay pinned and unused until the chat returns |
+| The evaluation runner (`EV-03`) | `EV-07` | It does not measure near misses, which `OS-05` and `CE-10` both need |
 
 **Decisions made while building, to confirm:**
 
@@ -63,13 +73,27 @@ half of `test_experience.py` are unverified.
 | D6 | **Open source only**, because this is a community project | The hosted model router and the Voyage API go. Generation and embeddings both run on Ollama with open-weights models. This also settles `LS-03` in doc 10: the model is local |
 | D7 | **No Atlas cluster** | Vector search moves into the server's own code as an exact cosine search, so any MongoDB works |
 
-Two things for the owner to decide, neither blocking:
+Five things for the owner to decide. Only the first blocks anything, and only `OS-04`:
 
+- **Which generation model.** The code default is `qwen3.5:9b`; only `phi3` is pulled on the
+  test machine, which is too small. The model must be open-weights under a licence D6 accepts,
+  must honour a strict JSON schema, and must fit the memory of the machine it runs on. Every
+  score and every baseline is tied to this choice.
 - **MongoDB's licence.** The Community Server is under the SSPL, which is source-available but
   not approved by the Open Source Initiative. Staying on it is the practical choice. A strict
   reading of D6 would mean moving the server's data layer to PostgreSQL, which is a rewrite.
 - **The repository has no `LICENSE` file.** A community project needs one before others can use
   or contribute to the code (`OS-06`).
+- **Personal data in the repository.** `server/seed_profile.json`, `templates/base_resume.tex`
+  and two files under `templates/GPT Template/` hold a real person's contact details, and six
+  template files are named after him. Doc 10 left their removal to Stage B (`SV-12`). A
+  community project is read by strangers sooner than that, so it may belong in step 0.
+- **Whether the `latex` MCP server (`MC-02`) is still wanted.** With the chat parked, no model
+  chooses a tool. §6 leaves the discovery servers out for exactly that reason, and the same
+  reasoning applies here: a plain function does the same job.
+
+The data already in the Atlas cluster (about 419 jobs) is not needed for any step here. A local
+database starts empty and is filled by a discovery run.
 
 ---
 
@@ -113,7 +137,18 @@ posting; word-for-word matches are decided in code; scores are counted, not gene
 checked against their source.
 
 Built since: steps 2 and 3 and part of step 4 (see Progress). Nothing waits on
-an outside account any more. Step 0 can start now.
+an outside account any more. Step 0 can start once the owner says to build it.
+
+**What step 0 changes in the product roadmap.** [05-Roadmap-Backlog.md](../05-Roadmap-Backlog.md)
+is the owner's document and is not edited here. These of its tasks are marked done there and are
+replaced by step 0:
+
+| Roadmap task | What it built | After step 0 |
+|---|---|---|
+| `P5-06`, `P6-04` | Voyage `voyage-4-lite` embeddings; `NEAR_MISS_THRESHOLD` 0.35 measured on them | Ollama embeddings (`OS-02`); threshold measured again (`OS-05`) |
+| `P5-11`, and the Phase 5 decision "one hosted path" | The hosted router as the only model | A local model on Ollama (`OS-04`). The roadmap's note that NFR-3 and invariant 3 are now false no longer applies: generation is local again |
+| `P5-12`, `P6-06` | `$vectorSearch` indexes on `job_descriptions` and `resume_chunks` | Removed (`OS-01`). Deviation 6, "one store, Atlas", becomes "one store, any MongoDB" |
+| `P6-05` | Two-stage retrieval with a Voyage reranker | Removed (`OS-03`); parked with the chat |
 
 ---
 
@@ -146,32 +181,58 @@ draft (the code checks here do that job without a call).
 
 ### Step 0 — Open-source stack (about 1 week)
 
-Done before measuring, because a baseline is only useful on the stack that will be kept.
+Done before measuring, because a baseline is only useful on the stack that will be kept. The
+tasks are listed in the order to do them, which is not the order of their ids.
 
+- [ ] `OS-07` **Set up the machine, and run the server suite for the first time.** Install
+  MongoDB Community Server on `127.0.0.1:27017`. Pull `bge-m3` and the chosen generation model
+  into Ollama. Then run `uv run --frozen pytest -q` in `server/` and fix what fails: four test
+  files have never run (`test_multi_account.py`, `test_llm_usage.py`, `test_scoring_inputs.py`,
+  and the database half of `test_experience.py`). Everything after this is tested on that
+  database. *Needs the owner of the machine: an earlier attempt to run a downloaded `mongod`
+  was blocked by the permission settings.*
 - [ ] `OS-01` **Exact vector search in the server.** `resume_chunk.service.search` loads the
   user's embedded chunks with an ordinary query and ranks them by cosine similarity in Python. A
   profile is a few dozen chunks, so this is exact and fast, and needs no new dependency.
-  `search_many` loads the chunks once for all vectors. Remove the Atlas index creation from
-  `config/database.py` and the score rescaling in `cosine_from_score`. Add the tests the Atlas
-  version could never have: ordering, the per-user filter, chunks with no vector.
+  `search_many` loads the chunks once for all vectors. Remove `_ensure_vector_index` and both
+  of its calls from `config/database.py` (the `job_descriptions` index as well as the
+  `resume_chunks` one) and the score rescaling in `cosine_from_score`. Point `MONGODB_URI` in
+  `server/.env.example` at the local database: it still carries an Atlas hostname. Add the
+  tests the Atlas version could never have: ordering, the per-user filter, chunks with no
+  vector.
 - [ ] `OS-02` **Embeddings from Ollama.** Replace the Voyage client in `ai/rag/embeddings.py`
   with a call to Ollama's OpenAI-compatible embeddings endpoint, using the HTTP client already in
   the project. Start with `bge-m3`: it returns 1,024-dimension vectors, the size the database
   already stores, so there is no schema change. Confirm the licence of the model pulled. Remove
-  the `voyageai` dependency and replace the guardrail test that names it.
+  the `voyageai` dependency. Voyage is also named in `rag/indexing.py`, `rag/retrieval.py`,
+  `agents/matching.py`, `api/settings/router.py` (which reports the embedding model to the
+  Settings screen), `tests/test_embeddings.py`, `tests/test_retrieval.py`, and two guardrail
+  tests: the one that limits who imports Voyage, and the one that keeps its key out of the
+  server and the browser. Voyage embedded a query and a stored chunk differently; check whether
+  the new model does, and keep one code path if it does not.
 - [ ] `OS-03` **Remove reranking and two-stage retrieval** (`rag.retrieve`, `rag.rerank`). They
-  have no caller without the chat. Keep `nearest_spans`, which scoring uses.
-- [ ] `OS-04` **Point `ai/.env.example` at Ollama** and remove the Voyage settings. The guardrail
-  test that forbids a hosted endpoint then passes, and the CI workflow can go green.
+  have no caller without the chat. Keep `nearest_spans`, which scoring uses. The Settings
+  endpoint and its "Models & privacy" panel also report a rerank model; remove that field.
+- [ ] `OS-04` **Point `ai/.env.example` at Ollama** with the chosen generation model, and remove
+  the Voyage settings. The guardrail test that forbids a hosted endpoint then passes, and the CI
+  workflow can go green. *Waits on the owner's choice of generation model.*
 - [ ] `OS-05` **Re-embed and re-measure.** Every stored chunk is embedded again with the new
-  model. `NEAR_MISS_THRESHOLD` (0.35) was measured for Voyage's vectors and must be measured
-  again: with the helper in `rag/embeddings.py` now, and on the labelled set after step 1.
+  model. Today a re-index keeps a chunk's vector when its text is unchanged, so old vectors
+  would survive a change of model: store the embedding model's name on each chunk, and treat a
+  chunk embedded by a different model as having no vector. `NEAR_MISS_THRESHOLD` (0.35) was
+  measured for Voyage's vectors and must be measured again: with the helper in
+  `rag/embeddings.py` now, and on the labelled set after step 1 (`EV-07`).
+- [ ] `OS-08` **Bring the setup documents in line.** Rewrite
+  [doc 11](11-Local-Setup-Windows.md) for a local MongoDB and Ollama, with no Atlas cluster and
+  no Voyage key. Correct the README where it says vector search needs Atlas. In doc 10, the
+  paragraph "Next, and blocked on setup only you can do" still asks for an Atlas cluster and a
+  Voyage key, and its pointer to these decisions names the wrong section.
 - [ ] `OS-06` **Add a `LICENSE` file** once the owner has chosen one, and record the MongoDB
   licence decision in the README.
 
 **Check:** both test suites pass against a local MongoDB with no network access; scoring a
-posting with a missing requirement returns a near-miss hint; no API key appears in any `.env`
-template.
+posting with a missing requirement returns a near-miss hint; no API key and no hostname outside
+this machine appears in any `.env` template; the CI workflow has run green once.
 
 ### Step 1 — Measure (3–4 days)
 
@@ -179,8 +240,12 @@ template.
   from `GET /api/llm-usage/summary`, with the model names and the machine it ran on.
 - [ ] `EV-02` Label 20 of those postings and 3 profiles: requirements, the four details,
   present/missing verdicts, and true near misses. Grow the set later; 20 is enough to catch a regression.
+  *Store it under `ai/eval/data/` in the shape `ai/eval/dataset.py` reads, and take personal
+  details out of the profiles before committing. That shape has no field for near misses yet;
+  `EV-07` adds it.*
 
-**Check:** a saved table of tokens, calls, retries and time per step.
+**Check:** a saved table of tokens, calls, retries and time per step, and the budget table in §1
+updated with measured numbers.
 
 ### Step 2 — Send less (about 1 week)
 
@@ -232,13 +297,19 @@ reports them, or time per call falls where it does not; a new test with a hostil
 - [x] `EV-06` **Budget tests.** One test per prompt builds its largest realistic input and fails
   if any row of the budget table is exceeded. *`ai/tests/test_budgets.py`.*
 - [ ] `EV-04` One live adversarial test per prompt. *Written in `ai/tests/test_live_llm.py`,
-  seven tests. Not run: they need a local model pulled into Ollama.*
+  seven tests. Not run: they need the generation model from `OS-07`. Run them with
+  `pytest -m llm` and fix or record what fails.*
 - [ ] `EV-05` CI: lint, both suites and the budget tests on every push.
   *`.github/workflows/ci.yml` written, never run. The AI job will fail until `OS-04`
   fixes the `ai/.env.example` guardrail failure. After `OS-01` the server job needs only a
   stock MongoDB container.*
-- [ ] `CE-10` Try embedding each chunk with its role and company in front. Keep it only if the
-  labelled set shows related and unrelated scores further apart.
+- [ ] `EV-07` **Measure near misses in the runner.** Add a near-miss field to the labelled set
+  and have the runner embed each missing requirement and the profile's chunks, then report
+  how far apart the related and unrelated scores sit and what each threshold would flag. The
+  runner needs no server for this, only the embedding model. `OS-05` and `CE-10` are both
+  judged on this number, and the runner cannot produce it today.
+- [ ] `CE-10` Try embedding each chunk with its role and company in front. Keep it only if
+  `EV-07` shows related and unrelated scores further apart.
 
 **Check:** a prompt or model change produces a before-and-after report, and an oversized prompt
 fails the build.
@@ -250,11 +321,21 @@ fails the build.
 - [ ] `FE-02` **Answer bank.** Save answers typed in the extension. For a question the word match
   misses, search the bank by embedding with a threshold and give the model only the question and
   the matches. It returns the key of a stored answer or "ask the user", never a new fact.
+  *The search reuses the exact cosine search from `OS-01`. Its threshold is a new one, question
+  against question, and has to be measured: the near-miss threshold does not carry over.*
 - [ ] `FE-04` **Learn from edits.** A short keyed list of rules per user, updated in place when
   the user accepts or declines a tailoring suggestion, shown and editable in Settings, and capped
-  so it always fits in the tailoring prompt.
+  so it always fits in the tailoring prompt. *The cap is a new row in the budget table and a new
+  case in `EV-06`. Adding rules to the prompt bumps `TAILOR_VERSION`.*
+- [ ] `FE-05` **Show what step 2 built.** Two things are stored and shown nowhere: a match that
+  failed a gate (`match.gate`, with the reason as its one risk) and the lines of a posting
+  addressed to an AI (`brief.flagged`). A gated job should read as "outside your search
+  targets", not as a 0% match, and should be listable apart from scored jobs. Agree the screens
+  with the owner; this sits beside roadmap `P3-34`.
 - [ ] `QA-01` **Check the compiled PDF in code:** page count, and that the extracted text contains
-  the contact details and every keyword the user selected.
+  the contact details and every keyword the user selected. *Only the base resume can be compiled
+  today (`GET /resume/base/pdf`); a tailored resume has no PDF route, so that comes first. The
+  library that extracts the text must be open source (D6).*
 
 **Check:** a new tester goes from an uploaded resume to a tailored PDF without typing a profile.
 
@@ -265,11 +346,15 @@ LangGraph stays in (doc 10, decision D4), kept small.
 - [ ] `AG-01` **Pipeline graph.** The existing functions become nodes with fixed edges and
   unchanged prompts. State holds ids and structured results, never a message list.
 - [ ] `AG-02` **Checkpoints in MongoDB**, so a run survives a restart. Replaces the in-memory run
-  slots.
+  slots. *Written through the API server, like every other write: the AI tier holds no database
+  address, and a guardrail test fails if it opens a connection. So this is a small checkpointer
+  over HTTP and a server module to store it, not LangGraph's own MongoDB checkpointer.*
 - [ ] `AG-03` **Two approval interrupts:** keyword selection after scoring, and confirmation
-  before an application is marked applied. The server's own checks stay.
+  before an application is marked applied. The server's own checks stay. *The dashboard needs
+  somewhere to show a waiting interrupt, which is roadmap `P8-08`.*
 - [ ] `MC-02` **`latex` MCP server:** render and compile, called from the graph's code. A
-  failed compile returns the first error line only.
+  failed compile returns the first error line only. *Open question for the owner, in Decisions
+  above: with no model choosing tools, a plain function does this job.*
 
 **Check:** the pipeline runs as a graph with both interrupts and survives a restart; tokens per
 posting are no higher than after step 3.
@@ -307,16 +392,22 @@ These return together when the chat does. The design is kept here so it is not l
 
 | Step | Outcome | Estimate | State |
 |---|---|---|---|
-| 0 | Runs with no outside service | 1 week | not started |
+| 0 | Runs with no outside service | 1 week | not started; waits on a go-ahead, a local MongoDB and the model choice |
 | 1 | Baseline numbers and a labelled set | 3–4 days | waiting on step 0 |
 | 2 | Fewer and smaller calls | 1 week | built, not measured |
 | 3 | Prompts ordered for reuse | 3–4 days | built, not measured |
-| 4 | Budgets and accuracy enforced in CI | 1 week | partly built |
-| 5 | Import, answer bank, learning from edits | 2 weeks | not started |
+| 4 | Budgets and accuracy enforced in CI | 1 week | partly built; `EV-04`, `EV-05`, `EV-07`, `CE-10` open |
+| 5 | Import, answer bank, learning from edits, screens for gates | 2 weeks | not started |
 | 6 | Graph, approvals, LaTeX server | 1.5 weeks | not started |
 
-About 5 weeks of work remain for one or two developers.
+About 5 to 6 weeks of work remain for one or two developers.
+
+**Open tasks, in order:** `OS-07`, `OS-01`, `OS-02`, `OS-03`, `OS-04`, `OS-05`, `OS-08`, `OS-06`;
+`EV-00`, `EV-02`; `EV-04`, `EV-05`, `EV-07`, `CE-10`; `FE-01`, `FE-02`, `FE-04`, `FE-05`, `QA-01`;
+`AG-01`, `AG-02`, `AG-03`, `MC-02`. That is 23 open and 12 done.
 
 For Stage B (doc 10, section 5): a local model needs a server with enough memory, ideally a GPU.
-Size it from the times recorded in step 1. The task that corrected the "all generation is local"
-wording (`SV-12`) is no longer needed, because the statement is now true.
+Size it from the times recorded in step 1. Of `SV-12`, the part that corrected the "all
+generation is local" wording is no longer needed, because the statement is now true. The rest of
+it still stands: removing personal data from the repository, and correcting the README where it
+describes a different system.
