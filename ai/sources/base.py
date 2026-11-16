@@ -18,6 +18,7 @@ from markdownify import markdownify
 from pydantic import BaseModel
 
 import config  # noqa: F401 — imported for its .env load
+from agents.cleaning import strip_hidden_html
 from mcp_servers.jobpilot_api import client
 
 # Fallbacks only. A run scrapes with the account's saved Search targets
@@ -149,7 +150,9 @@ async def ingest(posting: Posting) -> bool:
     if created["duplicate"] and await client.get_description_for_job(job_id) is not None:
         return False
 
-    markdown = markdownify(posting.html, heading_style="ATX").strip()
+    # Hidden elements go first: converted to markdown, their text would read as part
+    # of the posting, with nothing left to say it was never shown.
+    markdown = markdownify(strip_hidden_html(posting.html), heading_style="ATX").strip()
     description = await client.create_description(
         {
             "url": posting.listingUrl,
