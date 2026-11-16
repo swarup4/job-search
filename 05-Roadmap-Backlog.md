@@ -20,6 +20,9 @@ The order is deliberate. An agent writing into a half-built app cannot be judged
 pipeline is far harder to debug with an LLM in the middle of it — so the plumbing is finished before
 anything starts reasoning.
 
+**The AI work in Phases 7, 8 and 10 follows [docs/12-AI-Roadmap.md](docs/12-AI-Roadmap.md):** six
+steps in order, with a token budget for every model call. Where it narrows a phase below, it says why.
+
 | Phase | Delivers | State |
 |---|---|---|
 | [1](#2-phase-1--authentication--profile) | Sign in, and the profile everything hangs off | ✅ done |
