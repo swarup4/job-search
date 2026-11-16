@@ -67,6 +67,10 @@ class Job(Document):
     jobType: JobType | None = None
     workMode: WorkMode | None = None
     experienceBand: str | None = None
+    # Parsed from `experienceBand` whenever it is written (modules/job/experience.py),
+    # so a filter can compare years. Both null when the band states no figure.
+    experienceMin: int | None = None
+    experienceMax: int | None = None
     salaryText: str | None = None
     source: JobSource
     listingUrl: HttpUrl | None = None
@@ -116,6 +120,8 @@ class JobRead(BaseModel):
     jobType: JobType | None = None
     workMode: WorkMode | None = None
     experienceBand: str | None = None
+    experienceMin: int | None = None
+    experienceMax: int | None = None
     salaryText: str | None = None
     source: JobSource
     listingUrl: HttpUrl | None = None
@@ -191,6 +197,8 @@ class JobDetailRead(BaseModel):
     jobType: JobType | None = None
     workMode: WorkMode | None = None
     experienceBand: str | None = None
+    experienceMin: int | None = None
+    experienceMax: int | None = None
     salaryText: str | None = None
     source: JobSource
     listingUrl: HttpUrl | None = None
@@ -246,6 +254,8 @@ class JobSearchHit(BaseModel):
     jobType: JobType | None = None
     workMode: WorkMode | None = None
     experienceBand: str | None = None
+    experienceMin: int | None = None
+    experienceMax: int | None = None
     salaryText: str | None = None
     source: JobSource
     listingUrl: HttpUrl | None = None

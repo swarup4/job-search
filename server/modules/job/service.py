@@ -1,11 +1,13 @@
 import hashlib
 import re
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from beanie import PydanticObjectId
 
 from config.errors import NotFound
+from modules.job.experience import parse_experience
 from modules.job.location import COUNTRY_NAMES, canonical_country, parse_location
 from modules.job.models import (
     Job,
@@ -47,10 +49,13 @@ async def create_job(payload: JobCreate) -> JobCreated:
         return JobCreated(id=existing.id, duplicate=True)
 
     parsed_country, cities = parse_location(payload.location)
+    experience_min, experience_max = parse_experience(payload.experienceBand)
     job = Job(
         **payload.model_dump(exclude={"dedupHash", "country"}),
         country=canonical_country(payload.country) or parsed_country,
         cities=cities,
+        experienceMin=experience_min,
+        experienceMax=experience_max,
         dedupHash=dedupHash,
     )
     await job.insert()
@@ -64,12 +69,68 @@ async def get_job(job_id: PydanticObjectId) -> Job:
     return job
 
 
-def _query(company: str | None, exclude: list[PydanticObjectId] | None) -> dict[str, object]:
+@dataclass(frozen=True)
+class SearchTargets:
+    """One user's saved search targets, as a filter over the shared catalogue."""
+
+    roles: list[str]
+    skills: list[str]
+    locations: list[str]
+
+
+def _whole_words(terms: list[str]) -> dict[str, str] | None:
+    """A case-insensitive match for any of `terms` standing alone. Bounded on letters
+    and digits rather than a word boundary, so "C++", ".NET" and "Node.js" match the
+    way discovery matches them."""
+    cleaned = [re.escape(term.strip()) for term in terms if term.strip()]
+    if not cleaned:
+        return None
+    return {"$regex": f"(?<![A-Za-z0-9])(?:{'|'.join(cleaned)})(?![A-Za-z0-9])", "$options": "i"}
+
+
+def _targets_query(targets: SearchTargets) -> list[dict[str, object]]:
+    """The rule discovery keeps a posting by: its title has a role or it names a skill,
+    and it is in one of the locations. The skill is read from `techStack`, so a posting
+    nobody has read yet matches on its title only. A posting whose country could not be
+    read is kept: silence is not a mismatch."""
+    clauses: list[dict[str, object]] = []
+    wanted: list[dict[str, object]] = []
+    roles, skills = _whole_words(targets.roles), _whole_words(targets.skills)
+    if roles:
+        wanted.append({"title": roles})
+    if skills:
+        wanted.append({"techStack": skills})
+    if wanted:
+        clauses.append({"$or": wanted})
+    places = _whole_words(targets.locations)
+    if places:
+        clauses.append(
+            {
+                "$or": [
+                    {"location": places},
+                    {"country": places},
+                    {"cities": places},
+                    {"country": None},
+                ]
+            }
+        )
+    return clauses
+
+
+def _query(
+    company: str | None,
+    exclude: list[PydanticObjectId] | None,
+    targets: SearchTargets | None = None,
+) -> dict[str, object]:
     query: dict[str, object] = {}
     if company:
         query["company"] = company
     if exclude:
         query["_id"] = {"$nin": exclude}
+    if targets is not None:
+        clauses = _targets_query(targets)
+        if clauses:
+            query["$and"] = clauses
     return query
 
 
@@ -78,11 +139,13 @@ async def list_jobs(
     limit: int = 50,
     skip: int = 0,
     exclude: list[PydanticObjectId] | None = None,
+    targets: SearchTargets | None = None,
 ) -> list[Job]:
     """Newest first. `exclude` is how another module asks for the jobs a user has not
-    touched — the ones they applied to, or the ones already scored."""
+    touched — the ones they applied to, or the ones already scored. `targets` keeps
+    only the jobs inside one user's search targets."""
     return (
-        await Job.find(_query(company, exclude))
+        await Job.find(_query(company, exclude, targets))
         .sort(-Job.discoveredAt)
         .skip(skip)
         .limit(limit)
@@ -90,8 +153,10 @@ async def list_jobs(
     )
 
 
-async def count_jobs(exclude: list[PydanticObjectId] | None = None) -> int:
-    return await Job.find(_query(None, exclude)).count()
+async def count_jobs(
+    exclude: list[PydanticObjectId] | None = None, targets: SearchTargets | None = None
+) -> int:
+    return await Job.find(_query(None, exclude, targets)).count()
 
 
 async def get_job_detail(job_id: PydanticObjectId, user_id: PydanticObjectId) -> JobDetailRead:
@@ -174,6 +239,9 @@ async def update_job(job_id: PydanticObjectId, payload: JobUpdate) -> Job:
 
     for field, value in changes.items():
         setattr(job, field, value)
+    if "experienceBand" in changes:
+        # The numbers follow the text they were read from, never the other way round.
+        job.experienceMin, job.experienceMax = parse_experience(job.experienceBand)
     job.updatedAt = datetime.now(UTC)
     await job.save()
     return job

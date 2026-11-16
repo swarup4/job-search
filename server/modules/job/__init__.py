@@ -2,7 +2,7 @@
 
 from modules.job.models import Job, JobRead, JobUpdate
 from modules.job.router import router
-from modules.job.service import count_jobs, get_job, list_jobs, update_job
+from modules.job.service import SearchTargets, count_jobs, get_job, list_jobs, update_job
 
 NAME = "job"
 
@@ -11,6 +11,7 @@ __all__ = [
     "Job",
     "JobRead",
     "JobUpdate",
+    "SearchTargets",
     "count_jobs",
     "get_job",
     "list_jobs",
