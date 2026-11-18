@@ -17,7 +17,7 @@ Task ids (`LS-`, `CE-`, `EV-`, `MA-`, `FE-`, `SV-`) are new and do not clash wit
 > **Steps `A3`–`A6` are replaced by [doc 12 — AI Roadmap](12-AI-Roadmap.md)**, which is shorter
 > and sets a token budget for every call. Sections 1–3, steps `A0`–`A2` and Stage B below still apply.
 >
-> **Three later decisions (2026-11-16) are recorded in doc 12, section 2:** no chat for now, open
+> **Three later decisions (2026-11-16) are recorded in doc 12, under "Decisions on 2026-11-16":** no chat for now, open
 > source only, and no Atlas cluster. They overrule this document where it mentions Atlas, Voyage,
 > a hosted model or the chat. In particular `LS-02` is no longer needed and `LS-03` is settled:
 > the model is local, on Ollama.
@@ -38,9 +38,9 @@ Task ids (`LS-`, `CE-`, `EV-`, `MA-`, `FE-`, `SV-`) are new and do not clash wit
 | `EV-03`, `EV-06` | done | Runner in `ai/eval/`, budget tests in `ai/tests/test_budgets.py` |
 | `EV-04`, `EV-05` | written, not run | Live tests need the model; the workflow has never run |
 
-**Next, and blocked on setup only you can do:** an Atlas cluster, a Voyage key and the model
-choice (`LS-02`–`LS-04`), then the baseline run (`EV-00`). The prompt changes in `A3` are held
-until that baseline exists, because they are judged against it.
+**Next:** doc 12, step 0 and then the baseline run (`EV-00`). No Atlas cluster, Voyage key or
+hosted model is needed any more. What is needed is a local MongoDB and a generation model pulled
+into Ollama.
 
 **Not verified:** the server changes (`MA-01`–`MA-03`, the `llm_usage` module). They import, lint
 and register their routes, but their tests need a MongoDB to run against.
