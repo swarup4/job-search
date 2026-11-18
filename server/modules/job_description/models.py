@@ -139,7 +139,7 @@ class JobDescription(Document):
     links: list[str] = Field(default_factory=list)
 
     # Built from `jdText`, never from `htmlString`. Null until the AI tier has
-    # embedded it; a `$vectorSearch` index covers this field.
+    # embedded it. Nothing reads it today (docs/12, CE-06).
     embedding: list[float] | None = None
 
     # Null until a scoring run has read the posting. `jdText` never changes under a

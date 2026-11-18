@@ -15,7 +15,6 @@ MIN_CHUNK_CHARS = 3
 
 # Named here rather than in `config.database`, which imports this module to register
 # the document and would have to be imported back to read the name.
-VECTOR_INDEX = "chunk_embedding_index"
 
 
 class ChunkSection(StrEnum):
@@ -64,10 +63,15 @@ class ResumeChunk(Document):
     contentHash: str
 
     # Null until the AI tier has embedded it. A chunk with no vector is invisible to
-    # `$vectorSearch`, which is what makes edited text un-retrievable rather than
-    # stale — see P6-03.
+    # search, which is what makes edited text un-retrievable rather than stale — see
+    # P6-03.
     embedding: list[float] | None = None
     embeddedAt: datetime | None = None
+    # Which model produced `embedding`. A cosine between vectors from two models means
+    # nothing, so a search names its model and a chunk embedded by another one is
+    # treated as having no vector: left out of the search and back in the work queue.
+    # Null on a vector stored before this was recorded, which reads as "another model".
+    embeddingModel: str | None = None
 
     chunkedAt: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
@@ -103,9 +107,12 @@ class ResumeChunkRead(BaseModel):
     embeddedAt: datetime | None = None
 
 
+MAX_MODEL_NAME = 200
+
+
 class ChunkMatch(BaseModel):
-    """A search hit. `score` is a true cosine, not Atlas's rescaled one — see
-    `service.search`."""
+    """A search hit. `score` is a cosine: 1 is the same direction, 0 nothing in
+    common."""
 
     model_config = ConfigDict(json_schema_serialization_defaults_required=True)
 
@@ -118,11 +125,12 @@ class ChunkMatch(BaseModel):
 
 class SearchQuery(BaseModel):
     """A query vector, already embedded. The server does not embed anything: the
-    model and its key live in the AI tier, and the two must agree on the model
-    anyway or the search is meaningless."""
+    model lives in the AI tier. `model` names it, and only chunks embedded by the same
+    model are searched; left out, every embedded chunk is."""
 
     vector: list[float] = Field(min_length=1)
     limit: int = Field(default=50, ge=1, le=200)
+    model: str | None = Field(default=None, max_length=MAX_MODEL_NAME)
 
 
 class SearchManyQuery(BaseModel):
@@ -131,6 +139,7 @@ class SearchManyQuery(BaseModel):
 
     vectors: list[list[float]] = Field(min_length=1, max_length=50)
     limit: int = Field(default=1, ge=1, le=50)
+    model: str | None = Field(default=None, max_length=MAX_MODEL_NAME)
 
 
 class SearchManyResult(BaseModel):
@@ -145,11 +154,13 @@ class ChunkEmbedding(BaseModel):
 
 
 class EmbeddingBatch(BaseModel):
-    """Vectors for many chunks at once. Voyage embeds a whole profile in one call,
+    """Vectors for many chunks at once. The AI tier embeds a profile in a batch or two,
     so storing them one HTTP request at a time would be forty round trips for
     nothing."""
 
     embeddings: list[ChunkEmbedding] = Field(min_length=1, max_length=500)
+    # The model that produced every vector in the batch, stored on each chunk.
+    model: str | None = Field(default=None, max_length=MAX_MODEL_NAME)
 
 
 class EmbeddingsStored(BaseModel):

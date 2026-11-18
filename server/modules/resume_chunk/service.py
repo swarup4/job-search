@@ -1,24 +1,18 @@
-import asyncio
 import hashlib
+import math
+from collections.abc import Sequence
 from datetime import UTC, datetime
 
 from beanie import PydanticObjectId
 
 from config.errors import Invalid
 from modules.resume_chunk.models import (
-    VECTOR_INDEX,
     ChunkFields,
     ChunkMatch,
     EmbeddingBatch,
     IndexStats,
     ResumeChunk,
 )
-
-# `$vectorSearch` narrows an approximate search to this many candidates before it
-# ranks them. Atlas asks for it to comfortably exceed `limit`; a profile is a few
-# dozen chunks, so this is the whole collection either way.
-CANDIDATE_MULTIPLIER = 20
-MIN_CANDIDATES = 100
 
 
 def content_hash(section: str, text: str) -> str:
@@ -27,12 +21,39 @@ def content_hash(section: str, text: str) -> str:
     return hashlib.sha256(f"{section}|{text}".encode()).hexdigest()
 
 
-def cosine_from_score(score: float) -> float:
-    """Atlas reports a cosine search as `(1 + cosine) / 2`, so a score of 0.5 means
-    two vectors with nothing in common. The AI tier's near-miss threshold is a real
-    cosine, calibrated against `rag/embeddings.py`, so the rescaling is undone here
-    rather than left for every caller to remember."""
-    return 2 * score - 1
+def cosine(left: Sequence[float], right: Sequence[float]) -> float:
+    """The cosine of the angle between two vectors: 1 for the same direction, 0 for
+    nothing in common. This is the scale the AI tier's near-miss threshold is measured
+    on, so nothing here rescales it. A zero vector is similar to nothing."""
+    norm = math.sqrt(sum(a * a for a in left)) * math.sqrt(sum(b * b for b in right))
+    if not norm:
+        return 0.0
+    return sum(a * b for a, b in zip(left, right, strict=True)) / norm
+
+
+def rank(chunks: Sequence[ResumeChunk], vector: Sequence[float], limit: int) -> list[ChunkMatch]:
+    """The `limit` chunks closest to `vector`, best first. Exact: every chunk is scored.
+
+    A chunk whose vector has a different length was embedded by a different model. Its
+    cosine against this query would be meaningless, so it is left out rather than
+    scored — the same answer a chunk with no vector gets. Equal scores keep profile
+    order, so the same query always answers the same way."""
+    scored = [
+        (cosine(chunk.embedding, vector), chunk)
+        for chunk in chunks
+        if chunk.embedding and len(chunk.embedding) == len(vector)
+    ]
+    scored.sort(key=lambda pair: (-pair[0], pair[1].ordinal))
+    return [
+        ChunkMatch(
+            id=chunk.id,
+            section=chunk.section,
+            text=chunk.text,
+            sourceRef=chunk.sourceRef,
+            score=score,
+        )
+        for score, chunk in scored[:limit]
+    ]
 
 
 async def replace_chunks(user_id: PydanticObjectId, chunks: list[ChunkFields]) -> IndexStats:
@@ -46,7 +67,7 @@ async def replace_chunks(user_id: PydanticObjectId, chunks: list[ChunkFields]) -
     """
     existing = await ResumeChunk.find(ResumeChunk.userId == user_id).to_list()
     carried = {
-        chunk.contentHash: (chunk.embedding, chunk.embeddedAt)
+        chunk.contentHash: (chunk.embedding, chunk.embeddedAt, chunk.embeddingModel)
         for chunk in existing
         if chunk.embedding is not None
     }
@@ -58,7 +79,7 @@ async def replace_chunks(user_id: PydanticObjectId, chunks: list[ChunkFields]) -
         if digest in seen:
             continue
         seen.add(digest)
-        embedding, embedded_at = carried.get(digest, (None, None))
+        embedding, embedded_at, embedding_model = carried.get(digest, (None, None, None))
         rows.append(
             ResumeChunk(
                 userId=user_id,
@@ -70,6 +91,7 @@ async def replace_chunks(user_id: PydanticObjectId, chunks: list[ChunkFields]) -
                 contentHash=digest,
                 embedding=embedding,
                 embeddedAt=embedded_at,
+                embeddingModel=embedding_model,
             )
         )
 
@@ -81,10 +103,17 @@ async def replace_chunks(user_id: PydanticObjectId, chunks: list[ChunkFields]) -
     return await stats(user_id)
 
 
-async def pending_chunks(user_id: PydanticObjectId, limit: int = 200) -> list[ResumeChunk]:
-    """Chunks with no vector yet — the AI tier's work queue."""
+async def pending_chunks(
+    user_id: PydanticObjectId, limit: int = 200, model: str | None = None
+) -> list[ResumeChunk]:
+    """The AI tier's work queue: chunks with no vector yet and, when `model` is named,
+    chunks whose vector came from a different model. That second group is how a change
+    of embedding model re-embeds a profile without anybody clearing it by hand."""
+    waiting: dict[str, object] = {"embedding": None}
+    if model:
+        waiting = {"$or": [{"embedding": None}, {"embeddingModel": {"$ne": model}}]}
     return (
-        await ResumeChunk.find({"userId": user_id, "embedding": None})
+        await ResumeChunk.find({"userId": user_id, **waiting})
         .sort(+ResumeChunk.ordinal)
         .limit(limit)
         .to_list()
@@ -106,60 +135,41 @@ async def store_embeddings(user_id: PydanticObjectId, batch: EmbeddingBatch) -> 
     for row in rows:
         row.embedding = wanted[row.id]
         row.embeddedAt = now
+        row.embeddingModel = batch.model
     await ResumeChunk.replace_many(rows)
     return len(rows)
 
 
+async def _embedded(user_id: PydanticObjectId, model: str | None = None) -> list[ResumeChunk]:
+    """This user's chunks that have a vector, in profile order — from `model` only,
+    when one is named. The filter on `userId` is the whole of the access control here:
+    nothing downstream sees another row."""
+    query: dict[str, object] = {"userId": user_id, "embedding": {"$ne": None}}
+    if model:
+        query["embeddingModel"] = model
+    return await ResumeChunk.find(query).sort(+ResumeChunk.ordinal).to_list()
+
+
 async def search(
-    user_id: PydanticObjectId, vector: list[float], limit: int = 50
+    user_id: PydanticObjectId, vector: list[float], limit: int = 50, model: str | None = None
 ) -> list[ChunkMatch]:
-    """Approximate nearest neighbours over this user's chunks.
+    """The nearest of this user's chunks to `vector`, by exact cosine.
 
-    Atlas only — `$vectorSearch` is not a MongoDB aggregation stage, it is a Search
-    one, and a local server answers with an error rather than an empty list. The
-    `userId` filter is part of the index definition, not a `$match` after it: an ANN
-    search filtered afterwards returns fewer rows than asked for, or none.
-    """
-    pipeline = [
-        {
-            "$vectorSearch": {
-                "index": VECTOR_INDEX,
-                "path": "embedding",
-                "queryVector": vector,
-                "numCandidates": max(MIN_CANDIDATES, limit * CANDIDATE_MULTIPLIER),
-                "limit": limit,
-                "filter": {"userId": user_id},
-            }
-        },
-        {
-            "$project": {
-                "text": 1,
-                "section": 1,
-                "sourceRef": 1,
-                "score": {"$meta": "vectorSearchScore"},
-            }
-        },
-    ]
-
-    cursor = await ResumeChunk.get_pymongo_collection().aggregate(pipeline)
-    return [
-        ChunkMatch(
-            id=row["_id"],
-            section=row["section"],
-            text=row["text"],
-            sourceRef=row.get("sourceRef", ""),
-            score=cosine_from_score(row["score"]),
-        )
-        for row in await cursor.to_list(limit)
-    ]
+    Done in this process, over an ordinary query: a profile is a few dozen chunks, so
+    scoring every one is fast and exact, and it runs on any MongoDB. A vector index
+    earns its keep at millions of rows, which one person's resume will never reach."""
+    return rank(await _embedded(user_id, model), vector, limit)
 
 
 async def search_many(
-    user_id: PydanticObjectId, vectors: list[list[float]], limit: int = 1
+    user_id: PydanticObjectId,
+    vectors: list[list[float]],
+    limit: int = 1,
+    model: str | None = None,
 ) -> list[list[ChunkMatch]]:
-    """`search` once per vector, side by side. `$vectorSearch` takes one query vector,
-    so this saves the round trips, not the searches."""
-    return list(await asyncio.gather(*(search(user_id, vector, limit) for vector in vectors)))
+    """`search` for several vectors, reading the chunks once for all of them."""
+    chunks = await _embedded(user_id, model)
+    return [rank(chunks, vector, limit) for vector in vectors]
 
 
 async def stats(user_id: PydanticObjectId) -> IndexStats:

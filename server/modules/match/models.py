@@ -57,7 +57,7 @@ class KeywordReview(BaseModel):
 
 
 class MatchWrite(BaseModel):
-    """What the matching agent posts. The JD vector goes to Atlas, never here."""
+    """What the matching agent posts."""
 
     jobId: PydanticObjectId
     score: int = Field(ge=0, le=100)
