@@ -2,8 +2,7 @@
 
 Local MongoDB is already a dev prerequisite, so the suite drives real queries
 against `jobpilot_test` rather than mocking the driver — see server-api.md. The
-database is dropped between runs, and no test reaches Atlas or Voyage, neither of
-which belongs to this tier.
+database is dropped between runs, and no test reaches the network.
 """
 
 from __future__ import annotations
@@ -26,8 +25,8 @@ from modules.error_log import service as error_log_service
 TEST_DB = "jobpilot_test"
 
 # Forced local, not whatever `server/.env` points at. server-api.md says these tests
-# must never reach Atlas, and a suite that creates and drops a database should not be
-# doing it over the network on someone's cluster. `TEST_MONGODB_URI` overrides.
+# must never reach a shared database, and a suite that creates and drops one should
+# not be doing it over the network. `TEST_MONGODB_URI` overrides.
 os.environ["MONGODB_URI"] = os.environ.get("TEST_MONGODB_URI", "mongodb://127.0.0.1:27017")
 
 

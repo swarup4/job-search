@@ -1,10 +1,10 @@
 """Giving the profile's chunks their vectors. (P6-04)
 
 The server cuts My Details into chunks and stores them with no vector; this is the
-half that costs money and a network call, so it lives here with the embedding model
-and its key. A chunk with no vector is invisible to `$vectorSearch`, which is what
-makes the split safe: between a profile edit and the next run here, retrieval
-returns nothing rather than returning what the user just replaced.
+half that needs a model, so it lives here with the embedding model. A chunk with no
+vector is invisible to search, which is what makes the split safe: between a profile
+edit and the next run here, retrieval returns nothing rather than returning what the
+user just replaced.
 """
 
 from __future__ import annotations
@@ -14,11 +14,12 @@ import sys
 from typing import Any
 
 from mcp_servers import jobpilot_api
-from rag.embeddings import VoyageEmbeddings
+from rag.embeddings import Embeddings
 
-# Voyage takes a whole profile in one request. The batch exists for the pathological
-# profile, not the ordinary one — forty chunks go up as a single call.
-EMBED_BATCH = 128
+# A local model embeds a batch in one pass and holds all of it in memory while it
+# does. An ordinary profile is forty chunks, so this is two requests, and a long one
+# never sends a batch the model server has to refuse.
+EMBED_BATCH = 32
 
 
 async def embed_pending(batch_size: int = EMBED_BATCH) -> int:
@@ -27,22 +28,24 @@ async def embed_pending(batch_size: int = EMBED_BATCH) -> int:
     Cheap when there is nothing to do — one GET — which is what lets `rectify` call
     it before scoring rather than trusting that somebody ran an indexing job.
     """
-    pending = await jobpilot_api.list_pending_chunks()
+    model = Embeddings()
+    # Naming the model puts chunks another model embedded back in the queue, so a
+    # change of EMBED_MODEL re-embeds the profile on the next run and never mixes two
+    # models' vectors in one search.
+    pending = await jobpilot_api.list_pending_chunks(model=model.model)
     if not pending:
         return 0
 
-    voyage = VoyageEmbeddings()
     stored = 0
     for start in range(0, len(pending), batch_size):
         batch = pending[start : start + batch_size]
-        # Chunks go up as `document`: a profile span is the thing being searched, and
-        # Voyage embeds the two sides of a retrieval differently.
-        vectors = await voyage.embed_documents([chunk["text"] for chunk in batch])
+        vectors = await model.embed([chunk["text"] for chunk in batch])
         result = await jobpilot_api.store_chunk_embeddings(
             [
                 {"chunkId": chunk["id"], "embedding": vector}
                 for chunk, vector in zip(batch, vectors, strict=True)
-            ]
+            ],
+            model=model.model,
         )
         stored += result["stored"]
     return stored

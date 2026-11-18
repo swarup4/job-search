@@ -1,0 +1,51 @@
+{
+  "postings": [
+    {
+      "id": "sample-platform-engineer",
+      "title": "Platform Engineer",
+      "company": "Example Systems",
+      "location": "Pune, India",
+      "jdText": "# Platform Engineer\n\nExample Systems — Pune, India\n\n## Requirements\n- You will run our Kubernetes clusters and write Terraform for the AWS estate.\n- Python for tooling and automation.\n- You bring 6+ years of experience.\n\nThis is a hybrid role, three days a week in Pune. Full-time.\n\n## Benefits\n- Health cover and a learning budget.\n",
+      "requirements": ["Kubernetes", "Terraform", "AWS", "Python"],
+      "details": {
+        "experience": "6+ years",
+        "salary": null,
+        "workMode": "hybrid",
+        "jobType": "full_time"
+      },
+      "verdicts": {
+        "sample-backend": {
+          "present": ["AWS", "Python"],
+          "missing": ["Kubernetes", "Terraform"]
+        }
+      }
+    }
+  ],
+  "profiles": [
+    {
+      "id": "sample-backend",
+      "profile": {
+        "name": "Sample Candidate",
+        "role": "Backend Engineer",
+        "profile": {
+          "headline": "Backend engineer",
+          "summary": "Backend services in Python.",
+          "location": "Pune"
+        },
+        "work": [
+          {
+            "title": "Backend Engineer",
+            "company": "Example Labs",
+            "start": "2019",
+            "current": true,
+            "bullets": ["Built Python and FastAPI services on AWS"],
+            "projects": []
+          }
+        ],
+        "skill": [{"name": "Languages", "items": ["Python"]}],
+        "education": [],
+        "certification": []
+      }
+    }
+  ]
+}

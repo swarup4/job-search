@@ -220,6 +220,9 @@ async def test_settings_report_what_is_configured(fake: FakeClient) -> None:
     assert body["scrape"]["userAgent"] == USER_AGENT
     assert body["models"]["generation"]
     assert body["models"]["embeddings"]
+    # The Settings panel says "local" or "not local" from these, so both are reported.
+    assert body["models"]["generationHost"] and body["models"]["embeddingsHost"]
+    assert "rerank" not in body["models"]
 
 
 async def test_a_run_uses_the_saved_search_targets(

@@ -224,19 +224,32 @@ export function ModelsPanel() {
             </PanelHeader>
             <PanelBody className="flex flex-col gap-4 py-4">
                 {error ? <Problem message={error} /> : null}
-                <KV label="Generation" value={models?.generation ?? "—"} note="hosted" warn />
+                <KV label="Generation" value={models?.generation ?? "—"} {...where(models?.generationHost)} />
                 <KV label="Host" value={models?.generationHost ?? "—"} />
-                <KV label="Embeddings" value={models?.embeddings ?? "—"} note="hosted" warn />
-                <KV label="Rerank" value={models?.rerank ?? "—"} note="hosted" warn />
+                <KV label="Embeddings" value={models?.embeddings ?? "—"} {...where(models?.embeddingsHost)} />
+                <KV label="Host" value={models?.embeddingsHost ?? "—"} />
                 <KV label="Eval judge" value="not built yet" />
                 <p className="border-t border-border pt-4 text-[12.5px] leading-relaxed text-muted-foreground">
-                    Generation and embeddings are hosted: a job description or resume text in a prompt
-                    leaves this machine for the model provider. Scraping sends nothing but requests to
-                    company job boards.
+                    {models && isLocal(models.generationHost) && isLocal(models.embeddingsHost)
+                        ? "Generation and embeddings both run on this machine: no job description and no resume text leaves it. Scraping sends nothing but requests to company job boards."
+                        : "A model here is not on this machine: a job description or resume text in a prompt leaves it for that host. Scraping sends nothing but requests to company job boards."}
                 </p>
             </PanelBody>
         </Panel>
     );
+}
+
+// Read from the host the AI tier reports, so the panel cannot claim "local" for a model
+// someone has pointed at another machine.
+const LOCAL_HOSTS = ["localhost", "127.0.0.1", "::1"];
+
+function isLocal(host) {
+    return LOCAL_HOSTS.includes(host);
+}
+
+function where(host) {
+    if (!host) return {};
+    return isLocal(host) ? { note: "local" } : { note: "not local", warn: true };
 }
 
 export function KV({ label, value, note, warn }) {

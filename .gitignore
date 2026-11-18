@@ -42,3 +42,9 @@ templates/previews/
 backup/
 # Shared error log, written by the server and the AI tier
 logs/
+
+# Personal Claude Code skill guide, not part of the project
+git-sync.md
+
+# Evaluation reports are output, written per run by `python -m eval.runner`
+ai/eval/reports/

@@ -54,6 +54,14 @@ INPUT_BUDGET = 0.60
 # Measured on Qwen3.5: English prose runs ~3.7 characters a token. Markdown, URLs
 # and code run denser, so the estimate leans low to keep the budget conservative.
 CHARS_PER_TOKEN = 3.0
+# The rest of the budget table in docs/12-AI-Roadmap.md, in tokens. `check_budget`
+# enforces the two shares above on every call; these are enforced where each part is
+# built (cleaning.py, inventory.py) and by tests/test_budgets.py.
+CANDIDATE_TOKENS = 3_000  # the skill inventory and profile digest, in any prompt
+POSTING_TOKENS = 3_000  # a posting's text, after cleaning
+TOOL_DEFINITION_TOKENS = 1_600  # every tool definition in one call — 10% of the window
+TOOL_RESULT_TOKENS = 1_000  # one tool result; paged beyond that
+
 # A repair turn sends back this much of the reply that failed, not all of it. The model
 # needs the validation error to answer again, not its whole wrong answer — and a long
 # reply resent beside a second one of the same length is what overflowed the window.

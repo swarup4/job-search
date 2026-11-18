@@ -12,7 +12,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from agents import analysis, matching
-from agents.analysis import JobDetails, verify_details
+from agents.details import JobDetails, verify_details
 from api import deps
 from api.analysis import service as analysis_api
 from main import create_app
@@ -38,9 +38,10 @@ class FakeClient:
         self.description = description if description is not None else {"id": "d1", "jdText": JD}
         self.match: dict[str, Any] | None = None
         self.job_updates: list[dict[str, Any]] = []
-        self.embeddings: list[list[float]] = []
         # What the match step was handed: None means it read the posting itself.
         self.rectified_with: list[list[Any] | None] = []
+        # How many times the posting was read into a brief.
+        self.briefs_read = 0
 
     async def get_job(self, job_id: str) -> dict[str, Any]:
         return self.job
@@ -57,30 +58,14 @@ class FakeClient:
         self.job_updates.append(payload)
         return {}
 
-    async def store_description_embedding(
-        self, description_id: str, vector: list[float]
-    ) -> dict[str, Any]:
-        self.embeddings.append(vector)
-        return {}
-
-
-class FakeVoyage:
-    async def embed_documents(self, texts: list[str]) -> list[list[float]]:
-        return [[0.1, 0.2, 0.3] for _ in texts]
-
 
 @pytest.fixture
 def fake(monkeypatch: pytest.MonkeyPatch) -> FakeClient:
     client = FakeClient()
     monkeypatch.setattr(analysis, "client", client)
-    monkeypatch.setattr(analysis, "VoyageEmbeddings", FakeVoyage)
-
-    async def proposes(shape, prompt, *, system, max_tokens=2048, version=None):
-        return JobDetails(
-            experience="6-10 years", salary="40 LPA", workMode="hybrid", jobType="contract"
-        )
 
     async def ensure_brief(description: dict[str, Any], job: dict[str, Any]) -> matching.Brief:
+        client.briefs_read += 1
         return matching.Brief(
             requirements=[
                 matching.Requirement(
@@ -96,14 +81,18 @@ def fake(monkeypatch: pytest.MonkeyPatch) -> FakeClient:
                 matching.Requirement(
                     key="rag", label="RAG", kind="tech", mentions=1, evidence="RAG"
                 ),
-            ]
+            ],
+            # What the brief call verified against the posting: the experience and the
+            # work mode it states. The job type is the board's, already on the job.
+            experience="6-10 years",
+            workMode="hybrid",
+            jobType="contract",
         )
 
     async def rectify(job_id: str, brief: matching.Brief | None = None) -> dict[str, Any]:
         client.rectified_with.append(brief.requirements if brief else None)
         return {"score": 72, "present": [{"label": "AWS"}], "missing": [{"label": "RAG"}]}
 
-    monkeypatch.setattr(analysis, "generate", proposes)
     monkeypatch.setattr(matching, "ensure_brief", ensure_brief)
     monkeypatch.setattr(matching, "rectify", rectify)
     return client
@@ -137,16 +126,25 @@ async def test_every_step_writes_its_own_field(fake: FakeClient) -> None:
 
     assert outcome.score == 72
     assert all(step.ok for step in outcome.steps.values()), outcome.steps
-    assert fake.embeddings == [[0.1, 0.2, 0.3]]
     # Only the technologies, and the match reuses the same brief.
     assert {"techStack": ["AWS", "RAG"]} in fake.job_updates
     assert [len(handed or []) for handed in fake.rectified_with] == [3]
 
 
+async def test_the_posting_is_read_once_and_nothing_is_embedded(fake: FakeClient) -> None:
+    """CE-03 and CE-06: one brief feeds the stack, the details and the match, and no
+    step buys a vector that nothing reads."""
+    outcome = await analysis.analyze("j1")
+
+    assert fake.briefs_read == 1
+    assert list(outcome.steps) == ["techStack", "details", "match"]
+
+
 async def test_details_never_overwrite_what_the_board_gave(fake: FakeClient) -> None:
     await analysis.analyze("j1")
-    # jobType came from the board, and the invented salary is dropped by the check.
-    assert fake.job_updates[0] == {"experienceBand": "6-10 years", "workMode": "hybrid"}
+    # jobType came from the board, so the brief's reading of it is not written.
+    assert {"experienceBand": "6-10 years", "workMode": "hybrid"} in fake.job_updates
+    assert not any("jobType" in update for update in fake.job_updates)
 
 
 async def test_a_job_already_matched_is_skipped_whole(fake: FakeClient) -> None:
@@ -156,13 +154,12 @@ async def test_a_job_already_matched_is_skipped_whole(fake: FakeClient) -> None:
     assert outcome.skipped == "already analyzed"
     assert outcome.score == 64
     assert outcome.steps == {}
-    assert fake.embeddings == [] and fake.job_updates == []
+    assert fake.briefs_read == 0 and fake.job_updates == []
 
 
 async def test_a_matched_job_without_a_stack_gets_only_the_stack(fake: FakeClient) -> None:
     """Jobs analyzed before the tech stack existed: one brief, no second match."""
     fake.match = {"score": 64}
-    fake.description = {"id": "d1", "jdText": JD, "hasEmbedding": True}
     outcome = await analysis.analyze("j1")
 
     assert outcome.skipped is None
@@ -172,35 +169,22 @@ async def test_a_matched_job_without_a_stack_gets_only_the_stack(fake: FakeClien
     assert outcome.score == 64
 
 
-async def test_a_stack_already_read_is_not_read_again(fake: FakeClient) -> None:
-    """An empty stack is an answer too — a posting that names no technology."""
+async def test_a_stack_already_read_is_not_written_again(fake: FakeClient) -> None:
+    """An empty stack is an answer too — a posting that names no technology. The brief
+    is still fetched, because the match needs it, and handed on."""
     fake.job["techStack"] = []
     outcome = await analysis.analyze("j1")
 
     assert outcome.steps["techStack"].note == "already read"
-    assert fake.rectified_with == [None]
+    assert [len(handed or []) for handed in fake.rectified_with] == [3]
     assert not any("techStack" in update for update in fake.job_updates)
 
 
-async def test_an_embedded_description_keeps_its_vector(fake: FakeClient) -> None:
-    fake.description = {"id": "d1", "jdText": JD, "hasEmbedding": True}
-    outcome = await analysis.analyze("j1")
-    assert fake.embeddings == []
-    assert outcome.steps["embedding"].note == "already embedded"
-    assert outcome.steps["match"].ok
-
-
-async def test_known_details_skip_the_model(
-    fake: FakeClient, monkeypatch: pytest.MonkeyPatch
-) -> None:
+async def test_known_details_are_left_alone(fake: FakeClient) -> None:
     fake.job.update(experienceBand="8 years", salaryText="₹40 LPA", workMode="remote")
-
-    async def must_not_run(*args: Any, **kwargs: Any) -> JobDetails:
-        raise AssertionError("the details model was called")
-
-    monkeypatch.setattr(analysis, "generate", must_not_run)
     outcome = await analysis.analyze("j1")
     assert outcome.steps["details"].note == "all details already known"
+    assert not any("experienceBand" in update for update in fake.job_updates)
 
 
 async def test_a_job_without_a_description_is_reported_not_analyzed(fake: FakeClient) -> None:
@@ -213,15 +197,18 @@ async def test_a_job_without_a_description_is_reported_not_analyzed(fake: FakeCl
 async def test_one_failing_step_spares_the_others(
     fake: FakeClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    class Down:
-        async def embed_documents(self, texts: list[str]) -> list[list[float]]:
-            raise RuntimeError("voyage unavailable")
+    """The brief cannot be read: the stack step fails, the details step says why it
+    wrote nothing, and the match still runs — it reads the posting itself."""
 
-    monkeypatch.setattr(analysis, "VoyageEmbeddings", Down)
+    async def down(description: dict[str, Any], job: dict[str, Any]) -> matching.Brief:
+        raise RuntimeError("model unavailable")
+
+    monkeypatch.setattr(matching, "ensure_brief", down)
     outcome = await analysis.analyze("j1")
-    assert outcome.steps["embedding"].ok is False
-    assert "voyage unavailable" in (outcome.steps["embedding"].note or "")
-    assert outcome.steps["match"].ok and outcome.steps["details"].ok
+    assert outcome.steps["techStack"].ok is False
+    assert "model unavailable" in (outcome.steps["techStack"].note or "")
+    assert outcome.steps["details"].note == "the posting could not be read"
+    assert outcome.steps["match"].ok and fake.rectified_with == [None]
 
 
 async def test_a_dead_token_stops_the_job(
@@ -405,18 +392,12 @@ async def test_needs_a_token(api) -> None:
     assert (await http.post("/analysis/start", json={"newest": 1})).status_code == 401
 
 
-async def test_a_job_whose_stack_was_read_skips_the_details(
-    fake: FakeClient, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """A capture reads details and stack in one call, so Analyze pays for neither again."""
-    fake.job["techStack"] = ["AWS"]
-
-    async def must_not_run(*args: Any, **kwargs: Any) -> JobDetails:
-        raise AssertionError("the details model was called")
-
-    monkeypatch.setattr(analysis, "generate", must_not_run)
+async def test_a_captured_job_fills_only_what_it_lacks(fake: FakeClient) -> None:
+    """A capture already wrote the stack and the details the page states. Analyze copies
+    across whatever the stored brief has that the job does not, with no model call."""
+    fake.job.update(techStack=["AWS"], experienceBand="6-10 years")
     outcome = await analysis.analyze("j1")
 
-    assert outcome.steps["details"].note == "already read"
     assert outcome.steps["techStack"].note == "already read"
-    assert outcome.steps["embedding"].ok and outcome.steps["match"].ok
+    assert outcome.steps["details"].note == "filled workMode"
+    assert outcome.steps["match"].ok

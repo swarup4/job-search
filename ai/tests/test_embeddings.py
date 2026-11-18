@@ -1,14 +1,14 @@
-"""The near-miss arithmetic, and the Voyage call it rests on."""
+"""The near-miss arithmetic, and the embedding call it rests on. (OS-02)"""
 
 from __future__ import annotations
 
-from types import SimpleNamespace
-from typing import Any
+from typing import Any, Self
 
+import httpx
 import pytest
 
 from rag import embeddings
-from rag.embeddings import VoyageEmbeddings, cosine, nearest
+from rag.embeddings import EmbeddingError, Embeddings, cosine, nearest
 
 
 def test_identical_directions_score_one() -> None:
@@ -33,59 +33,148 @@ def test_nearest_on_nothing_is_not_a_match() -> None:
     assert nearest([1.0, 0.0], []) == (-1, 0.0)
 
 
-# --- the Voyage call itself, against a stubbed SDK client --------------------
+# --- the call itself, against a stubbed model server --------------------------
 
 
-class FakeVoyage:
-    """Stands in for `voyageai.AsyncClient`, recording how it was constructed and
-    called so a test can assert on both."""
+class FakeServer:
+    """Stands in for the model server's `/embeddings`, answering from a queue and
+    recording every request."""
 
-    constructed: list[dict[str, Any]] = []
-    calls: list[dict[str, Any]] = []
-    vectors: list[list[float]] = []
+    def __init__(self) -> None:
+        self.requests: list[dict[str, Any]] = []
+        self.replies: list[Any] = []
 
-    def __init__(self, **kwargs: Any) -> None:
-        FakeVoyage.constructed.append(kwargs)
+    def reply(self, *vectors: list[float], status: int = 200) -> None:
+        data = [{"index": index, "embedding": vector} for index, vector in enumerate(vectors)]
+        self.replies.append(httpx.Response(status, json={"data": data}))
 
-    async def embed(self, texts: list[str], **kwargs: Any) -> SimpleNamespace:
-        FakeVoyage.calls.append({"texts": texts, **kwargs})
-        return SimpleNamespace(embeddings=FakeVoyage.vectors)
+    def client(self, **kwargs: Any) -> FakeClient:
+        return FakeClient(self)
+
+
+class FakeClient:
+    def __init__(self, server: FakeServer) -> None:
+        self.server = server
+
+    async def __aenter__(self) -> Self:
+        return self
+
+    async def __aexit__(self, *exc: object) -> None:
+        return None
+
+    async def post(self, url: str, *, json: dict[str, Any], headers: dict[str, str]) -> Any:
+        self.server.requests.append({"url": url, "json": json, "headers": headers})
+        reply = self.server.replies.pop(0)
+        if isinstance(reply, Exception):
+            raise reply
+        return reply
 
 
 @pytest.fixture
-def voyage(monkeypatch: pytest.MonkeyPatch) -> type[FakeVoyage]:
-    FakeVoyage.constructed, FakeVoyage.calls, FakeVoyage.vectors = [], [], []
-    monkeypatch.setattr(embeddings.voyageai, "AsyncClient", FakeVoyage)
-    return FakeVoyage
+def server(monkeypatch: pytest.MonkeyPatch) -> FakeServer:
+    fake = FakeServer()
+    monkeypatch.setattr(embeddings.httpx, "AsyncClient", fake.client)
+
+    async def no_wait(seconds: float) -> None:
+        return None
+
+    monkeypatch.setattr(embeddings.asyncio, "sleep", no_wait)
+    return fake
 
 
-async def test_the_two_sides_go_up_differently(voyage: type[FakeVoyage]) -> None:
-    """Voyage embeds a query and a document differently, so sending them the same way
-    would quietly cost accuracy the threshold then gets blamed for."""
-    voyage.vectors = [[1.0, 0.0], [0.0, 1.0]]
-    encoder = VoyageEmbeddings()
-
-    assert await encoder.embed_documents(["a", "b"]) == [[1.0, 0.0], [0.0, 1.0]]
-    assert await encoder.embed_queries(["a", "b"]) == [[1.0, 0.0], [0.0, 1.0]]
-
-    assert [call["input_type"] for call in voyage.calls] == ["document", "query"]
-    assert voyage.calls[0]["texts"] == ["a", "b"]
+def model(**overrides: Any) -> Embeddings:
+    return Embeddings(**{"dimensions": 2, **overrides})
 
 
-async def test_the_dimension_is_asked_for_not_assumed(voyage: type[FakeVoyage]) -> None:
-    """It has to equal the Atlas index's numDimensions, and a model default that moved
-    would leave the two disagreeing with no error at all."""
-    voyage.vectors = [[1.0, 0.0]]
+async def test_texts_go_up_in_one_request_to_the_configured_model(server: FakeServer) -> None:
+    server.reply([1.0, 0.0], [0.0, 1.0])
 
-    await VoyageEmbeddings().embed_queries(["anything"])
+    vectors = await model(model="bge-m3", base_url="http://localhost:11434/v1/").embed(["a", "b"])
 
-    assert voyage.calls[0]["output_dimension"] == embeddings.VOYAGE_EMBED_DIMS
-    assert voyage.calls[0]["model"] == embeddings.VOYAGE_EMBED_MODEL
+    assert vectors == [[1.0, 0.0], [0.0, 1.0]]
+    [request] = server.requests
+    assert request["url"] == "http://localhost:11434/v1/embeddings"
+    assert request["json"] == {"model": "bge-m3", "input": ["a", "b"]}
 
 
-async def test_retries_are_asked_for(voyage: type[FakeVoyage]) -> None:
-    """The SDK retries nothing by default, and the free tier rate-limits at 3 calls a
-    minute, so a burst mid-scoring would otherwise lose the run."""
-    VoyageEmbeddings()
+async def test_a_local_model_is_sent_no_key(server: FakeServer) -> None:
+    """There is none to send, and an empty bearer header is noise a server may refuse."""
+    server.reply([1.0, 0.0])
 
-    assert voyage.constructed[0]["max_retries"] >= 1
+    await model(api_key="").embed(["a"])
+
+    assert server.requests[0]["headers"] == {}
+
+
+async def test_vectors_come_back_in_the_order_the_texts_went_up(server: FakeServer) -> None:
+    """The protocol reports an index with each vector and promises no order. A vector
+    stored on the wrong chunk is a wrong hint nobody would trace back to this."""
+    server.replies.append(
+        httpx.Response(
+            200,
+            json={
+                "data": [
+                    {"index": 1, "embedding": [0.0, 1.0]},
+                    {"index": 0, "embedding": [1.0, 0.0]},
+                ]
+            },
+        )
+    )
+
+    assert await model().embed(["first", "second"]) == [[1.0, 0.0], [0.0, 1.0]]
+
+
+async def test_no_texts_asks_nothing(server: FakeServer) -> None:
+    assert await model().embed([]) == []
+    assert server.requests == []
+
+
+async def test_a_model_of_another_size_is_refused(server: FakeServer) -> None:
+    """Vectors of the wrong length would be stored and then silently left out of every
+    search. Refusing them here names the cause."""
+    server.reply([1.0, 0.0, 0.0])
+
+    with pytest.raises(EmbeddingError, match="3-dimension"):
+        await model(dimensions=2).embed(["a"])
+
+
+async def test_fewer_vectors_than_texts_is_refused(server: FakeServer) -> None:
+    server.reply([1.0, 0.0])
+
+    with pytest.raises(EmbeddingError, match="1 vectors for 2 texts"):
+        await model().embed(["a", "b"])
+
+
+async def test_a_server_fault_is_tried_again(server: FakeServer) -> None:
+    """A local model server drops a request while it loads the model."""
+    server.reply(status=503)
+    server.replies.append(httpx.ConnectError("refused"))
+    server.reply([1.0, 0.0])
+
+    assert await model(attempts=3).embed(["a"]) == [[1.0, 0.0]]
+    assert len(server.requests) == 3
+
+
+async def test_a_refused_request_is_not_tried_again(server: FakeServer) -> None:
+    """A 404 for a model that was never pulled will be a 404 the second time too."""
+    server.replies.append(httpx.Response(404, text='model "bge-m3" not found'))
+
+    with pytest.raises(EmbeddingError, match="404"):
+        await model(attempts=3).embed(["a"])
+    assert len(server.requests) == 1
+
+
+async def test_a_model_that_never_answers_ends_in_an_error_naming_it(server: FakeServer) -> None:
+    for _ in range(2):
+        server.replies.append(httpx.ConnectError("refused"))
+
+    with pytest.raises(EmbeddingError, match="bge-m3"):
+        await model(model="bge-m3", attempts=2).embed(["a"])
+
+
+def test_the_default_endpoint_is_this_machine() -> None:
+    """Embedding is the one step that sends profile text to a model besides generation.
+    Its default must not be somebody else's server."""
+    host = httpx.URL(embeddings.EMBED_BASE_URL).host
+
+    assert host in {"localhost", "127.0.0.1"}

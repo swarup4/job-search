@@ -1,0 +1,93 @@
+# Lint and tests on every push and pull request. (roadmap CC-05, launch plan EV-05)
+#
+# Three jobs, one per tier that has checks:
+#   ai        ruff, then the suite — which includes the prompt budget tests
+#             (tests/test_budgets.py), so an oversized prompt fails the build.
+#             The live-model tests are marked `llm` and are not run here.
+#   server    ruff, then the suite against a throwaway MongoDB service container.
+#             No Atlas, no Voyage: the suite is written never to reach either.
+#   extension the TypeScript type check.
+#
+# No job needs a secret. JWT_SECRET for the server suite is set by tests/conftest.py.
+
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ai:
+    name: AI tier
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: ai/uv.lock
+      - name: Install
+        run: uv sync --frozen
+      - name: Lint
+        run: uv run ruff check .
+      - name: Tests and prompt budgets
+        run: uv run pytest -q
+
+  server:
+    name: API server
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ ping: 1 }).ok'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_MONGODB_URI: mongodb://127.0.0.1:27017
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: server/uv.lock
+      - name: Install
+        run: uv sync --frozen
+      - name: Lint
+        run: uv run ruff check .
+      - name: Tests
+        run: uv run pytest -q
+
+  extension:
+    name: Extension
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app/extension
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/extension/package-lock.json
+      - name: Install
+        run: npm ci
+      - name: Type check
+        run: npm run typecheck

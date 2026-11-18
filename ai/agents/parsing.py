@@ -1,15 +1,17 @@
 """P3-14 — turn a captured page into a `Job`.
 
-A capture is markdown of a career page. This reads it — title, company, location, the
-four details and the tech stack, in one model call — and writes the listing row the
-board shows, then links the two. Analyze later has only the embedding and the match
-left to do. Discovery by connector (`P3-02`/`P3-03`) will write
-the same shape without an LLM; this is the path for pages a human captured.
+A capture is markdown of a career page. This reads it once — title, company, location,
+the four details and the posting's brief, in one model call — writes the listing row
+the board shows, links the two, and stores the brief on the description. Analyze later
+has only the match left to do: the brief it needs is already there. Discovery by
+connector (`P3-02`/`P3-03`) will write the same shape without an LLM; this is the path
+for pages a human captured.
 
 Every field written has to be findable in the page. A title or a company the model
 composed rather than copied is the same failure as an invented resume keyword, so the
-checks here mirror `matching.build_brief`: the model proposes, the text
-decides.
+checks here are `matching.verified_brief`'s: the model proposes, the text decides.
+The page is cleaned first (cleaning.py) and checked against the cleaned text, which is
+the text the model was shown.
 """
 
 from __future__ import annotations
@@ -21,25 +23,27 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from agents.analysis import JobDetails, verify_details
-from config.llm import UNTRUSTED_RULE, as_document, generate
+from agents import matching
+from agents.cleaning import POSTING_CHARS, clean_posting
+from agents.details import JobType, WorkMode
+from agents.inventory import KIND_RULE
+from agents.matching import QUOTE, SHORT, BriefDraft, ExtractedKeyword
+from config.llm import DEFAULT, UNTRUSTED_RULE, as_document, generate
 from mcp_servers.jobpilot_api import client
 
 logger = logging.getLogger(__name__)
 
-# A posting is a few thousand characters. Past this it is a listing page or a nav
-# dump, and the tail adds noise rather than signal.
-MAX_PAGE_CHARS = 16_000
+# What a captured page may take of the prompt, after cleaning. A longer page loses
+# whole sections — benefits, legal text, "similar jobs" — before its requirements.
+MAX_PAGE_CHARS = POSTING_CHARS
 
 # A posting names a handful of technologies. A list longer than this is the model
 # restating the JD, and a filter every job matches is not a filter.
 MAX_STACK = 20
 
 # Bumped when PARSE_SYSTEM or the parsed shape changes. Recorded with the call's usage.
-PARSE_VERSION = 1
-
-JOB_TYPES = {"full_time", "contract", "part_time", "internship"}
-WORK_MODES = {"on_site", "hybrid", "remote"}
+# 2: the parse also returns the brief (requirements with evidence, and constraints).
+PARSE_VERSION = 2
 
 PARSE_SYSTEM = f"""You read a career page, captured as markdown, and pull out the posting it advertises.
 
@@ -50,33 +54,63 @@ Rules:
   appear in the page verbatim.
 - `isPosting` is false when the page is a job *list*, a search page, a login wall, or anything
   that is not one specific opening. Say so rather than guessing at fields.
-- `requirements` is the technology stack, and nothing else. A name you could put on a tool,
-  language, framework, database, cloud service or protocol: "Python", "Kubernetes", "PostgreSQL",
-  "LangGraph", "AWS".
-  Exclude activities and qualities even when the posting stresses them — "production deployment",
-  "observability", "compliance", "auditability", "risk controls", "governance", "planning",
-  "reasoning", "best practices" are NOT technologies and must not appear. If you would not
-  install it, import it or sign up for it, leave it out.
-  Prefer the shortest form the page uses, and return at most 20.
-- `jobType` is one of full_time, contract, part_time, internship, or null.
-- `workMode` is one of on_site, hybrid, remote, or null.
-- `experience` and `salary` are copied from the page verbatim — the exact words it uses,
-  e.g. "6-10 years", "Minimum 8 years of experience", "₹40–55 LPA". Never compute, convert,
-  round or combine figures; null when the page does not state them.
-- `refId` is the board's own requisition id if the page shows one, else null."""
+- `refId` is the board's own requisition id if the page shows one, else null.
+
+`requirements` — the concrete, checkable requirements the posting states: technologies, tools,
+platforms, languages, frameworks, methodologies, certifications and qualifications. Exclude
+generic traits ("team player", "excellent communication") and anything about the company itself.
+- `label` uses the page's own wording, at most four words. Prefer the shortest form the page uses.
+- {KIND_RULE}
+  Activities and qualities are never "tech", even when the posting stresses them — "production
+  deployment", "observability", "compliance", "governance", "best practices". If you would not
+  install it, import it or sign up for it, it is not "tech".
+- `evidence` is a span copied VERBATIM from the page containing the requirement. Never
+  paraphrase, never join spans.
+- Never list a requirement the page does not state. At most 20, most important first.
+- Years of experience and seniority are constraints, never requirements.
+
+Constraints and details — null unless the page states it outright:
+- `seniority`: the level word it uses, e.g. "Senior", "Lead", "Staff".
+- `minYears`: the minimum years of experience, as a number.
+- `locationRule`: its location or relocation requirement, copied verbatim.
+- `workMode`: on_site, hybrid or remote. `jobType`: full_time, contract, part_time or internship.
+- `experience` and `salary`: copied verbatim — the exact words the page uses, e.g. "6-10 years",
+  "Minimum 8 years of experience", "₹40–55 LPA". Never compute, convert, round or combine
+  figures."""
 
 
 class ParsedPosting(BaseModel):
     isPosting: bool
-    title: str = ""
-    company: str = ""
-    location: str = ""
-    jobType: str | None = None
-    workMode: str | None = None
-    experience: str | None = None
-    salary: str | None = None
-    refId: str | None = None
-    requirements: list[str] = Field(default_factory=list)
+    title: str = Field(default="", max_length=200)
+    company: str = Field(default="", max_length=120)
+    location: str = Field(default="", max_length=200)
+    refId: str | None = Field(default=None, max_length=SHORT)
+    requirements: list[ExtractedKeyword] = Field(default_factory=list, max_length=25)
+    seniority: str | None = Field(default=None, max_length=40)
+    minYears: int | None = None
+    locationRule: str | None = Field(default=None, max_length=200)
+    workMode: WorkMode | None = None
+    jobType: JobType | None = None
+    experience: str | None = Field(default=None, max_length=SHORT)
+    salary: str | None = Field(default=None, max_length=SHORT)
+
+    def brief_draft(self) -> BriefDraft:
+        """The brief's half of the reading, in the shape the brief call returns."""
+        return BriefDraft(
+            requirements=[
+                ExtractedKeyword(
+                    label=item.label[:SHORT], kind=item.kind, evidence=item.evidence[:QUOTE]
+                )
+                for item in self.requirements
+            ],
+            seniority=self.seniority,
+            minYears=self.minYears,
+            locationRule=self.locationRule,
+            workMode=self.workMode,
+            experience=self.experience,
+            salary=self.salary,
+            jobType=self.jobType,
+        )
 
 
 class ParseOutcome(BaseModel):
@@ -90,9 +124,10 @@ class ParseOutcome(BaseModel):
 
 
 async def parse_description(description_id: str) -> ParseOutcome:
-    """Read one capture, write the job it describes, and link them."""
+    """Read one capture, write the job it describes, link them, and store its brief."""
     description = await client.get_description(description_id)
-    page = (description.get("jdText") or "")[:MAX_PAGE_CHARS]
+    cleaned = clean_posting(description.get("jdText") or "", MAX_PAGE_CHARS)
+    page = cleaned.text
     if not page.strip():
         await client.set_description_status(description_id, "discarded")
         return ParseOutcome(
@@ -134,33 +169,23 @@ async def parse_description(description_id: str) -> ParseOutcome:
     }
     if posting.refId and _flatten(posting.refId) in flat:
         payload["refId"] = posting.refId
-    # The same checks Analyze's details step applies, so a capture never has to be read
-    # twice: figures verbatim, and a work mode or job type only when a word says so.
-    details = verify_details(
-        JobDetails(
-            experience=posting.experience,
-            salary=posting.salary,
-            workMode=posting.workMode if posting.workMode in WORK_MODES else None,
-            jobType=posting.jobType if posting.jobType in JOB_TYPES else None,
-        ),
-        page,
-    )
-    for field, value in {
-        "experienceBand": details.experience,
-        "salaryText": details.salary,
-        "workMode": details.workMode,
-        "jobType": details.jobType,
-    }.items():
-        if value is not None:
-            payload[field] = value
+    # The same checks the brief call applies, so a capture never has to be read twice:
+    # quotes verbatim, figures verbatim, and a work mode or job type only when a word
+    # says so.
+    brief = matching.verified_brief(posting.brief_draft(), page, cleaned.flagged)
+    payload.update(brief.details().as_job_fields())
 
     created = await client.create_job(payload)
     job_id = created["id"]
     await client.link_description(description_id, job_id)
+    # Stored on the capture, so scoring this job later starts from the brief instead of
+    # sending the page to a model a second time.
+    await client.store_brief(description_id, matching.brief_payload(brief, DEFAULT.provenance))
     # A job that already had a stack keeps it: the listing is shared, and a second
     # capture of it is not a reason to rewrite what another run read.
     if not created.get("duplicate") or (await client.get_job(job_id)).get("techStack") is None:
-        await client.update_job(job_id, {"techStack": _verified_stack(posting.requirements, flat)})
+        stack = _verified_stack(matching.tech_stack(brief.requirements), flat)
+        await client.update_job(job_id, {"techStack": stack})
     return ParseOutcome(
         descriptionId=description_id,
         parsed=True,

@@ -12,7 +12,7 @@ class ModelSettings(BaseModel):
     generation: str
     generationHost: str
     embeddings: str
-    rerank: str
+    embeddingsHost: str
 
 
 class TierSettings(BaseModel):

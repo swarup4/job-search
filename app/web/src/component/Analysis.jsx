@@ -16,7 +16,6 @@ const PER_JOB = "About a minute and ~$0.001 per job.";
 
 const STEPS = {
     details: { doing: "Reading experience, salary, work mode and job type", done: "Details" },
-    embedding: { doing: "Embedding the job description", done: "Embedding" },
     techStack: { doing: "Reading the tech stack", done: "Tech stack" },
     match: { doing: "Matching the job against your resume", done: "Match" },
 };

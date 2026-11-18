@@ -29,8 +29,6 @@ from typing import Any
 import pytest
 
 from agents import matching
-from agents.analysis import DETAILS_SYSTEM
-from agents.analysis import MAX_JD_CHARS as DETAILS_MAX_CHARS
 from agents.inventory import INVENTORY_SYSTEM, MAX_OUTPUT_TOKENS, Inventory, Skill
 from agents.matching import (
     BRIEF_SYSTEM,
@@ -107,14 +105,17 @@ def test_no_ollama_cloud_model_is_configured() -> None:
     assert hits(r"""LLM_MODEL\s*=\s*\S+[:-]cloud\b|["'][\w.-]+:cloud["']""", "ai") == []
 
 
-def test_voyage_is_imported_only_by_the_rag_clients() -> None:
-    allowed = {"ai/rag/embeddings.py", "ai/rag/retrieval.py"}
-    found = [hit for hit in hits(r"^\s*(import|from)\s+voyageai\b", "ai", "server")]
-    assert [hit for hit in found if hit.split(":")[0] not in allowed] == []
+def test_no_hosted_embedding_sdk_is_imported() -> None:
+    """Embeddings go to a local model over plain HTTP (rag/embeddings.py). A provider's
+    SDK in the import list is profile text on its way to that provider."""
+    assert hits(r"^\s*(import|from)\s+(voyageai|cohere|pinecone|jina)\b", "ai", "server") == []
 
 
-def test_the_voyage_key_never_reaches_server_or_the_browser() -> None:
-    assert hits(r"VOYAGE", "server", "app") == []
+def test_no_hosted_embedding_service_is_named() -> None:
+    """No setting, key or dependency for one, in any tier or env template."""
+    assert (
+        hits(r"voyage|api\.jina\.ai|api\.cohere", "ai", "server", "app", flags=re.IGNORECASE) == []
+    )
 
 
 def test_no_secret_is_shipped_to_the_browser() -> None:
@@ -227,10 +228,11 @@ def test_server_modules_import_each_other_only_through_their_public_interface() 
 
 UNTRUSTED_PROMPTS = {
     "parse": PARSE_SYSTEM,
-    "details": DETAILS_SYSTEM,
     "brief": BRIEF_SYSTEM,
     "compare": COMPARE_SYSTEM,
     "inventory": INVENTORY_SYSTEM,
+    # Its keywords are a posting's words, chosen by the user but written by a stranger.
+    "tailor": TAILOR_SYSTEM,
 }
 
 
@@ -260,7 +262,7 @@ def test_untrusted_text_cannot_close_its_own_fence(payload: str) -> None:
 
 # --- LLM07: prompts carry nothing worth leaking ---------------------------------
 
-ALL_PROMPTS = {**UNTRUSTED_PROMPTS, "tailor": TAILOR_SYSTEM}
+ALL_PROMPTS = dict(UNTRUSTED_PROMPTS)
 
 
 @pytest.mark.parametrize("name", ALL_PROMPTS)
@@ -278,10 +280,9 @@ def test_no_prompt_carries_a_secret_or_an_address(name: str) -> None:
     ("system", "cap", "max_tokens"),
     [
         (PARSE_SYSTEM, MAX_PAGE_CHARS, 2048),
-        (DETAILS_SYSTEM, DETAILS_MAX_CHARS, 512),
         (BRIEF_SYSTEM, MAX_JD_CHARS, 2048),
     ],
-    ids=["parse", "details", "brief"],
+    ids=["parse", "brief"],
 )
 def test_the_longest_input_an_agent_allows_fits_the_budget(
     system: str, cap: int, max_tokens: int
@@ -360,6 +361,9 @@ async def test_a_brief_built_only_from_invented_quotes_offers_nothing(
             minYears=15,
             locationRule="Must relocate to Mars",
             workMode="remote",
+            experience="15+ years",
+            salary="$900k",
+            jobType="contract",
         )
 
     monkeypatch.setattr(matching, "generate", compromised)
@@ -370,3 +374,4 @@ async def test_a_brief_built_only_from_invented_quotes_offers_nothing(
     assert (brief.seniority, brief.minYears, brief.locationRule, brief.workMode) == (
         None, None, None, None,
     )  # fmt: skip
+    assert (brief.experience, brief.salary, brief.jobType) == (None, None, None)

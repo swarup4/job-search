@@ -26,6 +26,7 @@ class FakeClient:
         self.token: str | None = None
         self.unscored = list(unscored)
         self.pages: list[int] = []
+        self.relevant: list[bool] = []
 
     def set_token(self, token: str) -> None:
         self.token = token
@@ -35,9 +36,15 @@ class FakeClient:
             raise JobPilotApiError(401, "invalid token")
         return {"id": "u1" if self.token == "good" else "u2"}
 
-    async def list_unscored_jobs(self, limit: int) -> list[dict[str, Any]]:
+    async def list_unscored_jobs(self, limit: int, relevant: bool = False) -> list[dict[str, Any]]:
+        return (await self.unscored_jobs(limit, relevant))["jobs"]
+
+    async def unscored_jobs(self, limit: int, relevant: bool = False) -> dict[str, Any]:
         self.pages.append(limit)
-        return [{"id": job_id, "title": f"Job {job_id}"} for job_id in self.unscored[:limit]]
+        # A scoring run only ever asks for the jobs inside the caller's search targets.
+        self.relevant.append(relevant)
+        jobs = [{"id": job_id, "title": f"Job {job_id}"} for job_id in self.unscored[:limit]]
+        return {"total": len(self.unscored), "jobs": jobs}
 
 
 @pytest.fixture
@@ -106,6 +113,32 @@ async def test_it_keeps_asking_past_one_page(
     assert scoring_api._slot.run.scored == 5
 
 
+async def test_a_run_stops_at_its_cap_and_reports_what_is_left(
+    api: AsyncClient, fake: FakeClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """CE-07: a run is a bounded spend. The jobs past the cap are left for the next
+    run, not dropped, and the run says how many."""
+    fake.unscored = [f"j{n}" for n in range(1, 8)]
+    monkeypatch.setattr(scoring_api, "MAX_JOBS", 3)
+
+    await api.post("/scoring/start", headers=AUTH)
+    await finish()
+
+    run = scoring_api._slot.run
+    assert (run.status, run.scored, run.remaining) == ("done", 3, 4)
+    assert fake.unscored == ["j4", "j5", "j6", "j7"]
+
+
+async def test_a_run_scores_only_jobs_inside_the_search_targets(
+    api: AsyncClient, fake: FakeClient
+) -> None:
+    """The catalogue is shared. Every listing a run asks for is the relevant one."""
+    await api.post("/scoring/start", headers=AUTH)
+    await finish()
+
+    assert fake.relevant and all(fake.relevant)
+
+
 async def test_a_failing_job_is_tried_once_and_the_rest_still_scored(
     api: AsyncClient, fake: FakeClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -124,6 +157,8 @@ async def test_a_failing_job_is_tried_once_and_the_rest_still_scored(
     run = scoring_api._slot.run.model_dump(mode="json")
     assert (run["status"], run["scored"], run["failed"]) == ("done", 2, 1)
     assert "no job description" in run["results"][1]["error"]
+    # Still unscored, so it counts among what the next run will take.
+    assert run["remaining"] == 1
 
 
 async def test_refresh_during_a_run_returns_that_run(

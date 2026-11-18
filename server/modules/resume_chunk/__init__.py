@@ -8,7 +8,6 @@ dependency pointing one way.
 from modules.resume_chunk.models import (
     MAX_CHUNK_CHARS,
     MIN_CHUNK_CHARS,
-    VECTOR_INDEX,
     ChunkFields,
     ChunkSection,
     IndexStats,
@@ -23,7 +22,6 @@ __all__ = [
     "MAX_CHUNK_CHARS",
     "MIN_CHUNK_CHARS",
     "NAME",
-    "VECTOR_INDEX",
     "ChunkFields",
     "ChunkSection",
     "IndexStats",

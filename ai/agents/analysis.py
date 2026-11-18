@@ -1,80 +1,39 @@
 """Everything done to a stored job after discovery, behind one Analyze button.
 
-Four steps, each standing alone so one failing does not cost the others. The job
+Three steps, each standing alone so one failing does not cost the others. The job
 page renders the stored markdown itself, so no HTML is produced here:
 
-| step      | writes                                   | model          |
-|-----------|------------------------------------------|----------------|
-| details   | experience, salary, work mode, job type  | the LLM        |
-| embedding | the JD's vector                          | Voyage         |
-| techStack | the job's technologies                   | the LLM        |
-| match     | score, keywords, risks — via `rectify`,  | the LLM, 1×    |
-|           | reusing the techStack step's brief       |                |
+| step      | writes                                   | model                       |
+|-----------|------------------------------------------|-----------------------------|
+| techStack | the job's technologies, from the brief   | the LLM, once               |
+| details   | experience, salary, work mode, job type  | none: copied from the brief |
+| match     | score, keywords, risks, via `rectify`,   | the LLM, once               |
+|           | reusing the same brief                   |                             |
 
-The details step follows the parser's rule: the model proposes, the page decides. An
-experience or salary figure not present in the posting verbatim is dropped, and a
-work mode or job type needs a word in the text that says so. A field the board
-already supplied is never overwritten.
+The posting is read by the model once. The brief that read carries the tech stack and
+the four details, each already checked against the posting, so the details step is a
+copy and not a second reading. A field the board already supplied is never overwritten.
 
-Nothing is paid for twice: each step skips what is already stored — the four details,
-the vector, a tech stack already read (even an empty one), your match — and a job with
-all of them is skipped whole.
+Nothing is paid for twice: each step skips what is already stored (the four details,
+a tech stack already read, even an empty one, your match) and a job with all of them
+is skipped whole.
 """
 
 from __future__ import annotations
 
 import asyncio
 import logging
-import re
 from collections.abc import Callable
-from typing import Any, Literal
+from typing import Any
 
 from pydantic import BaseModel, Field
 
 from agents import matching
-from config.llm import UNTRUSTED_RULE, as_document, generate
+from agents.details import DETAIL_FIELDS
 from mcp_servers.jobpilot_api import client
 from mcp_servers.jobpilot_api.client import JobPilotApiError
-from rag.embeddings import VoyageEmbeddings
 
 logger = logging.getLogger(__name__)
-
-DETAIL_FIELDS = ("experienceBand", "salaryText", "workMode", "jobType")
-
-# The same ceiling the match step uses. Past this a JD is boilerplate and legal text.
-MAX_JD_CHARS = 12_000
-
-# Bumped when DETAILS_SYSTEM or its shape changes. Recorded with the call's usage.
-DETAILS_VERSION = 1
-
-# Words that have to appear in the posting before a work mode or job type is believed.
-MODE_WORDS = matching.MODE_WORDS
-TYPE_WORDS = {
-    "full_time": r"\bfull[- ]time\b|\bpermanent\b",
-    "part_time": r"\bpart[- ]time\b",
-    "contract": r"\bcontract(or|ual)?\b|\bfixed[- ]term\b",
-    "internship": r"\bintern(ship)?\b",
-}
-
-DETAILS_SYSTEM = f"""You read one job posting and report four facts about the role, only when the posting states them.
-
-{UNTRUSTED_RULE}
-
-Rules:
-- Copy `experience` and `salary` from the posting verbatim — the exact words it uses,
-  e.g. "6-10 years", "Minimum 8 years of experience", "₹40–55 LPA". Never compute,
-  convert, round or combine figures.
-- `workMode` is on_site, hybrid or remote; `jobType` is full_time, contract, part_time
-  or internship.
-- Answer null for anything the posting does not state outright. Do not infer a work
-  mode from a city, or a job type from seniority. A guess is worse than null."""
-
-
-class JobDetails(BaseModel):
-    experience: str | None = None
-    salary: str | None = None
-    workMode: Literal["on_site", "hybrid", "remote"] | None = None
-    jobType: Literal["full_time", "contract", "part_time", "internship"] | None = None
 
 
 class StepResult(BaseModel):
@@ -131,26 +90,16 @@ async def analyze(job_id: str, on_event: OnEvent = _ignore) -> AnalysisOutcome:
         outcome.error = "no job description is stored for this job"
         return outcome
 
-    outcome.steps["details"] = await step("details", _details(job, text[:MAX_JD_CHARS]))
-    if description.get("hasEmbedding"):
-        outcome.steps["embedding"] = done("embedding", StepResult(ok=True, note="already embedded"))
-    else:
-        outcome.steps["embedding"] = await step(
-            "embedding", _embedding(description["id"], text[:MAX_JD_CHARS])
-        )
-
-    # Handed from the techStack step to the match, so the posting is read once.
+    # Read once, here, and handed to both later steps.
     briefs: list[matching.Brief] = []
-    if job.get("techStack") is not None:
-        outcome.steps["techStack"] = done("techStack", StepResult(ok=True, note="already read"))
-    else:
-        outcome.steps["techStack"] = await step("techStack", _tech_stack(job, description, briefs))
+    outcome.steps["techStack"] = await step("techStack", _tech_stack(job, description, briefs))
+    brief = briefs[0] if briefs else None
+    outcome.steps["details"] = await step("details", _details(job, brief))
 
     if existing is not None:
         outcome.steps["match"] = done("match", StepResult(ok=True, note="already matched"))
         return outcome
     match: dict[str, Any] = {}
-    brief = briefs[0] if briefs else None
     outcome.steps["match"] = await step("match", _match(job_id, brief, match))
     outcome.score = match.get("score")
     return outcome
@@ -204,31 +153,31 @@ async def _step(work: Any) -> StepResult:
     return StepResult(ok=True, note=note)
 
 
-async def _details(job: dict[str, Any], text: str) -> str:
-    if all(job.get(field) for field in DETAIL_FIELDS):
-        return "all details already known"
-    # The tech stack is read with the details — by the capture parser in one call, or by
-    # this run's own later step — so a stack already there means the details were read.
+async def _tech_stack(
+    job: dict[str, Any], description: dict[str, Any], into: list[matching.Brief]
+) -> str:
+    """The posting's brief, stored or freshly read, and the stack it names."""
+    brief = await matching.ensure_brief(description, job)
+    into.append(brief)
     if job.get("techStack") is not None:
         return "already read"
-    proposed = await generate(
-        JobDetails,
-        as_document("job_posting", text),
-        system=DETAILS_SYSTEM,
-        max_tokens=512,
-        version=DETAILS_VERSION,
-    )
-    found = verify_details(proposed, text)
+    stack = matching.tech_stack(brief.requirements)
+    await client.update_job(job["id"], {"techStack": stack})
+    return f"{len(stack)} technologies" if stack else "names no technology"
+
+
+async def _details(job: dict[str, Any], brief: matching.Brief | None) -> str:
+    """Copy what the brief read. No model: the brief checked each value against the
+    posting when it was built."""
+    if all(job.get(field) for field in DETAIL_FIELDS):
+        return "all details already known"
+    if brief is None:
+        return "the posting could not be read"
     # The board's own values win: only fields the job does not have yet are written.
     changes = {
         field: value
-        for field, value in {
-            "experienceBand": found.experience,
-            "salaryText": found.salary,
-            "workMode": found.workMode,
-            "jobType": found.jobType,
-        }.items()
-        if value is not None and not job.get(field)
+        for field, value in brief.details().as_job_fields().items()
+        if not job.get(field)
     }
     if changes:
         await client.update_job(job["id"], changes)
@@ -236,57 +185,7 @@ async def _details(job: dict[str, Any], text: str) -> str:
     return "nothing new stated"
 
 
-async def _embedding(description_id: str, text: str) -> str:
-    [vector] = await VoyageEmbeddings().embed_documents([text])
-    await client.store_description_embedding(description_id, vector)
-    return f"{len(vector)} dimensions"
-
-
-async def _tech_stack(
-    job: dict[str, Any], description: dict[str, Any], into: list[matching.Brief]
-) -> str:
-    brief = await matching.ensure_brief(description, job)
-    into.append(brief)
-    stack = matching.tech_stack(brief.requirements)
-    await client.update_job(job["id"], {"techStack": stack})
-    return f"{len(stack)} technologies" if stack else "names no technology"
-
-
 async def _match(job_id: str, brief: matching.Brief | None, into: dict[str, Any]) -> str:
     match = await matching.rectify(job_id, brief)
     into.update(match)
     return f"score {match.get('score')}"
-
-
-# --- pure helpers, tested directly ------------------------------------------------
-
-
-def verify_details(proposed: JobDetails, text: str) -> JobDetails:
-    flat = _flatten(text)
-    return JobDetails(
-        experience=proposed.experience if _verbatim(proposed.experience, flat) else None,
-        salary=proposed.salary if _verbatim(proposed.salary, flat) else None,
-        workMode=proposed.workMode if _said(MODE_WORDS, proposed.workMode, text) else None,
-        jobType=proposed.jobType if _said(TYPE_WORDS, proposed.jobType, text) else None,
-    )
-
-
-def _verbatim(value: str | None, flat_text: str) -> bool:
-    return bool(value) and _flatten(value) in flat_text
-
-
-def _said(words: dict[str, str], value: str | None, text: str) -> bool:
-    return value is not None and re.search(words[value], text, re.IGNORECASE) is not None
-
-
-def _flatten(value: str) -> str:
-    return " ".join(value.lower().split())
-
-
-if __name__ == "__main__":
-    print(
-        verify_details(
-            JobDetails(experience="6-10 years", salary="40 LPA", workMode="hybrid"),
-            "We need 6-10 years of experience. Hybrid, Bengaluru.",
-        )
-    )

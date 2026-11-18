@@ -3,7 +3,8 @@ Nothing outside imports past this file."""
 
 from modules.preference.models import Preference
 from modules.preference.router import router
+from modules.preference.service import get_preference
 
 NAME = "preference"
 
-__all__ = ["NAME", "Preference", "router"]
+__all__ = ["NAME", "Preference", "get_preference", "router"]

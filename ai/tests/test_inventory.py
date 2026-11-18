@@ -10,7 +10,7 @@ import pytest
 
 from agents import inventory
 from agents.evidence import profile_corpus
-from agents.inventory import DraftInventory, DraftSkill
+from agents.inventory import DraftInventory, DraftSkill, Skill
 
 PROFILE = {
     "name": "A Candidate",
@@ -137,12 +137,65 @@ async def test_an_inventory_read_from_this_profile_is_reused(
 
     monkeypatch.setattr(inventory, "generate", refuse)
     digest = inventory.profile_hash(profile_corpus(PROFILE))
-    server.stored = {"profileHash": digest, "modelName": "m", "skills": [], "builtAt": "x"}
+    server.stored = {
+        "profileHash": digest,
+        "modelName": "m",
+        "skills": [],
+        "candidateBlock": inventory.render_candidate([], PROFILE),
+        "builtAt": "x",
+    }
 
     found = await inventory.ensure_inventory(PROFILE)
 
     assert found.profileHash == digest
     assert server.replaced == []
+
+
+async def test_an_inventory_stored_without_its_block_gains_one_without_a_model_call(
+    monkeypatch: pytest.MonkeyPatch, server: Server
+) -> None:
+    """An inventory from before CE-13. The block is rendered in code and stored, so
+    the next call finds it — and nobody pays to read the profile again."""
+
+    async def refuse(*args: Any, **kwargs: Any) -> None:
+        raise AssertionError("the model was called to render a block")
+
+    monkeypatch.setattr(inventory, "generate", refuse)
+    digest = inventory.profile_hash(profile_corpus(PROFILE))
+    server.stored = {"profileHash": digest, "modelName": "m", "skills": [], "builtAt": "x"}
+
+    found = await inventory.ensure_inventory(PROFILE)
+
+    assert found.candidateBlock == inventory.render_candidate([], PROFILE)
+    assert [stored["candidateBlock"] for stored in server.replaced] == [found.candidateBlock]
+
+
+def test_the_candidate_block_is_the_same_bytes_every_time() -> None:
+    """CE-13: a model server can only reuse the start of a prompt that does not move."""
+    skills = [
+        Skill(id="s1", label="Kubernetes", aliases=["k8s"], kind="tech", evidence="Cloud: K8s"),
+        Skill(id="s2", label="Docker", kind="tech", evidence="Cloud: Kubernetes, Docker"),
+    ]
+
+    first = inventory.render_candidate(skills, PROFILE)
+
+    assert first == inventory.render_candidate(list(skills), dict(PROFILE))
+    assert "s1: Kubernetes (also: k8s)" in first
+    assert first.index("Skill inventory:") < first.index("Profile:")
+
+
+def test_a_long_inventory_lists_shorter_quotes_not_fewer_skills() -> None:
+    """The block has a budget. A skill left out of it is a requirement wrongly reported
+    Missing, so the quotes give way first."""
+    skills = [
+        Skill(id=f"s{n}", label=f"Skill number {n}", kind="tech", evidence="evidence " * 40)
+        for n in range(1, 101)
+    ]
+
+    block = inventory.render_candidate(skills, PROFILE)
+
+    assert len(block) <= inventory.CANDIDATE_CHARS
+    assert all(f"s{n}: Skill number {n}" in block for n in range(1, 101))
 
 
 async def test_an_edited_profile_is_read_again_and_stored(

@@ -69,10 +69,16 @@ async def get_job(job_id: str) -> dict[str, Any]:
     return await _request("GET", f"/job/getJob/{job_id}")
 
 
-async def list_unscored_jobs(limit: int) -> list[dict[str, Any]]:
-    """The caller's newest jobs with no match yet — what "Analyze new jobs" takes."""
-    body = await _request("GET", "/match/unscored", params={"limit": limit})
-    return body["jobs"]
+async def list_unscored_jobs(limit: int, relevant: bool = False) -> list[dict[str, Any]]:
+    """The caller's newest jobs with no match yet — what "Analyze new jobs" takes.
+    `relevant` narrows them to the caller's saved roles, skills and locations."""
+    return (await unscored_jobs(limit, relevant))["jobs"]
+
+
+async def unscored_jobs(limit: int, relevant: bool = False) -> dict[str, Any]:
+    """`{total, jobs}` — the jobs as above, and how many there are in all."""
+    params = {"limit": limit, "relevant": str(relevant).lower()}
+    return await _request("GET", "/match/unscored", params=params)
 
 
 async def update_job(job_id: str, payload: dict[str, Any]) -> dict[str, Any]:
@@ -177,21 +183,41 @@ async def replace_skill_inventory(inventory: dict[str, Any]) -> dict[str, Any]:
     return await _request("PUT", "/skill-inventory/replaceInventory", json=inventory)
 
 
-async def list_pending_chunks(limit: int = 200) -> list[dict[str, Any]]:
-    """Chunks with no vector yet — everything this tier still owes the index."""
-    return await _request("GET", "/resume-chunk/pending", params={"limit": limit})
+async def list_pending_chunks(limit: int = 200, model: str | None = None) -> list[dict[str, Any]]:
+    """Everything this tier still owes the index: chunks with no vector yet, and with
+    `model`, chunks whose vector came from a different embedding model."""
+    params: dict[str, Any] = {"limit": limit}
+    if model:
+        params["model"] = model
+    return await _request("GET", "/resume-chunk/pending", params=params)
 
 
-async def store_chunk_embeddings(embeddings: list[dict[str, Any]]) -> dict[str, Any]:
-    """One request for a whole profile's vectors. Refused outright if any chunk id is
-    not the caller's or no longer exists, rather than partly applied."""
-    return await _request("PUT", "/resume-chunk/embeddings", json={"embeddings": embeddings})
+async def store_chunk_embeddings(
+    embeddings: list[dict[str, Any]], model: str | None = None
+) -> dict[str, Any]:
+    """One request for a batch of vectors, and the model that produced them. Refused
+    outright if any chunk id is not the caller's or no longer exists, rather than partly
+    applied."""
+    return await _request(
+        "PUT", "/resume-chunk/embeddings", json={"embeddings": embeddings, "model": model}
+    )
 
 
-async def search_chunks(vector: list[float], limit: int = 50) -> list[dict[str, Any]]:
-    """`$vectorSearch` over the caller's own chunks. The vector is embedded here; the
-    server runs the query, because this tier has no database URI."""
-    return await _request("POST", "/resume-chunk/search", json={"vector": vector, "limit": limit})
+async def search_chunks_many(
+    vectors: list[list[float]], limit: int = 1, model: str | None = None
+) -> list[list[dict[str, Any]]]:
+    """The caller's own chunks nearest to each vector, by exact cosine: one list of
+    hits per vector, in the order sent. The vectors are embedded here and the server
+    runs the search, because this tier has no database address. With `model`, only
+    chunks that model embedded are searched."""
+    if not vectors:
+        return []
+    body = await _request(
+        "POST",
+        "/resume-chunk/search-many",
+        json={"vectors": vectors, "limit": limit, "model": model},
+    )
+    return body["results"]
 
 
 async def chunk_stats() -> dict[str, Any]:

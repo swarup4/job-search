@@ -32,6 +32,7 @@ async def replace_inventory(
     inventory.profileHash = payload.profileHash
     inventory.modelName = payload.modelName
     inventory.skills = payload.skills
+    inventory.candidateBlock = payload.candidateBlock
     inventory.builtAt = datetime.now(UTC)
     await inventory.save()
     return inventory
