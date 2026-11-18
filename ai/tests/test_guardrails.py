@@ -105,14 +105,17 @@ def test_no_ollama_cloud_model_is_configured() -> None:
     assert hits(r"""LLM_MODEL\s*=\s*\S+[:-]cloud\b|["'][\w.-]+:cloud["']""", "ai") == []
 
 
-def test_voyage_is_imported_only_by_the_rag_clients() -> None:
-    allowed = {"ai/rag/embeddings.py", "ai/rag/retrieval.py"}
-    found = [hit for hit in hits(r"^\s*(import|from)\s+voyageai\b", "ai", "server")]
-    assert [hit for hit in found if hit.split(":")[0] not in allowed] == []
+def test_no_hosted_embedding_sdk_is_imported() -> None:
+    """Embeddings go to a local model over plain HTTP (rag/embeddings.py). A provider's
+    SDK in the import list is profile text on its way to that provider."""
+    assert hits(r"^\s*(import|from)\s+(voyageai|cohere|pinecone|jina)\b", "ai", "server") == []
 
 
-def test_the_voyage_key_never_reaches_server_or_the_browser() -> None:
-    assert hits(r"VOYAGE", "server", "app") == []
+def test_no_hosted_embedding_service_is_named() -> None:
+    """No setting, key or dependency for one, in any tier or env template."""
+    assert (
+        hits(r"voyage|api\.jina\.ai|api\.cohere", "ai", "server", "app", flags=re.IGNORECASE) == []
+    )
 
 
 def test_no_secret_is_shipped_to_the_browser() -> None:

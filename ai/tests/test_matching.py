@@ -539,11 +539,15 @@ def test_slugs_are_stable_across_spelling() -> None:
 # --- P5-06: a near miss is a hint, never a verdict ---------------------------
 
 
+# Either side of the configured threshold, not fixed numbers: the threshold belongs to
+# one embedding model and moves when the model does.
+ABOVE = matching.NEAR_MISS_THRESHOLD + 0.05
+BELOW = matching.NEAR_MISS_THRESHOLD - 0.05
+
+
 def hint(text: str, score: float) -> Span:
     """What `nearest_spans` hands back: the closest indexed chunk and its cosine."""
-    return Span(
-        id="1", section="experience", text=text, source_ref="", score=score, scored_by="cosine"
-    )
+    return Span(id="1", section="experience", text=text, source_ref="", score=score)
 
 
 def requirement() -> Requirement:
@@ -569,7 +573,7 @@ def index(monkeypatch, *spans: Span | None) -> list[list[str]]:
 
 
 async def test_near_miss_names_the_span_it_matched(monkeypatch) -> None:
-    index(monkeypatch, hint("LangGraph pipelines", 0.52))
+    index(monkeypatch, hint("LangGraph pipelines", ABOVE))
 
     result = await matching.flag_near_misses([requirement()])
 
@@ -579,17 +583,25 @@ async def test_near_miss_names_the_span_it_matched(monkeypatch) -> None:
 async def test_a_distant_span_is_not_a_near_miss(monkeypatch) -> None:
     """Below the threshold calibrated in `rag/embeddings.py` — related and unrelated
     spans separate there, and this is the wrong side of the line."""
-    index(monkeypatch, hint("Built a RASA chatbot", 0.24))
+    index(monkeypatch, hint("Built a RASA chatbot", BELOW))
 
     result = await matching.flag_near_misses([requirement()])
 
     assert result[0].near_miss is None
 
 
+async def test_a_span_exactly_at_the_threshold_is_a_near_miss(monkeypatch) -> None:
+    index(monkeypatch, hint("LangGraph pipelines", matching.NEAR_MISS_THRESHOLD))
+
+    result = await matching.flag_near_misses([requirement()])
+
+    assert result[0].near_miss == "LangGraph pipelines"
+
+
 async def test_a_near_miss_leaves_the_requirement_missing(monkeypatch) -> None:
     """Promoting it on a cosine would hide a keyword the user never got to tick —
     the same failure the comparison refuses in the other direction."""
-    index(monkeypatch, hint("LangGraph pipelines", 0.52))
+    index(monkeypatch, hint("LangGraph pipelines", ABOVE))
 
     result = await matching.flag_near_misses([requirement()])
 
@@ -608,7 +620,7 @@ async def test_an_empty_index_is_not_a_near_miss(monkeypatch) -> None:
 async def test_the_labels_are_what_the_index_is_asked_about(monkeypatch) -> None:
     """The label, not the evidence sentence: the threshold was calibrated on short
     requirement labels against profile spans."""
-    asked = index(monkeypatch, hint("LangGraph pipelines", 0.52))
+    asked = index(monkeypatch, hint("LangGraph pipelines", ABOVE))
 
     await matching.flag_near_misses([requirement()])
 

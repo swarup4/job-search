@@ -6,13 +6,14 @@ per account on the API server and read at the start of each run.
 
 from __future__ import annotations
 
+from urllib.parse import urlparse
+
 from fastapi import APIRouter
 
 from api.deps import Caller
 from api.settings.models import ModelSettings, ScrapeSettings, TierSettings
 from config.llm import LLM_HOST, LLM_MODEL
-from rag.embeddings import VOYAGE_EMBED_MODEL
-from rag.retrieval import VOYAGE_RERANK_MODEL
+from rag.embeddings import EMBED_BASE_URL, EMBED_MODEL
 from sources.http import MAX_PER_HOST, USER_AGENT
 
 router = APIRouter(tags=["settings"])
@@ -25,7 +26,7 @@ async def read_settings(_: Caller) -> TierSettings:
         models=ModelSettings(
             generation=LLM_MODEL,
             generationHost=LLM_HOST,
-            embeddings=VOYAGE_EMBED_MODEL,
-            rerank=VOYAGE_RERANK_MODEL,
+            embeddings=EMBED_MODEL,
+            embeddingsHost=urlparse(EMBED_BASE_URL).hostname or "unknown",
         ),
     )

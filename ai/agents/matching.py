@@ -18,7 +18,7 @@ What each step is allowed to see is a guardrail, not only an economy:
 | brief       | the JD, cleaned (cleaning.py) and fenced as untrusted                |
 | gates       | nothing — the brief against your search targets, in code (gates.py)  |
 | compare     | the candidate block, the job's constraints, the brief's requirements |
-| near misses | the indexed profile chunks, via Voyage                               |
+| near misses | the indexed profile chunks, by embedding                             |
 
 A posting that fails a gate never reaches the compare call.
 
