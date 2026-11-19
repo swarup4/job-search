@@ -1,8 +1,8 @@
 # 11 — Local setup on Windows
 
 The README and [doc 07](07-PDF-Setup-macOS.md) assume macOS. This is the same setup on Windows
-(plan task `LS-06`), rewritten on 2026-11-18 for the open-source stack in
-[doc 12](12-AI-Roadmap.md), step 0. Commands are for Git Bash or PowerShell.
+(roadmap `P13-08`), rewritten on 2026-11-18 for the open-source stack in
+[roadmap Phase 13](../05-Roadmap-Backlog.md#14-phase-13--local-open-source-stack). Commands are for Git Bash or PowerShell.
 
 Everything runs on this machine. There is no account to create and no key to obtain.
 

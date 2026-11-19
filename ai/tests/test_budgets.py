@@ -1,4 +1,4 @@
-"""EV-06 — the budget table in docs/12-AI-Roadmap.md, as tests.
+"""P10-09 — the budget table in 05-Roadmap-Backlog.md (Phase 14), as tests.
 
 One test per prompt builds the largest input that prompt can realistically be handed
 and fails if any row of the table is exceeded:

@@ -4,8 +4,9 @@
 |---|---|
 | **Product** | JobPilot — Agentic AI Job Search Platform |
 | **Owner** | Swarup Saha |
-| **Status** | v1.11 — twelve phases, application first then agents. Phases 1, 5 and 6 done; Workday scraping live from Settings; the pipeline is per-user in `applications`, and every screen but the per-job Resume Preview reads the API |
-| **Updated** | 2026-11-10 — career-page scraping moved out of Phase 3 into its own Phase 12 |
+| **Status** | v2.0 — **the one roadmap.** Sixteen phases, application first then agents. Phases 1, 5 and 6 done; everything runs locally on open-source parts (Phase 13); model calls per posting cut from four to two (Phase 14); nothing measured yet |
+| **Updated** | 2026-11-19 — doc 10 (Context Engineering Launch Plan) and doc 12 (AI Roadmap) merged in and deleted. Their tasks are Phases 13–16 and new tasks in Phases 1, 7, 8 and 10, each marked *(was `OS-07`)* and so on |
+| **Also** | [docs/08](docs/08-Career-Page-Scraping.md) is the company registry behind Phase 12 — reference data, not a plan |
 
 ---
 
@@ -14,30 +15,79 @@
 **Make the whole application work end to end first, then make it intelligent.** Phases 1–4 build a
 product a person can use by hand. Phase 5 adds the first LLM, called straight from the API. Phases
 6–11 turn that into the agentic system: retrieval, tools, agents, the extension, and the evals that
-prove it behaves.
+prove it behaves. Phase 12 pulls postings from career pages. Phases 13–16 came later: run on a
+local open-source stack, fit every model call into a budget, add the features a new tester needs,
+then move to a server for invited users.
 
 The order is deliberate. An agent writing into a half-built app cannot be judged, and a broken
 pipeline is far harder to debug with an LLM in the middle of it — so the plumbing is finished before
-anything starts reasoning.
+anything starts reasoning. **Phase numbers are not the order of work** — see the next section.
 
-**The AI work in Phases 7, 8 and 10 follows [docs/12-AI-Roadmap.md](docs/12-AI-Roadmap.md):** a
-setup step and six steps in order, with a token budget for every model call, open-source parts
-only, and no chat for now. Where it narrows a phase below, it says why.
+### Order of work
 
-| Phase | Delivers | State |
-|---|---|---|
-| [1](#2-phase-1--authentication--profile) | Sign in, and the profile everything hangs off | ✅ done |
-| [2](#3-phase-2--resume-generation--download) | A resume built from that profile, downloadable | 🚧 `.tex` and PDF both download; tailored resume live; two tasks left |
-| [3](#4-phase-3--job-scraping-search--shortlist) | Real jobs in the system, searchable and shortlistable | 🚧 capture, analysis, Search, Shortlist and Job details live; other sources and the scheduler open |
-| [4](#5-phase-4--applications--settings) | Tracking what you applied to, and the preferences driving it | 🚧 per-user pipeline, board, badges and Applications screen live; follow-ups and sheet sync open |
-| [5](#6-phase-5--llm-integration--resume-rectification) | A resume rectified against a specific job | ✅ done |
-| [6](#7-phase-6--rag--retrieval) | Retrieval over your own resume | ✅ done |
-| [7](#8-phase-7--mcp-tool-servers) | The tool servers agents reach the world through | ⬜ not started |
-| [8](#9-phase-8--agents--orchestration) | LangGraph agents under a supervisor, with approval interrupts | ⬜ not started |
-| [9](#10-phase-9--application-agent--chrome-extension) | Form autofill in your own browser session | 🚧 extension fills and captures; the two LLM tasks wait on `ai/` |
-| [10](#11-phase-10--eval-guardrails--observability) | Ragas faithfulness, guardrail tests, tracing | ⬜ not started |
-| [11](#12-phase-11--daily-use--polish) | What only real daily use reveals | ⬜ not started |
-| [12](#13-phase-12--career-page-scraping) | Postings pulled straight from company career pages | 🚧 Workday live; ten more stages planned |
+What is open, in the order to do it. Everything else open sits in its phase and can be picked up
+alongside.
+
+1. **Finish the local stack** (Phase 13). `P13-07` run the server suite for the first time —
+   **next**. Then `P13-05`'s measurement and `P13-06` (a `LICENSE`).
+2. **Measure** (Phase 10). `P10-11` score about 50 real postings for a baseline; `P10-02` label 20
+   of them. Then `P14-14`: judge Phase 14 against it.
+3. **Lock it in** (Phase 10). `P10-04` run the live adversarial tests, `CC-05` CI green once,
+   `P10-10` near misses in the runner, then `P14-10`.
+4. **Features** (Phase 15). `P15-01`…`P15-05`, about two weeks.
+5. **Graph** (Phases 7–8). `P8-05` pipeline graph, `P8-09` checkpoints, `P8-06` approval
+   interrupts with `P8-08` on screen, and `P7-02` if open decision 5 keeps it. About 1.5 weeks.
+6. **Server for invited users** (Phase 16), about 2–3 weeks.
+
+Steps 1–5 are about 5 to 6 weeks for one or two developers.
+
+### Decisions that shape the AI work
+
+- **D1 Local first, then a server.** Run and test on one machine; Phase 16 moves it to a server.
+- **D2 The privacy promise stands as it is for now.** No policy work is planned before invited
+  users.
+- **D3 India, invited users only.** No public signup, no billing, no public Chrome Web Store
+  listing.
+- **D4 LangGraph stays, kept small.** A fixed pipeline graph with two approval interrupts
+  (Phase 8), built to a context budget: adding it must not make any model call larger.
+- **D5 No chat for now** (2026-11-16). The resume chat, its router, tools a model would choose
+  from, and reranking are parked (§21). Nothing else depended on them.
+- **D6 Open source only**, because this is a community project (2026-11-16). Generation and
+  embeddings run on Ollama with open-weights models; no hosted model or paid API.
+- **D7 No Atlas cluster** (2026-11-16). Vector search is plain code in the server, so any MongoDB
+  works.
+
+### Open decisions
+
+1. **The generation model.** The default is `qwen3.5:9b`. It must be open-weights under a licence
+   D6 accepts, honour a strict JSON schema, and fit the machine's memory. Every score and baseline
+   is tied to it, so settle it before `P10-11`.
+2. **MongoDB's licence.** The Community Server is SSPL — source-available, not OSI-approved.
+   Staying on it is the practical choice; a strict reading of D6 means moving to PostgreSQL, a
+   rewrite. Recorded by `P13-06`.
+3. **A `LICENSE` file** for the repository (`P13-06`).
+4. **Personal data in the repository** (`P16-12`): before Phase 16, or now?
+5. **Whether the `latex` MCP server (`P7-02`) is still wanted.** With no model choosing tools, a
+   plain function does the same job.
+
+| Phase | Name | Delivers | State |
+|---|---|---|---|
+| [1](#2-phase-1--authentication--profile) | Authentication & Profile | Sign in, and the profile everything hangs off | ✅ done; the two-account tests are written, not run |
+| [2](#3-phase-2--resume-generation--download) | Resume generation & download | A resume built from that profile, downloadable | 🚧 `.tex` and PDF both download; tailored resume live; two tasks left |
+| [3](#4-phase-3--job-scraping-search--shortlist) | Job scraping, search & shortlist | Real jobs in the system, searchable and shortlistable | 🚧 capture, analysis, Search, Shortlist and Job details live; other sources and the scheduler open |
+| [4](#5-phase-4--applications--settings) | Applications & Settings | Tracking what you applied to, and the preferences driving it | 🚧 per-user pipeline, board, badges and Applications screen live; follow-ups and sheet sync open |
+| [5](#6-phase-5--llm-integration--resume-rectification) | LLM integration & resume rectification | A resume rectified against a specific job | ✅ done; runs on a local Ollama model since 2026-11-18 |
+| [6](#7-phase-6--rag--retrieval) | RAG & retrieval | Retrieval over your own resume | ✅ done; exact cosine in the server, `bge-m3` embeddings, no reranker |
+| [7](#8-phase-7--mcp-tool-servers) | MCP tool servers | The tool servers agents reach the world through | ⬜ not started; narrowed to `latex`, and that one is an open question |
+| [8](#9-phase-8--agents--orchestration) | Agents & orchestration | A fixed LangGraph pipeline with approval interrupts | ⬜ not started |
+| [9](#10-phase-9--application-agent--chrome-extension) | Application agent & Chrome extension | Form autofill in your own browser session | 🚧 extension fills and captures; the two LLM tasks wait on `ai/` |
+| [10](#11-phase-10--eval-guardrails--observability) | Eval, guardrails & observability | Evaluation runner, budget tests, guardrail tests | 🚧 runner and budget tests built; nothing measured yet |
+| [11](#12-phase-11--daily-use--polish) | Daily use & polish | What only real daily use reveals | ⬜ not started |
+| [12](#13-phase-12--career-page-scraping) | Career-page scraping | Postings pulled straight from company career pages | 🚧 Workday live; ten more stages planned |
+| [13](#14-phase-13--local-open-source-stack) | Local open-source stack | Everything on one machine, open-source parts only | 🚧 built; server suite not yet run — **next** |
+| [14](#15-phase-14--context-engineering) | Context engineering | Every model call within a fixed budget | 🚧 built, not measured |
+| [15](#16-phase-15--features-on-the-same-contract) | Features on the same contract | Resume import, a growing answer bank, learning from edits | ⬜ not started |
+| [16](#17-phase-16--server-for-invited-users) | Server for invited users | A server for a small invited group | ⬜ not started |
 
 **How to read a phase.** Each is split into **API**, **UI** and, where relevant, infrastructure and
 guardrail tasks — so you can see at a glance that a phase's backend is done while its screens are
@@ -55,8 +105,10 @@ screen exists but still reads a JSON fixture, the wiring is listed as its own un
 
 Each task appears once, under the phase that delivers it, and carries an id: `P1-06` is the sixth
 task of Phase 1, counting through that phase's **API**, **UI** and other sections in order.
-Cross-cutting tasks (§14) use `CC-`. The id is for referring to a task in a commit message or a
-conversation — nothing outside this document generates or validates them.
+Cross-cutting tasks (§18) use `CC-`. The id is for referring to a task in a commit message or a
+conversation — nothing outside this document generates or validates them. A task moved here from
+another plan keeps its old id beside the new one — *(was `OS-07`)* — so old commit messages still
+trace.
 
 **Add new tasks at the end of their section** rather than inserting them mid-list. Numbering is
 positional, so an insert renumbers every task below it and any id you wrote down elsewhere goes
@@ -112,6 +164,18 @@ the product is keyed by `userId`, so this comes first.
   creating the profile row on first save. Entries added in the browser pick up their
   server ids from the response, so a second save updates instead of duplicating. Email is
   read-only — it is the login key. The retrieval panel beside it went live with `P6-07`
+
+**Multi-account** — *found 2026-11-10 when the launch plan (doc 10) read the code for a second
+tester; built in PR #58*
+- ✅ `P1-19` *(was `MA-01`)* `matches` unique per `(userId, jobId)`. It was unique on `jobId`
+  alone, while jobs are shared, so a second user's score for the same job was refused.
+  `server/migrate_per_user_indexes.py` fixes an existing database
+- ✅ `P1-20` *(was `MA-02`)* `resumes` unique per `(userId, jobId, version)`; both users started
+  at version 1 and collided
+- 🟡 `P1-21` *(was `MA-03`)* Two-account tests: both score and tailor the same job, and neither
+  sees the other's match, resume, chunks or inventory. *`server/tests/test_multi_account.py`,
+  written, not run — `P13-07`*
+- ✅ `P1-22` *(was `MA-04`)* The skill-inventory build lock is per profile, not one for every user
 
 ---
 
@@ -218,7 +282,12 @@ Shortlist and Job details all run on the API. The other sources and the schedule
   never names is dropped from `requirements`, an unfindable requisition id is dropped, and a page
   that is not one posting is marked `discarded` rather than written. 9 tests in `ai/tests/`
 - ✅ `P3-28` **Analyze.** `ai/agents/analysis.py` runs three isolated steps per job (HTML
-  conversion was dropped on 2026-09-26 — the job page renders the stored markdown itself):
+  conversion was dropped on 2026-09-26 — the job page renders the stored markdown itself).
+  *Reshaped 2026-11-16 by Phase 14: the posting is cleaned and guarded first (`P14-04`,
+  `P14-11`), read once into a brief that carries the four details (`P14-03`), checked against
+  location, work mode and minimum-experience gates in code (`P14-12`), then compared. The JD
+  embedding step is gone (`P14-06`). Two model calls per posting instead of four, none hosted.
+  The description below is as first built:*
   experience / salary / work mode / job type
   from the text (kept only if stated verbatim or backed by a word in the posting, and never over
   a board-supplied value), the JD embedding (Voyage), and `rectify` — whose extracted labels are
@@ -257,8 +326,9 @@ Shortlist and Job details all run on the API. The other sources and the schedule
   `experienceBand` ("11-15 years" → 11 / 15, "5+ years" → 5 / null), no LLM — so the saved
   `minExperience` preference can filter on it. *2026-11-16: `modules/job/experience.py`, written
   whenever the band is; `server/backfill_job_experience.py`, dry-run by default. 30 parser
-  tests pass. The two tests that write a job were not run (no MongoDB), and nothing filters on
-  the numbers yet — that is `P3-34`*
+  tests pass. The two tests that write a job were not run (no MongoDB); they run with the
+  server suite in `P13-07`. The scoring gate reads the numbers (`P14-12`); Search does not
+  filter on them yet — that is `P3-34`*
 - ✅ `P3-35` **Analysis progress over SSE, not polling.** `GET /api/runs/analysis/events` on the
   AI tier streams `job_started`, `step_started`, `step`, `job_done` and `run_done` as they
   happen, replays the run's earlier events to a late stream, resumes from `Last-Event-ID`, and
@@ -287,7 +357,11 @@ Shortlist and Job details all run on the API. The other sources and the schedule
   `Match.modelName` records which scored it. The header's **Refresh** starts it on any screen,
   toasts each job scored, and a job page showing that job reloads. 7 tests in
   `ai/tests/test_api_scoring.py`. *Untried on a real local model — it must honour
-  `response_format` `json_schema` with `strict: true`*
+  `response_format` `json_schema` with `strict: true`.* *2026-11-18: every endpoint is local
+  now (`P13-04`), so the split between a local `MATCH` model and hosted ones is gone; the
+  `MATCH_` / `BRIEF_` / `INVENTORY_` overrides stay, all pointing at Ollama. A run scores only
+  postings relevant to your saved roles and locations, capped by `SCORING_MAX_JOBS` (default
+  50), and reports `remaining` (`P14-07`)*
 - ✅ `P3-38` **Every background run in one place, and none polls.** Discovery, analysis and
   scoring each have two endpoints under `/api/runs/{discovery|analysis|scoring}` on the AI
   tier — `POST /start` (answering your run instead, while it is going; another account gets
@@ -309,12 +383,15 @@ Shortlist and Job details all run on the API. The other sources and the schedule
   /api/capture/{descriptionId}`, which runs the `P3-14` parser: one model call for title,
   company, location, the tech stack and now **experience and salary**, every value checked
   against the page — the details through the same `verify_details` Analyze uses. The popup
-  waits and shows "Saved: <title> at <company> — N technologies", or why the page is not a
+  waits and shows `Saved: <title> at <company> — N technologies`, or why the page is not a
   posting. Analyze afterwards runs only **embedding and match**: its details step now skips
   when the job's tech stack is already read (both come from reading the posting), and the
   scoring run stopped filling the tech stack, so that stays exact. No schema change. The
   extension gained host permission for port 8001 (`JOBPILOT_AI_URL`, default
-  `http://127.0.0.1:8001/api`) and the AI tier admits the extension origin. 6 tests
+  `http://127.0.0.1:8001/api`) and the AI tier admits the extension origin. 6 tests.
+  *2026-11-16: the parse call now returns the brief as well (`P14-03`, `PARSE_VERSION` 2), so a
+  captured page costs one model call before the compare. Whether the larger schema lowers
+  parse accuracy is unmeasured*
 - ✅ `P3-08` Job Search screen built (multi-field search + facets)
 - ✅ `P3-09` Shortlist / Match Review screen built
 - ✅ `P3-10` Job Details screen built
@@ -343,8 +420,12 @@ Shortlist and Job details all run on the API. The other sources and the schedule
   twice: a run skips a job you already have a match for, keeps a JD's existing embedding (the
   description read gained `hasEmbedding`), and skips the details LLM call when all four fields
   are known
-- ⬜ `P3-34` Show and filter the `P3-31`…`P3-33` fields: tech stack chips and the country on
-  Job details; country and tech-stack filters on Search, beside its existing `keywords`
+- 🟡 `P3-34` Show and filter the `P3-31`…`P3-33` fields: tech stack chips and the country on
+  Job details; country and tech-stack filters on Search, beside its existing `keywords`.
+  *Job details shows the tech stack chips (the `P3-32` panel). The country on Job details and
+  every Search filter are open. `P15-04` sits beside this: a gated match
+  (`match.gate`) and a posting's lines addressed to an AI (`brief.flagged`) are stored and
+  shown nowhere*
 
 **Infrastructure**
 - ⬜ `P3-12` Redis + Celery for scheduling
@@ -518,6 +599,11 @@ application hangs off it, the row is kept as `withdrawn`.
 ✅ **done.** The first intelligence in the product, called by hand from the AI tier. No agents and
 no orchestration yet — deliberately, so a wrong answer stays debuggable.
 
+**Moved to a local stack on 2026-11-18** (Phase 13, decisions D6 and D7). Generation runs on
+Ollama (`qwen3.5:9b` by default), embeddings on Ollama's `bge-m3`, and nothing leaves the
+machine. `P5-11`, `P5-12` and the "one hosted path" decision below are superseded; `P5-06`'s
+embeddings and threshold changed. The rest of the phase stands as built.
+
 `ai/` holds `config/` (settings + the one LLM client), `agents/matching.py`, `agents/tailoring.py`,
 `mcp_servers/jobpilot_api/` and `tests/`. It imports nothing from `server` and reaches it over HTTP.
 
@@ -538,7 +624,10 @@ no orchestration yet — deliberately, so a wrong answer stays debuggable.
     orchestration" and the profile calls "LangGraph multi-agent pipeline". Advisory: the keyword
     stays Missing and stays selectable
   - Voyage `voyage-4-lite`, ~900 tokens and ~$0.000018 per job. The one call carrying profile text
-    off the machine, which is why NFR-3 reads "all generation is local" rather than absolute
+    off the machine, which is why NFR-3 reads "all generation is local" rather than absolute.
+    *Replaced 2026-11-18 by `bge-m3` on Ollama (`P13-02`): MIT-licensed, 1,024
+    dimensions so no schema change, and one `embed` call for queries and chunks alike.
+    `voyageai` is out of the lock file*
   - ✅ **`near_miss_threshold` calibrated 2026-09-19 — and the old value was silently fatal.**
     At 0.70 nothing ever fired: on `voyage-4-lite` a true near-miss scores ~0.48, so the feature
     had never produced a single hint. Measured over 14 labels against 6 profile spans, related
@@ -546,6 +635,12 @@ no orchestration yet — deliberately, so a wrong answer stays debuggable.
     managed at any threshold. Set to **0.35**, above the midpoint because a missed hint costs
     nothing and a wrong one invites a claim the user cannot back. The sample is representative,
     not exhaustive; re-measure if the embedding model changes
+  - 🟡 **Re-measured on `bge-m3`, 2026-11-18 — the bands overlap.** Related labels scored
+    0.448–0.604, unrelated 0.376–0.522, so no threshold separates them. Set to **0.53**
+    provisionally: no false hints on the sample, 3 of 8 real near misses kept. Each chunk now
+    records its embedding model and a search sees only that model's chunks, so a model change
+    re-embeds on the next run. `P10-10` decides on the labelled set: a strict threshold,
+    another embedding model, or chunks embedded with their role in front (`P14-10`)
   - ~~Known waste: profile spans are re-embedded per job~~ — **closed by `P6-04`** (2026-09-19).
     The spans now come from the stored chunks, which change when the profile does
 - ✅ `P5-07` Incorporate **only** ticked keywords. The `.tex` never reaches the model — it gets the
@@ -560,7 +655,10 @@ no orchestration yet — deliberately, so a wrong answer stays debuggable.
   resolving the interrupt. An unscored job says so; a reopened match starts unchecked again
 
 **Infrastructure**
-- ✅ `P5-11` **Validated against the hosted model, which is now the only one.**
+- ⛔ `P5-11` *Superseded 2026-11-18 by `P13-04`: the hosted router is gone and generation
+  runs on Ollama again. Whether the local model honours `strict: true` on every schema is
+  checked by `P10-04`'s live tests, which have not run yet. As first built:*
+  **Validated against the hosted model, which is now the only one.**
   `Qwen/Qwen3-32B:nscale` on the HF router honours `strict: true` on every pipeline shape —
   checked 2026-09-19 against `Extraction`, `Diff`, `RiskReport` and `PlacementPlan`, the
   nested-array schemas being where a provider usually drops it. Quotes came back verbatim and
@@ -568,9 +666,11 @@ no orchestration yet — deliberately, so a wrong answer stays debuggable.
   pair is not pending work — `qwen3:14b` was never run and never will be.
   ⏱️ **Latency, measured:** 12–19s per call on nscale, so a full `rectify()` is ~45–60s a job.
   Fine by hand, worth knowing before `P8-01` schedules it in bulk
-- ✅ `P5-12` `$vectorSearch` index on `job_descriptions.embedding` — 1024 dimensions (the
+- ⛔ `P5-12` `$vectorSearch` index on `job_descriptions.embedding` — 1024 dimensions (the
   `voyage-4-lite` default), cosine, with `userId` as a filter field so a search scopes to one
-  account. Created by `server/migrate_job_descriptions.py`, which also moved `captures` across
+  account. Created by `server/migrate_job_descriptions.py`, which also moved `captures` across.
+  *Removed 2026-11-18 (`P13-01`): no Atlas cluster, and nothing reads the JD embedding
+  since `P14-06`*
 
 **Guardrail**
 - ✅ `P5-13` No-fabrication tests — 12 in `server/tests/` against a throwaway database, 32 in
@@ -578,6 +678,11 @@ no orchestration yet — deliberately, so a wrong answer stays debuggable.
   re-score reopens the gate, and a rewrite inventing a metric or employer is declined
 
 ### Decisions (2026-09-18)
+
+*Reversed 2026-11-16 by decision D6 (open source only, §1). The OpenAI-compatible path
+stays; it now points at Ollama on `localhost:11434` with no key, and the hosted values below
+are history. "Ollama was dropped" and "Now settled, and it went the other way" no longer
+hold: generation is local, so NFR-3 and invariant 3 are true again.*
 
 **One OpenAI-compatible path.** `config/llm.py` is a single `generate(prompt, schema)` over
 `httpx`. Pointing it elsewhere is three environment values, not a provider abstraction:
@@ -627,8 +732,13 @@ section are now wrong and need amending — this is a privacy claim, not a nicet
 ## 7. Phase 6 — RAG & retrieval
 ✅ **done.** Scoring now works against what your resume actually says rather than against the whole
 document re-embedded for every job. The server cuts the profile into chunks and searches them; the
-AI tier embeds them and reranks what comes back. Nothing here reaches a database: `$vectorSearch`
-runs on `server`, because the AI tier holds no URI and no credentials.
+AI tier embeds them. Nothing here reaches a database: search runs on `server`, because the AI
+tier holds no URI and no credentials.
+
+**Rebuilt on 2026-11-18** (Phase 13, `P13-01`…`P13-03`). Search is an exact cosine ranking in the server's own
+Python over the user's chunks, which works on any MongoDB; a profile is a few dozen chunks, so
+exact is also fast. Embeddings come from `bge-m3` on Ollama. Reranking and two-stage retrieval are
+removed, parked with the chat. `P6-05` and `P6-06` are superseded.
 
 **API**
 - ✅ `P6-01` `resume_chunks` — chunk text and its vector on one document, per user. `contentHash`
@@ -641,15 +751,18 @@ runs on `server`, because the AI tier holds no URI and no credentials.
 - ✅ `P6-03` Re-index on profile edit — all fourteen mutations end in `profile.service.reindex`,
   plus `POST /api/profile/reindex` for the panel's button. **Stale is not a state retrieval can
   reach:** an edited chunk is rewritten with no vector, and a chunk with no vector is invisible to
-  `$vectorSearch`. The window between an edit and the next embedding run serves nothing rather
+  search. The window between an edit and the next embedding run serves nothing rather
   than serving what the user just replaced
 
 **AI tier**
 - ✅ `P6-04` `rag/indexing.py` — embed everything still pending and store the vectors in one
   request. Chunks go up as `document`, matching `P5-06`. `rectify` calls it before scoring, which
   costs one GET when nothing changed and means no run depends on somebody having remembered to
-  index first
-- ✅ `P6-05` `rag/retrieval.py` — `$vectorSearch` top 50 → `rerank-2.5-lite` → top 5. Two models
+  index first. *2026-11-18: embeds with `bge-m3` on Ollama. A chunk stores the model that
+  embedded it, and one embedded by another model counts as pending, so a model change
+  re-embeds without clearing anything by hand*
+- ⛔ `P6-05` *Removed 2026-11-18 (`P13-03`): no caller without the chat. `nearest_spans`,
+  which scoring uses, stays. As first built:* `rag/retrieval.py` — `$vectorSearch` top 50 → `rerank-2.5-lite` → top 5. Two models
   doing two different jobs: `voyage-4-lite` is a bi-encoder and scored every chunk without ever
   seeing the query, which is what makes the index possible and what limits how well it can rank;
   the reranker reads query and chunk together and is far too expensive to run over everything.
@@ -657,7 +770,7 @@ runs on `server`, because the AI tier holds no URI and no credentials.
   costs. The reranker is skipped when there are fewer candidates than the answer asked for
 
 **Infrastructure**
-- ✅ `P6-06` `chunk_embedding_index` on `resume_chunks.embedding` — 1024 dimensions, cosine, with
+- ⛔ `P6-06` *Removed 2026-11-18 with `_ensure_vector_index`; replaced by `P13-01`. As first built:* `chunk_embedding_index` on `resume_chunks.embedding` — 1024 dimensions, cosine, with
   `userId` as a **filter field in the index definition**, not a `$match` after it: an approximate
   search filtered afterwards comes back short, or empty. `_ensure_vector_index` now takes a
   collection, so it covers this and `P5-12`'s
@@ -674,9 +787,14 @@ runs on `server`, because the AI tier holds no URI and no credentials.
   vector cannot be written onto another user's chunk; a batch naming a chunk a re-index deleted is
   refused whole rather than applied in part; an edited bullet loses its vector and an untouched one
   keeps it. `$vectorSearch` itself is not exercised — it is an Atlas Search stage and the server
-  suite is forced at a local MongoDB on purpose
+  suite is forced at a local MongoDB on purpose. *Since `P13-01` the ranking is plain Python and
+  is tested directly*
 
 ### Decisions (2026-09-19)
+
+*Updated 2026-11-18: "one Atlas cluster" is now "one MongoDB, any MongoDB" (D7). The
+reranker and the Atlas score rescaling mentioned below are gone; the point about not feeding a
+different score scale into `NEAR_MISS_THRESHOLD` still holds.*
 
 **One store, one hop.** The earlier design split vectors into Atlas and kept text in a local
 MongoDB, which is why this phase used to need two hops and a `chunk_id` join. Everything is one
@@ -703,15 +821,24 @@ threshold compares.
 ---
 
 ## 8. Phase 7 — MCP tool servers
-⬜ **not started.** The agents in Phase 8 reach the outside world only through these, so they come
-first.
+⬜ **not started, and mostly not wanted now.** With the chat parked (D5), no model
+chooses a tool, so an MCP server adds tool definitions and no ability. Code calls the scrapers
+and the API client directly.
 
 **AI tier**
-- ⬜ `P7-01` `jobpilot_api` — the one way agents read and write structural data, over HTTP
-- ⬜ `P7-02` `latex` — render a tailored `.tex` from a template and a profile
-- ⬜ `P7-03` `job_search` — Google CSE / SerpAPI behind one tool interface
-- ⬜ `P7-04` `indeed` and `linkedin` source servers
-- ⬜ `P7-05` `browser` — Playwright, for discovery only
+- ⬜ `P7-01` `jobpilot_api` — the one way agents read and write structural data, over HTTP.
+  *(was `MC-01`) Parked with the chat (§21). The plain HTTP client in
+  `mcp_servers/jobpilot_api/client.py` already does this job for code*
+- ⬜ `P7-02` `latex` — render a tailored `.tex` from a template and a profile. *(was `MC-02`)
+  Render and compile, called from the graph's code; a failed compile returns the first error
+  line only. Open decision 5 (§1): a plain function does the same job while no model chooses
+  tools*
+- ⛔ `P7-03` `job_search` — Google CSE / SerpAPI behind one tool interface. *Left out (§21),
+  and paid search is deferred anyway*
+- ⛔ `P7-04` `indeed` and `linkedin` source servers. *Left out (§21): discovery sources
+  are called from code. Revisit if another client needs them*
+- ⛔ `P7-05` `browser` — Playwright, for discovery only. *Left out for the same reason;
+  Playwright stays as `P12-29`'s fallback*
 - ⛔ `P7-06` MongoDB MCP Server. *Superseded: agents go through `jobpilot_api` over HTTP
   instead, so there is one validation boundary and no DB credentials in the agent process*
 
@@ -719,16 +846,39 @@ first.
 
 ## 9. Phase 8 — Agents & orchestration
 ⬜ **not started.** Phases 3 and 5 do discovery and matching as plain endpoints. This phase turns
-them into agents under a supervisor that can pause for a human.
+them into a graph that can pause for a human. *Narrowed by decision D4: the pipeline is a
+fixed sequence, so it becomes a LangGraph graph with fixed edges and unchanged prompts, not
+agents under a model-driven supervisor. State holds ids and structured results, never a
+message list.*
 
 **AI tier**
-- ⬜ `P8-01` Job Discovery agent — scheduled, multi-source, dedup-aware
-- ⬜ `P8-02` JD Match & Score agent — extraction, diff, scoring over RAG
-- ⬜ `P8-03` Resume Tailor agent — selected keywords only, rendering through the `latex` server
-- ⬜ `P8-04` Tracking & Follow-up agent — status transitions and interval drafts
-- ⬜ `P8-05` LangGraph supervisor wiring all agents with shared state
-- ⬜ `P8-06` **Human-approval interrupts** at keyword selection and application review
-- ⬜ `P8-07` Retry and error handling per agent step
+- ⬜ `P8-01` Job Discovery agent — scheduled, multi-source, dedup-aware. *A node of `P8-05`'s
+  graph (`sources.run_all`); the schedule is still `P3-07`*
+- ⬜ `P8-02` JD Match & Score agent — extraction, diff, scoring over RAG. *Nodes of `P8-05`'s
+  graph: `ensure_brief`, `ensure_inventory`, `compare`, `flag_near_misses`*
+- ⬜ `P8-03` Resume Tailor agent — selected keywords only, rendering through the `latex` server.
+  *Nodes of `P8-05`'s graph: `plan_placements`, `review`, `apply`; the `latex` server is
+  `P7-02`*
+- ⬜ `P8-04` Tracking & Follow-up agent — status transitions and interval drafts. *Moved to
+  Phase 11 as `P11-05` (was doc 10's `AG-05`): needs real usage first*
+- ⬜ `P8-05` *(was `AG-01`)* **Pipeline graph.** The existing functions become LangGraph nodes
+  with fixed edges and unchanged prompts. State holds user, job and run ids and structured
+  results, never a message list. Replaces "a supervisor wiring all agents"; a model-driven
+  supervisor is left out (§21)
+- ⬜ `P8-06` *(was `AG-03`)* **Human-approval interrupts** at keyword selection after scoring, and
+  before an application is marked applied. The server keeps its own checks
+  (`SelectionGateNotPassed`, `Fabrication`, `SubmitNotConfirmed`), so the guarantee does not
+  depend on the graph
+- 🟡 `P8-07` *(was doc 10's `AG-04`)* Retry and error handling per agent step, each within the
+  node's token budget. *Each model call already has a retry budget (`P14-05`) and a job that
+  fails is tried once per run (`P3-37`); per-node handling comes with `P8-05`*
+- ⬜ `P8-09` *(was `AG-02`)* **Checkpoints that survive a restart**, replacing the in-memory run
+  slots. Written through the API server, like every other write: the AI tier holds no database
+  address, and a guardrail test fails if it opens a connection. So this is a small checkpointer
+  over HTTP and a server module to store it, not LangGraph's own MongoDB checkpointer
+
+**Check:** the pipeline runs as a graph with both interrupts and survives a restart; tokens per
+posting are no higher than after Phase 14.
 
 **UI**
 - ⬜ `P8-08` Surface an interrupt in the dashboard — the approval gate needs somewhere to happen
@@ -795,7 +945,9 @@ questions always come to you.
 **Three known limits.** Workday and LinkedIn are multi-step wizards, and one pass fills the step on
 screen only — nothing here navigates a form. The answer bank is still read-only over HTTP
 (`upsert_answer` exists in `application/service.py` with no route), so a one-off answer typed in the
-popup fills the field and is recorded on the application, but is not saved for next time. And
+popup fills the field and is recorded on the application, but is not saved for next time —
+`P15-02` saves it and adds an embedding search over the bank, which is also how `P9-03` will pick
+a stored answer without inventing one. And
 `applicant_profile` has **no UI** — it is populated through `/docs` or curl until a Settings screen
 reaches it, which is `P4-10`'s neighbour rather than part of this phase.
 
@@ -815,22 +967,59 @@ them would put "target salary band for search" and "what I told Wells Fargo I ea
 ---
 
 ## 11. Phase 10 — Eval, guardrails & observability
-⬜ **not started.** The phase that turns "it seems to work" into something measured. Everything
-above is unprovable until this exists.
+🚧 **the tools are built; nothing is measured yet.** The phase that turns "it seems to work" into
+something measured. Everything above is unprovable until this exists. Its own runner and the
+per-call usage log stand in for Ragas and Langfuse, and a token budget per prompt fails the
+build. The first numbers need `P10-11` and `P10-02`, which wait on `P13-07`. *Absorbs step 1 and
+most of step 4 of the AI roadmap (doc 12), and A1 and A4 of the launch plan (doc 10).*
 
 **Eval**
-- ⬜ `P10-01` Ragas suite: **faithfulness** (the automated no-fabrication check), context
-  precision and recall
-- ⬜ `P10-02` Eval datasets built from real JDs and real profile content
-- ⬜ `P10-03` A **local** judge model, so evaluation does not leak what generation protects
+- ⛔ `P10-01` Ragas suite: **faithfulness** (the automated no-fabrication check), context
+  precision and recall. *Left out (§21): the runner in `P10-08` answers the same questions for
+  now. Ragas is open source, so it can come back*
+- ⬜ `P10-02` *(was `EV-02`)* **Labelled set**: 20 of `P10-11`'s postings and 3 profiles, labelled
+  for requirements, the four details, present/missing verdicts and true near misses. Grow it
+  later; 20 catches a regression. Stored under `ai/eval/data/` in the shape `ai/eval/dataset.py`
+  reads, with personal details taken out. `ai/eval/sample/` holds one invented posting to show
+  the format; it is not this set
+- ⬜ `P10-03` A **local** judge model, so evaluation does not leak what generation protects.
+  *Not needed for now: the runner scores against labels, not a judge, and every model is local
+  since `P13-04`*
+- ✅ `P10-08` *(was `EV-03`)* **Evaluation runner**, `ai/eval/` (`python -m eval.runner --data …
+  --out … [--baseline …]`): requirement precision and recall, verdict accuracy, the rate of
+  wrong "present" verdicts, tokens and time per posting, per prompt version and model. Tested
+  with the model faked; never run on real data
+- ✅ `P10-09` *(was `EV-06`)* **Budget tests**, `ai/tests/test_budgets.py`: one per prompt builds
+  its largest realistic input and fails if any row of the budget table (Phase 14) is exceeded
+- ⬜ `P10-10` *(was `EV-07`)* **Near misses in the runner.** A near-miss field in the labelled
+  set; the runner embeds each missing requirement and the profile's chunks and reports how far
+  apart related and unrelated scores sit and what each threshold would flag. Needs only the
+  embedding model, no server. Decides `P5-06`'s threshold, `P13-05` and `P14-10`
+- ⬜ `P10-11` *(was `EV-00`)* **Baseline.** Score about 50 real Indian postings against one
+  profile and save the per-step summary from `GET /api/llm-usage/summary`, with the model names
+  and the machine. *Check:* a saved table of tokens, calls, retries and time per step, and the
+  budget table updated with measured numbers
 
 **Guardrails**
-- ⬜ `P10-04` No-fabrication test cases
+- 🟡 `P10-04` *(also was `EV-04`)* No-fabrication test cases. *The keyword-gate and rewrite tests
+  from `P5-13` exist, and one live adversarial test per prompt is written in
+  `ai/tests/test_live_llm.py` — seven tests, never run: they need the generation model
+  (`pytest -m llm`). Run them, and fix or record what fails. The hostile requirement label test
+  passes with the model faked (`P14-01`)*
 - ⬜ `P10-05` No-auto-submit test cases
-- ⬜ `P10-06` The API test suite *(also in §14 — it blocks every phase, not just this one)*
+- 🟡 `P10-06` The API test suite *(also in §18 — it blocks every phase, not just this one)*.
+  *See `CC-04`: the server suite has not run since PR #58*
 
 **Observability**
-- ⬜ `P10-07` Langfuse or Phoenix, self-hosted
+- ⛔ `P10-07` Langfuse or Phoenix, self-hosted. *Left out (§21) in favour of `P10-12`*
+- ✅ `P10-12` *(was `EV-01`)* **Usage log per model call** (PR #58): step, model, prompt version,
+  attempt, prompt / cached / completion tokens and time, posted when a run ends to the
+  `llm_usage` module and summarised at `GET /api/llm-usage/summary`. `Match.modelName` and the
+  prompt versions keep scores from different models apart. *The server half is untested until
+  `P13-07`*
+
+**Check:** a prompt or model change produces a before-and-after report, and an oversized prompt
+fails the build.
 
 ---
 
@@ -841,6 +1030,8 @@ above is unprovable until this exists.
 - ⬜ `P11-02` Q&A answer-bank refinement from real applications
 - ⬜ `P11-03` Performance and cost tuning on the local models
 - ⬜ `P11-04` Cover letter generation *(stretch)*
+- ⬜ `P11-05` *(was doc 10's `AG-05`)* Tracking and follow-up drafts, moved here from `P8-04`:
+  they need real usage first. On a schedule, drafts only; sending stays with you
 
 ---
 
@@ -1143,19 +1334,286 @@ public board URL. Those still come in by hand or through the extension's Capture
 
 ---
 
-## 14. Cross-cutting — true of every phase
+## 14. Phase 13 — Local open-source stack
+🚧 **built; the server suite has not run on it yet.** Everything runs on one machine with open
+parts: a local MongoDB, and Ollama for generation and embeddings. No Atlas cluster, no hosted
+model, no API key, and no call leaves the machine. Done before any measuring, because a baseline
+only means something on the stack that will be kept. Decisions D6 and D7 (§1).
+
+*Was step 0 of the AI roadmap (doc 12, merged here 2026-11-19), and it replaces step A0 of the
+launch plan (doc 10): `LS-01` Python 3.12 is done, `LS-02` (an Atlas cluster) is overruled by
+D7, `LS-03` is settled by D6 (the model is local), `LS-04` and `LS-05` are `P13-07`, and `LS-06`
+is `P13-08`.* The ids follow the old order; **do them in this order:** `P13-07`, then the
+measuring half of `P13-05`, then `P13-06`.
+
+**API**
+- ✅ `P13-01` *(was `OS-01`)* **Exact vector search in the server.** `resume_chunk.service.search`
+  loads the user's embedded chunks with an ordinary query and ranks them by cosine in Python
+  (`service.rank`); `search_many` loads them once for every vector (`POST
+  /resume-chunk/search-many`, `P14-09`). A profile is a few dozen chunks, so this is exact and
+  fast, and needs no new dependency. `_ensure_vector_index` and both its calls, the
+  `cosine_from_score` rescaling and the Atlas hostname in `server/.env.example` are gone.
+  11 ranking tests pass; 5 through the API (ordering, the per-user filter, chunks with no
+  vector) wait for `P13-07`
+
+**AI tier**
+- ✅ `P13-02` *(was `OS-02`)* **Embeddings from Ollama.** `ai/rag/embeddings.py` calls Ollama's
+  OpenAI-compatible endpoint with `EMBED_BASE_URL`, `EMBED_MODEL`, `EMBED_DIMS` and no key.
+  `bge-m3` is MIT-licensed, returns 1,024 dimensions (no schema change) and embeds a query and a
+  chunk the same way, so there is one `embed` call. `voyageai` and the 40 packages it pulled in
+  are out of the lock file. Two guardrail tests forbid any hosted embedding SDK or service by
+  name. Run end to end against the real model on 2026-11-18
+- ✅ `P13-03` *(was `OS-03`)* **Reranking and two-stage retrieval removed** (`rag.retrieve`,
+  `rag.rerank`): no caller without the chat. `nearest_spans`, which scoring uses, stays. The
+  Settings panel no longer hard-codes "hosted": it reports each model's host and marks it local
+  or not
+- ✅ `P13-04` *(was `OS-04`)* **`ai/.env.example` points at Ollama** with `qwen3.5:9b`, the code
+  default, and no Voyage settings. The guardrail test forbidding a hosted endpoint passes. If you
+  choose another generation model, it is one line
+- 🟡 `P13-05` *(was `OS-05`)* **Re-embed and re-measure.** Each chunk records its embedding model;
+  a search names its model and sees only that model's chunks, and the rest are re-embedded on the
+  next run, so nothing is cleared by hand. `NEAR_MISS_THRESHOLD` is provisional at 0.53 (see
+  `P5-06`). *Open: the measurement on the labelled set, which is `P10-10`*
+
+**Setup**
+- ⬜ `P13-06` *(was `OS-06`)* **A `LICENSE` file**, once you choose one, and the MongoDB licence
+  decision recorded in the README (open decision 2, §1)
+- ⬜ `P13-07` *(was `OS-07`)* **Run the server suite for the first time on this stack.**
+  `uv run --frozen pytest -q` in `server/`, and fix what fails. Never run so far:
+  `test_multi_account.py`, `test_llm_usage.py`, `test_scoring_inputs.py`, the database half of
+  `test_experience.py`, and `P13-01`'s 5 API tests. Then the 7 live-model tests in `ai/`
+  (`pytest -m llm`, `P10-04`). *2026-11-19: MongoDB is installed and listening on
+  `127.0.0.1:27017`, and `qwen3.5:9b` is pulled. `bge-m3` is not in `ollama list` and has to be
+  pulled again.* **This is the next task**
+- ✅ `P13-08` *(was `OS-08`)* **Setup documents brought in line.**
+  [doc 11](docs/11-Local-Setup-Windows.md) rewritten for a local MongoDB and Ollama; the README's
+  stack, prerequisites, settings and "what leaves your machine" sections corrected
+
+**Check:** both test suites pass against a local MongoDB with no network access; scoring a
+posting with a missing requirement returns a near-miss hint; no API key and no outside hostname
+appears in any `.env` template; the CI workflow has run green once (`CC-05`).
+
+---
+
+## 15. Phase 14 — Context engineering
+🚧 **built, not measured.** Every model call fits a fixed budget, and no step makes a call larger.
+Fewer and smaller calls per posting (four down to two: brief and compare, plus a parse for a
+captured page), cleaned and guarded input, and prompts ordered so the model server can reuse
+their shared start. Nothing here has been measured against a baseline yet: that needs `P10-11`.
+Accuracy on captured pages and cached tokens are unverified until then.
+
+*Was steps 2 and 3 of the AI roadmap (doc 12) and step A3 of the launch plan (doc 10). The ids
+keep the old `CE-` order. A before-number for this phase would need Phase 13 applied on top of
+commit `7504b03`, the last one before it; without that, it is judged on accuracy alone.*
+
+### The contract for the context window
+
+These six rules apply to every prompt, existing and new. A change that breaks one is not merged.
+
+1. **Code decides what it can; the model sees only what is left.** Exact matches, counts,
+   filters, totals and the routing of fixed sequences stay in code. A decision made in code costs
+   no tokens and cannot be wrong in a new way.
+2. **Read once, store, reuse.** A posting is read by the model once and becomes a brief; a
+   profile is read once and becomes the candidate block. Later calls use those, never the raw text.
+3. **Stable first, changing last.** Every prompt is ordered system, candidate block, per-job data,
+   the question, so the model server can reuse the shared start between calls.
+4. **Clean before the model reads.** Outside text is cleaned and checked in code, then fenced in a
+   tag. Noise is not paid for, and hidden text never reaches the model.
+5. **State stays out of the prompt.** Lists, history and run state live in the database; a call
+   receives ids and the few rows it needs.
+6. **Every call has a budget and is measured against it.** A test fails when a call exceeds it
+   (`P10-09`).
+
+### Budgets
+
+The window is 16,384 tokens. `check_budget` enforces the first three rows; `P10-09` enforces the
+rest. They are starting values, replaced by measured ones after `P10-11`.
+
+| Part | Limit (tokens) | Today |
+|---|---|---|
+| System prompt | 2,457 (15% of the window) | 237–533 across the six prompts |
+| All input | 9,830 (60%) | enforced |
+| Reserved for a retry | 650 | enforced |
+| Candidate block (skill inventory and profile digest) | 3,000 | enforced: `inventory.render_candidate` |
+| Posting text, after cleaning | 3,000 | enforced: `cleaning.clean_posting` |
+| Tool definitions in any call | 1,600 (10%) | parked with the chat: no call has tools. Pinned in `config/llm.py` |
+| One tool result | 1,000, paged beyond that | parked with the chat |
+
+**Already right before this phase, and kept:** each step gets a narrow view (tailoring never sees
+the `.tex`); the brief and the skill inventory are versioned and rebuilt only when stale; a
+requirement found word for word in the profile is decided in code; scores are counted, not
+generated; every quote is checked against its source; an oversized prompt is refused before it
+is sent; system prompts hold no per-call values; there is no tool-calling loop. Several habits
+here were borrowed from [ai-job-search](https://github.com/ai-job-search-dev/ai-job-search)
+(reviewed at `745e677`): the posting guard, gates before scoring, capped runs, one rubric built
+once per profile.
+
+**AI tier**
+- ✅ `P14-01` *(was `CE-01`)* **Scoring prompt reordered and tagged:** system, candidate block,
+  job, then the requirements to judge, each in its own tag. `COMPARE_SYSTEM` names each tag and
+  says which is the question. A test with a hostile requirement label passes
+- ✅ `P14-02` *(was `CE-02`)* **Same order and tags for tailoring**, with the untrusted-input
+  rule. It does not use the candidate block: it needs the current role's bullets word for word
+- ✅ `P14-03` *(was `CE-03`)* **Each posting read once.** The brief carries experience, salary and
+  job type, so the separate details call is gone. For a captured page the parse call returns the
+  brief fields too (`PARSE_VERSION` 2). Whether the larger schema lowers parse accuracy is
+  unmeasured
+- ✅ `P14-04` *(was `CE-04`)* **Postings cleaned.** `ai/agents/cleaning.py`: links become their
+  text, images go, blank and repeated lines collapse; over budget, sections are kept by heading
+  and benefits and legal text dropped. The evidence checks run on the same cleaned text
+- ✅ `P14-05` *(was `CE-05`)* **The repair turn is budgeted.** A retry echoes at most 1,500
+  characters of the failed reply, and the budget check reserves room for it (PR #58)
+- ✅ `P14-06` *(was `CE-06`)* **The posting embedding nothing read is gone** from analysis. The
+  server endpoint is left for a feature that will read it
+- ✅ `P14-07` *(was `CE-07`)* **Only relevant postings scored, in capped runs.** `GET
+  /match/unscored?relevant=true` filters by saved roles and locations; `SCORING_MAX_JOBS`
+  (default 50) caps a run, which reports `remaining`. A posting kept by discovery only for a
+  skill in its description, not yet analyzed, is not picked up until Analyze reads it
+- ✅ `P14-08` *(was `CE-08`)* **Every prompt versioned** — compare, tailor, parse, details,
+  brief, inventory — and the version stored on each match, tailored resume and usage row (PR #58)
+- ✅ `P14-09` *(was `CE-09`)* **All near-miss label vectors in one search request.** `POST
+  /resume-chunk/search-many`; since `P13-01` it is one pass over the user's chunks
+- ⬜ `P14-10` *(was `CE-10`)* **Embed each chunk with its role and company in front**, storing and
+  showing the bare text. Keep it only if `P10-10` shows related and unrelated scores further apart
+- ✅ `P14-11` *(was `CE-11`)* **Postings guarded.** Zero-width and invisible characters and hidden
+  elements removed. Lines addressed to an AI are kept but recorded as `brief.flagged`; no screen
+  shows them yet (`P15-04`)
+- ✅ `P14-12` *(was `CE-12`)* **Gates before the model.** `ai/agents/gates.py` compares location,
+  work mode and minimum years against your Search targets once the brief exists. A failing posting
+  is stored as a match with score 0, the reason as its one risk, and `gate` set, and is not sent to
+  the compare call. No screen treats a gated match differently yet (`P15-04`)
+- ✅ `P14-13` *(was `CE-13`)* **One candidate block.** Skill inventory and profile digest rendered
+  once per profile version into one block, identical byte for byte on every call, and stored
+- ⬜ `P14-14` **Measure this phase.** After `P10-11`: model calls per posting at most three,
+  prompt tokens per posting down by at least a third, accuracy on the labelled set not lower, and
+  from the second posting of a run either cached tokens above zero or time per call falling
+
+**Decisions made while building, to confirm:**
+- *Minimum experience gate (`P14-12`).* "Min experience" in Search targets is read as the level
+  you are looking for: a posting that states a minimum **below** it fails.
+- *Work mode gate.* A posting that states a mode different from the saved one fails, including a
+  remote posting when you saved hybrid.
+- *Skill-only postings (`P14-07`).* A scoring run matches a saved skill against `techStack`, so a
+  posting kept only for a skill in its description waits for Analyze.
+- *Captured pages (`P14-03`).* If the larger schema lowers accuracy on captured pages, the parse
+  and the brief go back to two calls.
+
+---
+
+## 16. Phase 15 — Features on the same contract
+⬜ **not started.** The features a new tester needs, each built inside the budgets of Phase 14.
+*Was step 5 of the AI roadmap (doc 12) and step A5 of the launch plan (doc 10). The resume chat
+(`FE-03`) is parked (§21).*
+
+**AI tier**
+- ⬜ `P15-01` *(was `FE-01`)* **Resume import.** PDF or DOCX to markdown, one schema-constrained
+  call per section into the five profile collections, each value checked against the document as
+  `parsing.py` does, and shown on My Details for confirmation before saving. Removes the need to
+  type a whole CV
+- ⬜ `P15-02` *(was `FE-02`)* **Answer bank that grows.** A write route so an answer typed in the
+  extension is saved (`upsert_answer` has none today). For a question the word match misses, an
+  embedding search over the bank with its own measured threshold (question against question; the
+  near-miss threshold does not carry over), and the model gets only the question and the matches.
+  It returns the key of a stored answer or "ask the user", never a new fact, and never answers
+  legal or equal-opportunity questions. This is how `P9-03` is built
+- ⬜ `P15-03` *(was `FE-04`)* **Learn from edits.** A short keyed list of rules per user, updated
+  in place when you accept or decline a tailoring suggestion, shown and editable in Settings, and
+  capped so it always fits the tailoring prompt. The cap is a new budget row and a new `P10-09`
+  case; adding the rules bumps `TAILOR_VERSION`
+
+**UI**
+- ⬜ `P15-04` *(was `FE-05`)* **Show what Phase 14 stores.** A gated match (`match.gate`) should
+  read as "outside your search targets", not as a 0% match, and be listable apart from scored
+  jobs; a posting's lines addressed to an AI (`brief.flagged`) should be visible. Screens to
+  agree first. Sits beside `P3-34`
+
+**Verification**
+- ⬜ `P15-05` *(was `QA-01`)* **Check the compiled PDF in code:** page count, and that the
+  extracted text holds the contact details and every keyword you selected. A tailored resume has
+  no PDF route yet (only `GET /resume/base/pdf`), so that comes first. The text-extraction
+  library must be open source (D6)
+
+**Check:** a new tester goes from an uploaded resume to a tailored PDF without typing a profile.
+
+---
+
+## 17. Phase 16 — Server for invited users
+⬜ **not started.** Move from one machine to a server for a small, invited group in India (D1,
+D3): no public signup, no billing, no public Chrome Web Store listing. *Was Stage B of the launch
+plan (doc 10). Starts after Phases 13–15; size the server from the times `P10-11` records — a
+local model needs enough memory, ideally a GPU.*
+
+**Access**
+- ⬜ `P16-01` *(was `SV-01`)* Invite-only signup: an invite code or an email allow-list checked
+  in `account.service.sign_up`. Today anyone who can reach the server can sign up
+- ⬜ `P16-02` *(was `SV-02`)* Refuse to start when `JWT_SECRET` is missing; remove the hard-coded
+  fallback in `server/modules/account/security.py`
+- ⬜ `P16-03` *(was `SV-03`)* Rate-limit login. Password reset can be an admin action for this
+  group. Old refresh tokens stay valid after a refresh today
+- ⬜ `P16-04` *(was `SV-04`)* An admin flag on accounts. Career sources, template upload and the
+  error log become admin-only — any account can read and clear the error log today
+- ⬜ `P16-05` *(was `SV-05`)* The AI tier gets its own credential for writing shared data (jobs,
+  descriptions, briefs), so no user account can overwrite a brief every other user is scored
+  against
+
+**Runs**
+- ⬜ `P16-06` *(was `SV-06`)* One run per user per type, with a global limit on how many run at
+  once — today one module-level slot per run type serves every account, and a second user gets
+  409. Run state comes from the graph checkpoints (`P8-09`), so a restart loses nothing. Add a
+  queue and worker only if the usage log shows the need
+- ⬜ `P16-07` *(was `SV-07`)* A run-scoped token from the server, so a run outlives the 60-minute
+  login token
+- ⬜ `P16-08` *(was `SV-08`)* Discovery on a schedule for everyone, since the catalogue is shared;
+  the per-user button removed or made admin-only. Shares `P3-07`
+- ⬜ `P16-09` *(was `SV-09`)* A daily model budget per user, enforced from the usage log
+
+**Deployment**
+- ⬜ `P16-10` *(was `SV-10`)* A Dockerfile each for `server`, `ai` and `app/web`, and a compose
+  file running them on one host behind HTTPS. TeX Live in the server image; MongoDB and Ollama
+  alongside
+- ⬜ `P16-11` *(was `SV-11`)* Bind address and CORS origins from the environment; `reload` off.
+  The error log into the database, no tailored `.tex` files written to disk (the text is already
+  stored), template previews into the database or object storage
+- ⬜ `P16-12` *(was `SV-12`)* **Personal data out of the repository:** `server/seed_profile.json`,
+  `templates/base_resume.tex`, two files under `templates/GPT Template/`, and six template files
+  named after a real person. *The Atlas hostname went with `P13-01` and the README's "generation
+  is local" wording is true again since `P13-04`. Open decision 4 (§1) asks whether this belongs
+  before Phase 16, since a community project is read by strangers sooner*
+- ⬜ `P16-13` *(was `SV-13`)* The extension built against the server URLs with matching host
+  permissions, handed to invited users directly
+- ⬜ `P16-14` *(was `SV-14`)* Database backups, error tracking, and a page showing model cost and
+  time per user per day from the usage log
+
+**Rollout**
+- ⬜ `P16-15` *(was `SV-15`)* Invite the first few users. Watch: signup to first tailored resume,
+  reports of wrong "present" verdicts, declined-keyword rate, model time per active user, time per
+  job
+
+**Check:** two invited users can run analysis at the same time on the server, a restart mid-run
+loses nothing, and no fabricated content appears in any tailored resume.
+
+---
+
+## 18. Cross-cutting — true of every phase
 
 - ✅ `CC-01` FastAPI app shell: thin `main.py`, localhost bind, CORS for web + extension
 - ✅ `CC-02` Beanie documents for every local collection, `ObjectId` keys
 - ✅ `CC-03` React frontend, built in v1 instead of Streamlit/Gradio *(closed — see
   deviation 1)*
-- ✅ `CC-04` **Test suite for the API and its guardrails.** 84 tests in `server/tests/`, run
+- 🟡 `CC-04` **Test suite for the API and its guardrails.** 84 tests in `server/tests/`, run
   against a throwaway local MongoDB (`jobpilot_test`), never Atlas — including
   `test_no_fabrication.py` for the keyword gate. 136 in `ai/tests/`, with the model and the API
-  faked. Counted 2026-09-27
-- 🟡 `CC-05` CI/CD via GitHub Actions (lint and test on push). *2026-11-16:
-  `.github/workflows/ci.yml` — AI tier, API server against a MongoDB service container, and
-  the extension's type check. Written, never run*
+  faked. Counted 2026-09-27. *2026-11-18: the AI tier has **345 passing, none failing**, and 7
+  live-model tests collected but not run. The server suite has grown to 169 test functions and
+  **has not run as a whole since PR #58**; only its tests that need no database pass. Never run:
+  `test_multi_account.py`, `test_llm_usage.py`, `test_scoring_inputs.py`, the database half of
+  `test_experience.py` and the 5 API ranking tests from `P13-01`. Running it is `P13-07`, the
+  next task*
+- 🟡 `CC-05` *(also was `EV-05`)* CI/CD via GitHub Actions (lint and test on push).
+  *2026-11-16: `.github/workflows/ci.yml` — AI tier with the budget tests, API server against a
+  MongoDB service container, and the extension's type check. Written, never run. The AI job's
+  known failure (`ai/.env.example` naming a hosted endpoint) is fixed by `P13-04`, and since
+  `P13-01` the server job needs only a stock MongoDB container*
 - ✅ `CC-06` **The AI tier's API token is one global.** `client.set_token` is module state, so a
   second account calling tailoring while another's analysis or discovery run is going would switch
   that run onto its token. *Already fixed in the code: the token is a `ContextVar`
@@ -1175,20 +1633,28 @@ public board URL. Those still come in by hand or through the extension's Capture
 
 **CI is now the one that should not wait.** The suites exist but run only when someone runs
 them; `CC-05` makes them run on every push before this is used against real job applications.
+It goes green only once the server suite has passed locally (`CC-04`).
 
 ---
 
-## 15. Implementation status
+## 19. Implementation status
 
-The dashboard UI was built ahead of the backend. `server/` now has 11 modules, 83 endpoints and 18
+The dashboard UI was built ahead of the backend. `server/` now has 15 modules, 83 endpoints and 20
 collections, every endpoint behind a bearer token; the AI tier (`ai/api/`, port 8001) adds
-discovery, analysis, tailoring and settings. Every signed-in screen shares one header and sidebar
-(`app/(app)/layout.jsx`) and reads the API; My Details keeps one fixture field, `resumeFile`. Tests: 84 in `server/tests/`,
-136 in `ai/tests/` (`CC-04`). There is still no CI
-(`CC-05`). Recounted against the codebase on 2026-09-28.
+discovery, analysis, scoring, capture, tailoring, settings and usage. Every signed-in screen
+shares one header and sidebar (`app/(app)/layout.jsx`) and reads the API; My Details keeps one
+fixture field, `resumeFile`. Tests: 169 test functions in `server/tests/`, not run as a whole
+since PR #58; 345 passing in `ai/tests/` (`CC-04`). CI is written and has never run (`CC-05`).
+Recounted against the codebase on 2026-11-19.
 
-`ai/` runs discovery and analysis on request but holds no graph — nothing agentic runs yet
-(Phase 8). The Chrome extension is built (Phase 9).
+**Everything runs on this machine** since 2026-11-18 (Phase 13): a local MongoDB, and Ollama for
+both generation (`qwen3.5:9b`) and embeddings (`bge-m3`). No Atlas cluster, no hosted model, no
+API key. The ~419 jobs in the old Atlas cluster are not carried over; a local database is filled
+by a discovery run.
+
+`ai/` runs discovery, analysis and scoring on request but holds no graph — nothing agentic runs
+yet (Phase 8). Per posting it now makes two model calls, a brief and a compare, after cleaning
+and gating in code. The Chrome extension is built (Phase 9).
 
 | Built | Backed by |
 |---|---|
@@ -1233,7 +1699,8 @@ discovery, analysis, tailoring and settings. Every signed-in screen shares one h
    Atlas, with `job_id` and `chunk_id` crossing the boundary. As of 2026-09-19 everything is one
    Atlas cluster: `captures` became `job_descriptions`, which carries its own `embedding`, and
    `events` was dropped for having no writer. Doc 06 and its ER diagram were redrawn; doc 03 was
-   not.
+   not. *Since 2026-11-18 the one store is any MongoDB, local by default: vector search is
+   plain code in the server (`P13-01`), so no Atlas feature is used.*
 5. **The profile is five collections, not one embedded document.** `profile`, `work_experience`,
    `education`, `skills` and `certifications`, each keyed by `userId` = `accounts._id`. Doc 06
    describes the earlier single-document shape.
@@ -1246,7 +1713,7 @@ removed all auth overhead; that assumption no longer holds — see deviation 3.
 
 ---
 
-## 16. Definition of Done (per story, general)
+## 20. Definition of Done (per story, general)
 
 - Functionality works end-to-end against real (or realistic test) data — and against the local
   LLM from Phase 5 onward, where one is involved
@@ -1258,7 +1725,49 @@ removed all auth overhead; that assumption no longer holds — see deviation 3.
 
 ---
 
-## 17. Stretch — candidates beyond Phase 12
+## 21. Parked, left out, and stretch
+
+### Parked with the chat (D5)
+
+These come back together when the chat does; the design is kept here so it is not lost.
+
+- **Resume chat** *(was `FE-03`)*. A fixed prompt layout with a limit on every part: system 500,
+  candidate block and learned rules 3,000, summary of earlier turns 600, recent turns 2,000,
+  retrieved chunks and the section being edited 1,500, the message 500, reply and retry 2,150 —
+  10,250 of 16,384 tokens. Threads stored by id; older turns fold into a summary (decisions,
+  constraints with reasons, open items) while the system block and the last few turns stay word
+  for word. Edits come back as structured changes, checked by `tailoring.invented_words`, which
+  you accept or reject. The review screen's panel (`P2-17`) is where it lands
+- **Chat router** *(was `AG-06`)*. One small call sorting a message into a question about your
+  data, a resume change, an action, or small talk; small talk gets no retrieval and no tools
+- **`jobpilot_api` as an MCP server** (`P7-01`, *was `MC-01`*): about seven read-only,
+  task-shaped tools (`job_search`, `job_get`, `match_get`, …) with paged results, counts from
+  `/status`, never added up by the model
+- **Tool allow-list per node** *(was `MC-05`)*, with the two tool rows of the budget table, a
+  budget test for tool definitions and results *(was `MC-06`)*, and a tool-selection check on
+  the evaluation set *(was `MC-07`)*
+- **Reranking, two-stage retrieval, and an events log for retrieval** — needed only for
+  retrieval inside a conversation (`P6-05`, `P13-03`)
+
+### Left out, and why
+
+- **Hosted models and paid APIs of any kind** — D6. Paid company discovery (`P3-03`) stays
+  deferred
+- **Discovery sources as MCP servers** (`P7-03`…`P7-05`, *was `MC-03`*) — the model never
+  chooses a discovery tool; code calls the scrapers directly. Revisit if another client needs them
+- **Server-side LinkedIn scraping** *(was `MC-04`)* — risks account blocks and breaches its
+  terms; LinkedIn pages come in through the extension's capture
+- **A model-driven supervisor for the pipeline** — the pipeline is a fixed sequence (Phase 8)
+- **A second model reviewing each draft** — code already checks for invented words and missing
+  keywords, at no token cost
+- **Ragas, Langfuse or Phoenix** (`P10-01`, `P10-07`) — the runner and the usage log answer the
+  same questions for now. Both are open source, so they fit D6 if wanted later
+- **A code sandbox for the model** — totals come from server endpoints
+- **Billing, public signup, a public Chrome Web Store listing, Google sign-in, account deletion
+  and export, a privacy policy and terms** — the audience is a small invited group (D2, D3);
+  revisit before any wider release
+
+### Stretch
 
 - ~~PDF compilation of tailored `.tex` resumes~~ — **promoted into Phase 2 and closed there**
   (`P2-08`, 2026-09-17). Base resume only; tailored `.tex` gets the same treatment when Phase 5
@@ -1266,4 +1775,4 @@ removed all auth overhead; that assumption no longer holds — see deviation 3.
 - Cover letter generation — carried in Phase 11
 - LinkedIn Easy Apply full support — Phase 9 fills the open step; multi-step navigation still open
 - A2A-based Application Agent as an independently scalable service
-- Multi-device sync (if ever needed — would require revisiting the single-user Atlas-only vector store decision)
+- Multi-device sync (if ever needed — would mean pointing several machines at one shared MongoDB)
